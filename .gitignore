@@ -1,0 +1,9 @@
+node_modules
+elm-stuff
+VerifyExamples
+zombie
+
+# Editors
+.idea/
+ElmjutsuDumMyM0DuL3.elm
+.vscode
