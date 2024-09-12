@@ -1,4 +1,7 @@
-module ElmSyntaxFormat exposing (exposing_, expose, import_, moduleName, module_)
+module ElmSyntaxFormat exposing
+    ( exposing_, expose, import_, moduleName, module_
+    , imports
+    )
 
 {-|
 
@@ -9,6 +12,7 @@ module ElmSyntaxFormat exposing (exposing_, expose, import_, moduleName, module_
 import Elm.Syntax.Exposing
 import Elm.Syntax.File
 import Elm.Syntax.Import
+import Elm.Syntax.Module
 import Elm.Syntax.ModuleName
 import Elm.Syntax.Node
 import Elm.Syntax.Range
@@ -17,12 +21,116 @@ import Print exposing (LineOffset, Print)
 
 module_ : Elm.Syntax.File.File -> Print
 module_ syntaxModule =
-    -- TODO header
     -- TODO declarations
     -- TODO comments
+    syntaxModule.moduleDefinition
+        |> Elm.Syntax.Node.value
+        |> moduleHeader
+        |> Print.followedBy Print.linebreak
+        |> Print.followedBy
+            (syntaxModule.imports
+                |> List.map (\(Elm.Syntax.Node.Node _ syntaxImport) -> syntaxImport)
+                |> imports
+            )
+
+
+moduleHeader : Elm.Syntax.Module.Module -> Print
+moduleHeader syntaxModuleHeader =
+    case syntaxModuleHeader of
+        Elm.Syntax.Module.NormalModule defaultModuleData ->
+            let
+                lineOffset : LineOffset
+                lineOffset =
+                    defaultModuleData.exposingList |> exposingLineOffset
+            in
+            Print.symbol "module"
+                |> Print.followedBy Print.space
+                |> Print.followedBy (moduleName (defaultModuleData.moduleName |> Elm.Syntax.Node.value))
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "exposing")
+                |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
+
+        Elm.Syntax.Module.PortModule defaultModuleData ->
+            let
+                lineOffset : LineOffset
+                lineOffset =
+                    defaultModuleData.exposingList |> exposingLineOffset
+            in
+            Print.symbol "port"
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "module")
+                |> Print.followedBy Print.space
+                |> Print.followedBy (moduleName (defaultModuleData.moduleName |> Elm.Syntax.Node.value))
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "exposing")
+                |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
+
+        Elm.Syntax.Module.EffectModule effectModuleData ->
+            let
+                lineOffset : LineOffset
+                lineOffset =
+                    effectModuleData.exposingList |> exposingLineOffset
+            in
+            Print.symbol "effect"
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "module")
+                |> Print.followedBy Print.space
+                |> Print.followedBy (moduleName (effectModuleData.moduleName |> Elm.Syntax.Node.value))
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "where")
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "{")
+                |> Print.followedBy Print.space
+                |> Print.followedBy
+                    (Print.inSequence
+                        ([ case effectModuleData.command of
+                            Nothing ->
+                                Nothing
+
+                            Just (Elm.Syntax.Node.Node _ name) ->
+                                Just
+                                    (Print.symbol "command"
+                                        |> Print.followedBy Print.space
+                                        |> Print.followedBy (Print.symbol "=")
+                                        |> Print.followedBy Print.space
+                                        |> Print.followedBy (Print.symbol name)
+                                    )
+                         , case effectModuleData.subscription of
+                            Nothing ->
+                                Nothing
+
+                            Just (Elm.Syntax.Node.Node _ name) ->
+                                Just
+                                    (Print.symbol "subscription"
+                                        |> Print.followedBy Print.space
+                                        |> Print.followedBy (Print.symbol "=")
+                                        |> Print.followedBy Print.space
+                                        |> Print.followedBy (Print.symbol name)
+                                    )
+                         ]
+                            |> List.filterMap identity
+                            |> List.intersperse
+                                (Print.symbol ","
+                                    |> Print.followedBy Print.space
+                                )
+                        )
+                    )
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "}")
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "exposing")
+                |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                |> Print.followedBy (effectModuleData.exposingList |> exposing_ lineOffset)
+
+
+imports : List Elm.Syntax.Import.Import -> Print
+imports syntaxImports =
+    -- TODO group according to doc tags
+    -- TODO check how overlaps with default imports are handled in elm-format
     Print.inSequence
-        (syntaxModule.imports
-            |> List.map (\(Elm.Syntax.Node.Node _ syntaxImport) -> syntaxImport)
+        (syntaxImports
             |> List.sortWith
                 (\a b ->
                     compare (a.moduleName |> Elm.Syntax.Node.value) (b.moduleName |> Elm.Syntax.Node.value)
@@ -31,6 +139,24 @@ module_ syntaxModule =
             |> List.map (\syntaxImport -> import_ syntaxImport)
             |> List.intersperse Print.linebreak
         )
+
+
+exposingLineOffset : Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing -> LineOffset
+exposingLineOffset syntaxExposing =
+    case syntaxExposing of
+        Elm.Syntax.Node.Node _ (Elm.Syntax.Exposing.All _) ->
+            Print.SameLine
+
+        Elm.Syntax.Node.Node exposingRange (Elm.Syntax.Exposing.Explicit exposingSet) ->
+            case exposingSet of
+                [] ->
+                    Print.SameLine
+
+                [ _ ] ->
+                    Print.SameLine
+
+                _ :: _ :: _ ->
+                    lineOffsetInRange exposingRange
 
 
 import_ : Elm.Syntax.Import.Import -> Print
@@ -42,19 +168,8 @@ import_ syntaxImport =
                 Nothing ->
                     Print.SameLine
 
-                Just (Elm.Syntax.Node.Node _ (Elm.Syntax.Exposing.All _)) ->
-                    Print.SameLine
-
-                Just (Elm.Syntax.Node.Node exposingRange (Elm.Syntax.Exposing.Explicit exposingSet)) ->
-                    case exposingSet of
-                        [] ->
-                            Print.SameLine
-
-                        [ _ ] ->
-                            Print.SameLine
-
-                        _ :: _ :: _ ->
-                            lineOffsetInRange exposingRange
+                Just syntaxExposing ->
+                    syntaxExposing |> exposingLineOffset
     in
     Print.symbol "import"
         |> Print.followedBy Print.space
@@ -90,8 +205,8 @@ import_ syntaxImport =
 importsCombine :
     List Elm.Syntax.Import.Import
     -> List Elm.Syntax.Import.Import
-importsCombine imports =
-    case imports of
+importsCombine syntaxImports =
+    case syntaxImports of
         [] ->
             []
 
@@ -396,7 +511,9 @@ expose : Elm.Syntax.Exposing.TopLevelExpose -> Print
 expose syntaxExpose =
     case syntaxExpose of
         Elm.Syntax.Exposing.InfixExpose operatorSymbol ->
-            Print.symbol operatorSymbol
+            Print.symbol "("
+                |> Print.followedBy (Print.symbol operatorSymbol)
+                |> Print.followedBy (Print.symbol ")")
 
         Elm.Syntax.Exposing.FunctionExpose name ->
             Print.symbol name

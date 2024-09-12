@@ -30,7 +30,8 @@ suite =
                     """module A exposing (..)
 import List"""
                         |> expectPrintedAs
-                            """import List"""
+                            """module A exposing (..)
+import List"""
                 )
             , Test.test "only name, multiline"
                 (\() ->
@@ -38,14 +39,16 @@ import List"""
 import
     List"""
                         |> expectPrintedAs
-                            """import List"""
+                            """module A exposing (..)
+import List"""
                 )
             , Test.test "name + alias, already same line"
                 (\() ->
                     """module A exposing (..)
 import List as CoreList"""
                         |> expectPrintedAs
-                            """import List as CoreList"""
+                            """module A exposing (..)
+import List as CoreList"""
                 )
             , Test.test "name + alias, multiline"
                 (\() ->
@@ -53,14 +56,16 @@ import List as CoreList"""
 import List 
     as CoreList"""
                         |> expectPrintedAs
-                            """import List as CoreList"""
+                            """module A exposing (..)
+import List as CoreList"""
                 )
             , Test.test "name + alias + exposing all, already same line"
                 (\() ->
                     """module A exposing (..)
 import List as CoreList exposing (..)"""
                         |> expectPrintedAs
-                            """import List as CoreList exposing (..)"""
+                            """module A exposing (..)
+import List as CoreList exposing (..)"""
                 )
             , Test.test "name + alias + exposing all, multiline"
                 (\() ->
@@ -70,14 +75,16 @@ import List
         exposing (..
             )"""
                         |> expectPrintedAs
-                            """import List as CoreList exposing (..)"""
+                            """module A exposing (..)
+import List as CoreList exposing (..)"""
                 )
             , Test.test "name + alias + exposing one, already same line"
                 (\() ->
                     """module A exposing (..)
 import List as CoreList exposing (map)"""
                         |> expectPrintedAs
-                            """import List as CoreList exposing (map)"""
+                            """module A exposing (..)
+import List as CoreList exposing (map)"""
                 )
             , Test.test "name + alias + exposing one, multiline"
                 (\() ->
@@ -86,14 +93,16 @@ import List as CoreList
     exposing (map
     )"""
                         |> expectPrintedAs
-                            """import List as CoreList exposing (map)"""
+                            """module A exposing (..)
+import List as CoreList exposing (map)"""
                 )
             , Test.test "name + alias + exposing multiple, already same line"
                 (\() ->
                     """module A exposing (..)
 import List as CoreList exposing (filter, map)"""
                         |> expectPrintedAs
-                            """import List as CoreList exposing (filter, map)"""
+                            """module A exposing (..)
+import List as CoreList exposing (filter, map)"""
                 )
             , Test.test "name + alias + exposing multiple, multiline"
                 (\() ->
@@ -101,7 +110,8 @@ import List as CoreList exposing (filter, map)"""
 import List as CoreList exposing (filter,
     map)"""
                         |> expectPrintedAs
-                            """import List as CoreList
+                            """module A exposing (..)
+import List as CoreList
     exposing
         ( filter
         , map
@@ -112,21 +122,24 @@ import List as CoreList exposing (filter,
                     """module A exposing (..)
 import List exposing (map, filter)"""
                         |> expectPrintedAs
-                            """import List exposing (filter, map)"""
+                            """module A exposing (..)
+import List exposing (filter, map)"""
                 )
             , Test.test "exposes get deduplicated"
                 (\() ->
                     """module A exposing (..)
 import List exposing (List, filter, map, filter, List)"""
                         |> expectPrintedAs
-                            """import List exposing (List, filter, map)"""
+                            """module A exposing (..)
+import List exposing (List, filter, map)"""
                 )
             , Test.test "open type exposes get deduplicated"
                 (\() ->
                     """module A exposing (..)
 import Maybe exposing (Maybe(..), map, Maybe)"""
                         |> expectPrintedAs
-                            """import Maybe exposing (Maybe(..), map)"""
+                            """module A exposing (..)
+import Maybe exposing (Maybe(..), map)"""
                 )
             , Test.test "open type exposes get deduplicated across imports"
                 (\() ->
@@ -134,7 +147,8 @@ import Maybe exposing (Maybe(..), map, Maybe)"""
 import Maybe exposing (Maybe(..), map)
 import Maybe exposing (Maybe)"""
                         |> expectPrintedAs
-                            """import Maybe exposing (Maybe(..), map)"""
+                            """module A exposing (..)
+import Maybe exposing (Maybe(..), map)"""
                 )
             , Test.test "exposes get deduplicated across imports, preserving line offset of higher"
                 (\() ->
@@ -143,7 +157,8 @@ import Maybe exposing (Maybe)
 import Maybe exposing (Maybe(..),
     map)"""
                         |> expectPrintedAs
-                            """import Maybe
+                            """module A exposing (..)
+import Maybe
     exposing
         ( Maybe(..)
         , map
@@ -155,7 +170,8 @@ import Maybe exposing (Maybe(..),
 import List exposing (map)
 import List as CoreList"""
                         |> expectPrintedAs
-                            """import List as CoreList exposing (map)"""
+                            """module A exposing (..)
+import List as CoreList exposing (map)"""
                 )
             , Test.test "imports get sorted"
                 (\() ->
@@ -164,9 +180,102 @@ import A
 import C
 import B"""
                         |> expectPrintedAs
-                            """import A
+                            """module A exposing (..)
+import A
 import B
 import C"""
+                )
+            ]
+        , Test.describe "module header"
+            [ Test.test "exposing all, already on same line"
+                (\() ->
+                    """module A exposing (..)
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+import Dummy"""
+                )
+            , Test.test "port exposing all, already on same line"
+                (\() ->
+                    """port module A exposing (..)
+import Dummy"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+import Dummy"""
+                )
+            , Test.test "effect where command exposing all, already on same line"
+                (\() ->
+                    """effect module A where { command = MyCmd } exposing (..)
+import Dummy"""
+                        |> expectPrintedAs
+                            """effect module A where { command = MyCmd } exposing (..)
+import Dummy"""
+                )
+            , Test.test "effect where subscription exposing all, already on same line"
+                (\() ->
+                    """effect module A where { subscription = MySub } exposing (..)
+import Dummy"""
+                        |> expectPrintedAs
+                            """effect module A where { subscription = MySub } exposing (..)
+import Dummy"""
+                )
+            , Test.test "effect where command, subscription exposing all, already on same line"
+                (\() ->
+                    """effect module A where { command = MyCmd, subscription = MySub } exposing (..)
+import Dummy"""
+                        |> expectPrintedAs
+                            """effect module A where { command = MyCmd, subscription = MySub } exposing (..)
+import Dummy"""
+                )
+            , Test.test "exposing all, multiline"
+                (\() ->
+                    """module A
+    exposing (
+        ..)
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+import Dummy"""
+                )
+            , Test.test "exposing one, already on same line"
+                (\() ->
+                    """module A exposing (a)
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing (a)
+import Dummy"""
+                )
+            , Test.test "exposing one, multiline"
+                (\() ->
+                    """module A
+    exposing (
+        a)
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing (a)
+import Dummy"""
+                )
+            , Test.test "exposing multiple, one line"
+                (\() ->
+                    """module A exposing ((||), B, C(..), a)
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing ((||), B, C(..), a)
+import Dummy"""
+                )
+            , Test.test "exposing multiple, multiline"
+                (\() ->
+                    """module A exposing ((||), B, C(..), a
+    )
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing
+    ( (||)
+    , B
+    , C(..)
+    , a
+    )
+import Dummy"""
                 )
             ]
         ]
