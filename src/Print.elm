@@ -1,4 +1,4 @@
-module Print exposing (LineOffset(..), Print, bumpIndent, emptiableLayoutPositiveIndent, empty, followedBy, inSequence, layoutModuleLevelIndent, layoutPositiveIndent, layoutTopIndent, lineOffsetMerge, linebreak, listCombineLineOffset, space, symbol, toString)
+module Print exposing (LineOffset(..), Print, bumpIndentBy1, bumpIndentBy4, char, emptiableLayoutPositiveIndent, empty, followedBy, inSequence, layoutModuleLevelIndent, layoutPositiveIndent, layoutTopIndent, lineOffsetMerge, linebreak, listCombineLineOffset, space, symbol, toString)
 
 import List as L
     exposing
@@ -28,6 +28,11 @@ empty =
     symbol ""
 
 
+char : Char -> Print
+char c =
+    symbol (String.fromChar c)
+
+
 space : Print
 space =
     symbol " "
@@ -55,9 +60,14 @@ inSequence printSequence =
                     head
 
 
-bumpIndent : Print -> Print
-bumpIndent print =
+bumpIndentBy4 : Print -> Print
+bumpIndentBy4 print =
     \soFarState -> print { indent = soFarState.indent + 4 }
+
+
+bumpIndentBy1 : Print -> Print
+bumpIndentBy1 print =
+    \soFarState -> print { indent = soFarState.indent + 1 }
 
 
 type LineOffset

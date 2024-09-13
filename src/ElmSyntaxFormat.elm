@@ -1,11 +1,13 @@
 module ElmSyntaxFormat exposing
-    ( exposing_, expose, import_, moduleName, module_
-    , imports
+    ( module_, moduleName, exposing_, expose, imports, import_
+    , patternNotParenthesized, patternParenthesizedIfSpaceSeparated, typeNotParenthesized
     )
 
-{-|
+{-| Pretty printing an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/) tree
+in a way consistent with [`elm-format`](https://github.com/avh4/elm-format).
 
-@docs exposing_, expose, expression, import_, moduleName, module_, pattern, type_
+@docs module_, moduleName, exposing_, expose, imports, import_
+@docs expression, patternNotParenthesized, patternParenthesizedIfSpaceSeparated, typeNotParenthesized
 
 -}
 
@@ -15,12 +17,15 @@ import Elm.Syntax.Import
 import Elm.Syntax.Module
 import Elm.Syntax.ModuleName
 import Elm.Syntax.Node
+import Elm.Syntax.Pattern
 import Elm.Syntax.Range
+import Elm.Syntax.TypeAnnotation
 import Print exposing (LineOffset, Print)
 
 
 module_ : Elm.Syntax.File.File -> Print
 module_ syntaxModule =
+    -- TODO module documentation
     -- TODO declarations
     -- TODO comments
     syntaxModule.moduleDefinition
@@ -194,7 +199,7 @@ import_ syntaxImport =
                     Print.layoutPositiveIndent lineOffset
                         |> Print.followedBy (Print.symbol "exposing")
                         |> Print.followedBy
-                            (Print.bumpIndent
+                            (Print.bumpIndentBy4
                                 (Print.layoutPositiveIndent lineOffset
                                     |> Print.followedBy (exposing_ lineOffset syntaxExposing)
                                 )
@@ -360,42 +365,42 @@ exposing_ lineOffset (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                             expose onlySyntaxExpose
 
                         _ :: _ :: _ ->
-                            commaSeparated
-                                lineOffset
-                                (exposingSet
-                                    |> List.sortWith
-                                        (\(Elm.Syntax.Node.Node _ a) (Elm.Syntax.Node.Node _ b) -> exposeCompare a b)
-                                    |> List.map
-                                        (\(Elm.Syntax.Node.Node _ syntaxExpose) -> expose syntaxExpose)
-                                )
+                            (case lineOffset of
+                                Print.SameLine ->
+                                    Print.empty
+
+                                Print.NextLine ->
+                                    Print.space
+                            )
+                                |> Print.followedBy
+                                    (commaSeparated
+                                        lineOffset
+                                        (exposingSet
+                                            |> List.sortWith
+                                                (\(Elm.Syntax.Node.Node _ a) (Elm.Syntax.Node.Node _ b) -> exposeCompare a b)
+                                            |> List.map
+                                                (\(Elm.Syntax.Node.Node _ syntaxExpose) -> expose syntaxExpose)
+                                        )
+                                    )
             )
         |> Print.followedBy (Print.symbol ")")
 
 
 commaSeparated : Print.LineOffset -> List Print -> Print
 commaSeparated lineOffset elements =
-    (case lineOffset of
-        Print.SameLine ->
-            Print.empty
-
-        Print.NextLine ->
-            Print.space
-    )
-        |> Print.followedBy
-            (Print.inSequence
-                (elements
-                    |> List.map
-                        (\elementPrint ->
-                            elementPrint
-                                |> Print.followedBy
-                                    (Print.emptiableLayoutPositiveIndent lineOffset)
-                        )
-                    |> List.intersperse
-                        (Print.symbol ","
-                            |> Print.followedBy Print.space
-                        )
+    Print.inSequence
+        (elements
+            |> List.map
+                (\elementPrint ->
+                    elementPrint
+                        |> Print.followedBy
+                            (Print.emptiableLayoutPositiveIndent lineOffset)
                 )
-            )
+            |> List.intersperse
+                (Print.symbol ","
+                    |> Print.followedBy Print.space
+                )
+        )
 
 
 moduleName : Elm.Syntax.ModuleName.ModuleName -> Print
@@ -529,3 +534,595 @@ expose syntaxExpose =
                 Just _ ->
                     Print.symbol syntaxExposeType.name
                         |> Print.followedBy (Print.symbol "(..)")
+
+
+intToHexString : Int -> String
+intToHexString int =
+    if int < 16 then
+        unsafeHexDigitIntToString int
+
+    else
+        intToHexString (int // 16)
+            ++ unsafeHexDigitIntToString (int |> Basics.remainderBy 16)
+
+
+unsafeHexDigitIntToString : Int -> String
+unsafeHexDigitIntToString int =
+    case int of
+        0 ->
+            "0"
+
+        1 ->
+            "1"
+
+        2 ->
+            "2"
+
+        3 ->
+            "3"
+
+        4 ->
+            "4"
+
+        5 ->
+            "5"
+
+        6 ->
+            "6"
+
+        7 ->
+            "7"
+
+        8 ->
+            "8"
+
+        9 ->
+            "9"
+
+        10 ->
+            "a"
+
+        11 ->
+            "b"
+
+        12 ->
+            "c"
+
+        13 ->
+            "d"
+
+        14 ->
+            "e"
+
+        -- 15
+        _ ->
+            "f"
+
+
+patternIsSpaceSeparated : Elm.Syntax.Pattern.Pattern -> Bool
+patternIsSpaceSeparated syntaxPattern =
+    case syntaxPattern of
+        Elm.Syntax.Pattern.AllPattern ->
+            False
+
+        Elm.Syntax.Pattern.UnitPattern ->
+            False
+
+        Elm.Syntax.Pattern.VarPattern _ ->
+            False
+
+        Elm.Syntax.Pattern.CharPattern _ ->
+            False
+
+        Elm.Syntax.Pattern.StringPattern _ ->
+            False
+
+        Elm.Syntax.Pattern.IntPattern _ ->
+            False
+
+        Elm.Syntax.Pattern.HexPattern _ ->
+            False
+
+        Elm.Syntax.Pattern.FloatPattern _ ->
+            -- invalid syntax
+            False
+
+        Elm.Syntax.Pattern.ParenthesizedPattern (Elm.Syntax.Node.Node _ inParens) ->
+            patternIsSpaceSeparated inParens
+
+        Elm.Syntax.Pattern.TuplePattern parts ->
+            case parts of
+                [ _, _ ] ->
+                    False
+
+                [ _, _, _ ] ->
+                    False
+
+                [] ->
+                    -- should be covered by UnitPattern
+                    False
+
+                [ Elm.Syntax.Node.Node _ inParens ] ->
+                    -- should be covered by ParenthesizedPattern
+                    patternIsSpaceSeparated inParens
+
+                part0 :: part1 :: part2 :: part3Up ->
+                    -- invalid syntax
+                    False
+
+        Elm.Syntax.Pattern.RecordPattern fields ->
+            False
+
+        Elm.Syntax.Pattern.UnConsPattern _ _ ->
+            True
+
+        Elm.Syntax.Pattern.ListPattern _ ->
+            False
+
+        Elm.Syntax.Pattern.NamedPattern _ argumentPatterns ->
+            case argumentPatterns of
+                [] ->
+                    False
+
+                _ :: _ ->
+                    True
+
+        Elm.Syntax.Pattern.AsPattern _ _ ->
+            True
+
+
+patternParenthesizedIfSpaceSeparated : Elm.Syntax.Pattern.Pattern -> Print
+patternParenthesizedIfSpaceSeparated syntaxPattern =
+    if patternIsSpaceSeparated syntaxPattern then
+        Print.symbol "("
+            |> Print.followedBy (patternNotParenthesized syntaxPattern)
+            |> Print.followedBy (Print.symbol ")")
+
+    else
+        patternNotParenthesized syntaxPattern
+
+
+patternNotParenthesized : Elm.Syntax.Pattern.Pattern -> Print
+patternNotParenthesized syntaxPattern =
+    case syntaxPattern of
+        Elm.Syntax.Pattern.AllPattern ->
+            Print.symbol "_"
+
+        Elm.Syntax.Pattern.UnitPattern ->
+            Print.symbol "()"
+
+        Elm.Syntax.Pattern.VarPattern name ->
+            Print.symbol name
+
+        Elm.Syntax.Pattern.CharPattern char ->
+            -- TODO escape, linebreak, tab, '
+            Print.symbol "'"
+                |> Print.followedBy (Print.char char)
+                |> Print.followedBy (Print.symbol "'")
+
+        Elm.Syntax.Pattern.StringPattern string ->
+            -- TODO escape, linebreak, tab, "
+            Print.symbol "\""
+                |> Print.followedBy (Print.symbol string)
+                |> Print.followedBy (Print.symbol "\"")
+
+        Elm.Syntax.Pattern.IntPattern int ->
+            -- TODO cap out
+            Print.symbol (intToHexString int)
+
+        Elm.Syntax.Pattern.HexPattern int ->
+            -- TODO cap out
+            Print.symbol (String.fromInt int)
+
+        Elm.Syntax.Pattern.FloatPattern float ->
+            -- invalid syntax
+            Print.symbol (String.fromFloat float)
+
+        Elm.Syntax.Pattern.ParenthesizedPattern (Elm.Syntax.Node.Node _ inParens) ->
+            patternNotParenthesized inParens
+
+        Elm.Syntax.Pattern.TuplePattern parts ->
+            case parts of
+                [ Elm.Syntax.Node.Node _ part0, Elm.Syntax.Node.Node _ part1 ] ->
+                    Print.symbol "("
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (patternNotParenthesized part0)
+                        |> Print.followedBy (Print.symbol ",")
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (patternNotParenthesized part1)
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (Print.symbol ")")
+
+                [ Elm.Syntax.Node.Node _ part0, Elm.Syntax.Node.Node _ part1, Elm.Syntax.Node.Node _ part2 ] ->
+                    Print.symbol "("
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (patternNotParenthesized part0)
+                        |> Print.followedBy (Print.symbol ",")
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (patternNotParenthesized part1)
+                        |> Print.followedBy (Print.symbol ",")
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (patternNotParenthesized part2)
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (Print.symbol ")")
+
+                [] ->
+                    -- should be covered by UnitPattern
+                    Print.symbol "()"
+
+                [ Elm.Syntax.Node.Node _ inParens ] ->
+                    -- should be covered by ParenthesizedPattern
+                    patternNotParenthesized inParens
+
+                part0 :: part1 :: part2 :: part3Up ->
+                    -- invalid syntax
+                    Print.symbol "("
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy
+                            (commaSeparated Print.SameLine
+                                ((part0 :: part1 :: part2 :: part3Up)
+                                    |> List.map
+                                        (\(Elm.Syntax.Node.Node _ partPattern) ->
+                                            patternNotParenthesized partPattern
+                                        )
+                                )
+                            )
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (Print.symbol ")")
+
+        Elm.Syntax.Pattern.RecordPattern fields ->
+            Print.symbol "{"
+                |> Print.followedBy Print.space
+                |> Print.followedBy
+                    (commaSeparated Print.SameLine
+                        (fields |> List.map (\(Elm.Syntax.Node.Node _ fieldName) -> Print.symbol fieldName))
+                    )
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "}")
+
+        Elm.Syntax.Pattern.UnConsPattern (Elm.Syntax.Node.Node _ headPattern) (Elm.Syntax.Node.Node _ tailPattern) ->
+            patternParenthesizedIfSpaceSeparated headPattern
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "::")
+                |> Print.followedBy Print.space
+                |> Print.followedBy (patternParenthesizedIfSpaceSeparated tailPattern)
+
+        Elm.Syntax.Pattern.ListPattern elementPatterns ->
+            Print.symbol "["
+                |> Print.followedBy Print.space
+                |> Print.followedBy
+                    (commaSeparated Print.SameLine
+                        (elementPatterns
+                            |> List.map
+                                (\(Elm.Syntax.Node.Node _ elementPattern) ->
+                                    patternNotParenthesized elementPattern
+                                )
+                        )
+                    )
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "]")
+
+        Elm.Syntax.Pattern.NamedPattern syntaxQualifiedNameRef argumentPatterns ->
+            qualifiedNameRef syntaxQualifiedNameRef
+                |> Print.followedBy
+                    (Print.inSequence
+                        (argumentPatterns
+                            |> List.map
+                                (\(Elm.Syntax.Node.Node _ argumentPattern) ->
+                                    Print.space
+                                        |> Print.followedBy
+                                            (patternParenthesizedIfSpaceSeparated argumentPattern)
+                                )
+                        )
+                    )
+
+        Elm.Syntax.Pattern.AsPattern (Elm.Syntax.Node.Node _ aliasedPattern) (Elm.Syntax.Node.Node _ aliasName) ->
+            patternParenthesizedIfSpaceSeparated aliasedPattern
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol "as")
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol aliasName)
+
+
+qualifiedNameRef : Elm.Syntax.Pattern.QualifiedNameRef -> Print
+qualifiedNameRef syntaxQualifiedNameRef =
+    case syntaxQualifiedNameRef.moduleName of
+        [] ->
+            Print.symbol syntaxQualifiedNameRef.name
+
+        modulePartHead :: modulePartTail ->
+            Print.symbol modulePartHead
+                |> Print.followedBy (Print.symbol ".")
+                |> Print.followedBy
+                    (Print.inSequence
+                        (modulePartTail
+                            |> List.map Print.symbol
+                            |> List.intersperse (Print.symbol ".")
+                        )
+                    )
+
+
+qualifiedTuple : ( Elm.Syntax.ModuleName.ModuleName, String ) -> Print
+qualifiedTuple ( qualification, unqualified ) =
+    qualifiedNameRef { moduleName = qualification, name = unqualified }
+
+
+typeIsSpaceSeparated : Elm.Syntax.TypeAnnotation.TypeAnnotation -> Bool
+typeIsSpaceSeparated syntaxType =
+    case syntaxType of
+        Elm.Syntax.TypeAnnotation.GenericType _ ->
+            False
+
+        Elm.Syntax.TypeAnnotation.Typed _ arguments ->
+            case arguments of
+                [] ->
+                    False
+
+                _ :: _ ->
+                    True
+
+        Elm.Syntax.TypeAnnotation.Unit ->
+            False
+
+        Elm.Syntax.TypeAnnotation.Tupled parts ->
+            case parts of
+                [] ->
+                    -- should be handled by Unit
+                    False
+
+                [ Elm.Syntax.Node.Node _ inParens ] ->
+                    typeIsSpaceSeparated inParens
+
+                [ _, _ ] ->
+                    False
+
+                [ _, _, _ ] ->
+                    False
+
+                _ :: _ :: _ :: _ :: _ ->
+                    False
+
+        Elm.Syntax.TypeAnnotation.Record _ ->
+            False
+
+        Elm.Syntax.TypeAnnotation.GenericRecord _ _ ->
+            False
+
+        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation _ _ ->
+            True
+
+
+typeParenthesizedIfSpaceSeparated : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation -> Print
+typeParenthesizedIfSpaceSeparated typeNode =
+    if typeIsSpaceSeparated (typeNode |> Elm.Syntax.Node.value) then
+        let
+            lineOffset : LineOffset
+            lineOffset =
+                lineOffsetInRange (typeNode |> Elm.Syntax.Node.range)
+        in
+        Print.symbol "("
+            |> Print.followedBy (Print.bumpIndentBy1 (typeNotParenthesized typeNode))
+            |> Print.followedBy (Print.emptiableLayoutPositiveIndent lineOffset)
+            |> Print.followedBy (Print.symbol ")")
+
+    else
+        typeNotParenthesized typeNode
+
+
+typeParenthesizedIfFunction : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation -> Print
+typeParenthesizedIfFunction typeNode =
+    case typeNode |> Elm.Syntax.Node.value of
+        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
+            Print.symbol "("
+                |> Print.followedBy
+                    (Print.bumpIndentBy1
+                        (typeFunctionNotParenthesized inType outType)
+                    )
+                |> Print.followedBy
+                    (Print.emptiableLayoutPositiveIndent
+                        (lineOffsetBetweenNodes inType outType)
+                    )
+                |> Print.followedBy (Print.symbol ")")
+
+        _ ->
+            typeNotParenthesized typeNode
+
+
+typeFunctionNotParenthesized :
+    Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    -> Print
+typeFunctionNotParenthesized inType outType =
+    typeParenthesizedIfFunction inType
+        |> Print.followedBy
+            (Print.layoutPositiveIndent
+                (lineOffsetBetweenNodes inType outType)
+            )
+        |> Print.followedBy (Print.symbol "->")
+        |> Print.followedBy (Print.layoutPositiveIndent (lineOffsetInNode outType))
+        |> Print.followedBy
+            (Print.bumpIndentBy4 (typeNotParenthesized outType))
+
+
+typeIsFunction : Elm.Syntax.TypeAnnotation.TypeAnnotation -> Bool
+typeIsFunction syntaxType =
+    case syntaxType of
+        Elm.Syntax.TypeAnnotation.Tupled [ Elm.Syntax.Node.Node _ inParens ] ->
+            typeIsFunction inParens
+
+        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation _ _ ->
+            True
+
+        _ ->
+            False
+
+
+typeParenthesizedIfParenthesizedFunction : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation -> Print
+typeParenthesizedIfParenthesizedFunction syntaxType =
+    case syntaxType of
+        Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ inParens ]) ->
+            if typeIsFunction (inParens |> Elm.Syntax.Node.value) then
+                Print.symbol "("
+                    |> Print.followedBy
+                        (Print.bumpIndentBy1
+                            (typeNotParenthesized inParens)
+                        )
+                    |> Print.followedBy
+                        (Print.emptiableLayoutPositiveIndent
+                            (lineOffsetInNode inParens)
+                        )
+                    |> Print.followedBy (Print.symbol ")")
+
+            else
+                typeNotParenthesized inParens
+
+        Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType) ->
+            typeFunctionNotParenthesized inType outType
+
+        otherType ->
+            typeNotParenthesized otherType
+
+
+typeNotParenthesized : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation -> Print
+typeNotParenthesized (Elm.Syntax.Node.Node typeRange syntaxType) =
+    case syntaxType of
+        Elm.Syntax.TypeAnnotation.Unit ->
+            Print.symbol "()"
+
+        Elm.Syntax.TypeAnnotation.GenericType name ->
+            Print.symbol name
+
+        Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node _ syntaxQualifiedTuple) arguments ->
+            qualifiedTuple syntaxQualifiedTuple
+                |> Print.followedBy
+                    (Print.inSequence
+                        (arguments
+                            |> List.map
+                                (\argument -> typeParenthesizedIfSpaceSeparated argument)
+                        )
+                    )
+
+        Elm.Syntax.TypeAnnotation.Tupled parts ->
+            case parts of
+                [] ->
+                    -- should be handled by Unit
+                    Print.symbol "()"
+
+                [ inParens ] ->
+                    typeNotParenthesized inParens
+
+                [ part0, part1 ] ->
+                    let
+                        lineOffset : Print.LineOffset
+                        lineOffset =
+                            lineOffsetInRange typeRange
+                    in
+                    Print.symbol "("
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (typeNotParenthesized part0)
+                        |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.symbol ",")
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (typeNotParenthesized part1)
+                        |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.symbol ")")
+
+                [ part0, part1, part2 ] ->
+                    let
+                        lineOffset : Print.LineOffset
+                        lineOffset =
+                            lineOffsetInRange typeRange
+                    in
+                    Print.symbol "("
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (typeNotParenthesized part0)
+                        |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.symbol ",")
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (typeNotParenthesized part1)
+                        |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.symbol ",")
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (typeNotParenthesized part2)
+                        |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.symbol ")")
+
+                part0 :: part1 :: part2 :: part3 :: part4Up ->
+                    -- invalid syntax
+                    let
+                        lineOffset : Print.LineOffset
+                        lineOffset =
+                            lineOffsetInRange typeRange
+                    in
+                    Print.symbol "("
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy
+                            (commaSeparated lineOffset
+                                ((part0 :: part1 :: part2 :: part3 :: part4Up)
+                                    |> List.map (\part -> typeNotParenthesized part)
+                                )
+                            )
+                        |> Print.followedBy (Print.symbol ")")
+
+        Elm.Syntax.TypeAnnotation.Record fields ->
+            case fields of
+                [] ->
+                    Print.symbol "{}"
+
+                field0 :: field1Up ->
+                    let
+                        lineOffset : Print.LineOffset
+                        lineOffset =
+                            lineOffsetInRange typeRange
+                    in
+                    Print.symbol "{"
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy
+                            (commaSeparated lineOffset
+                                (fields
+                                    |> List.map
+                                        (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
+                                            Print.symbol fieldName
+                                                |> Print.followedBy Print.space
+                                                |> Print.followedBy (Print.symbol ":")
+                                                |> Print.followedBy (Print.layoutPositiveIndent (lineOffsetInNode fieldValue))
+                                                |> Print.followedBy
+                                                    (Print.bumpIndentBy4 (typeNotParenthesized fieldValue))
+                                        )
+                                )
+                            )
+                        |> Print.followedBy (Print.symbol "}")
+
+        Elm.Syntax.TypeAnnotation.GenericRecord (Elm.Syntax.Node.Node _ recordVariable) (Elm.Syntax.Node.Node _ fields) ->
+            let
+                lineOffset : Print.LineOffset
+                lineOffset =
+                    lineOffsetInRange typeRange
+            in
+            Print.symbol "{"
+                |> Print.followedBy Print.space
+                |> Print.followedBy (Print.symbol recordVariable)
+                |> Print.followedBy (Print.layoutPositiveIndent (lineOffsetInRange typeRange))
+                |> Print.followedBy
+                    (Print.bumpIndentBy4
+                        (Print.symbol "|"
+                            |> Print.followedBy Print.space
+                            |> Print.followedBy
+                                (commaSeparated lineOffset
+                                    (fields
+                                        |> List.map
+                                            (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
+                                                Print.symbol fieldName
+                                                    |> Print.followedBy Print.space
+                                                    |> Print.followedBy (Print.symbol ":")
+                                                    |> Print.followedBy (Print.layoutPositiveIndent (lineOffsetInNode fieldValue))
+                                                    |> Print.followedBy (typeNotParenthesized fieldValue)
+                                            )
+                                    )
+                                )
+                        )
+                    )
+                |> Print.followedBy (Print.symbol "}")
+
+        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
+            typeFunctionNotParenthesized inType outType
