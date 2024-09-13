@@ -21,6 +21,7 @@ import Elm.Syntax.Pattern
 import Elm.Syntax.Range
 import Elm.Syntax.TypeAnnotation
 import Print exposing (LineOffset, Print)
+import Unicode
 
 
 module_ : Elm.Syntax.File.File -> Print
@@ -682,6 +683,122 @@ patternParenthesizedIfSpaceSeparated syntaxPattern =
         patternNotParenthesized syntaxPattern
 
 
+printQuotedString : String -> Print
+printQuotedString stringContent =
+    Print.symbol "\""
+        |> Print.followedBy
+            (Print.symbol
+                (stringContent
+                    |> String.foldl
+                        (\contentChar soFar ->
+                            soFar ++ quotedStringCharToEscaped contentChar
+                        )
+                        ""
+                )
+            )
+        |> Print.followedBy (Print.symbol "\"")
+
+
+quotedStringCharToEscaped : Char -> String
+quotedStringCharToEscaped character =
+    case character of
+        '"' ->
+            "\""
+
+        '\\' ->
+            "\\\\"
+
+        '\t' ->
+            "\\t"
+
+        '\n' ->
+            "\\n"
+
+        '\u{000D}' ->
+            "\\u{000D}"
+
+        otherCharacter ->
+            if characterIsPrint otherCharacter then
+                "\\u{" ++ characterHex otherCharacter ++ "}"
+
+            else
+                String.fromChar otherCharacter
+
+
+printQuotedChar : Char -> Print
+printQuotedChar charContent =
+    Print.symbol "'"
+        |> Print.followedBy
+            (Print.symbol
+                (quotedCharToEscaped charContent)
+            )
+        |> Print.followedBy (Print.symbol "'")
+
+
+quotedCharToEscaped : Char -> String
+quotedCharToEscaped character =
+    case character of
+        '\'' ->
+            "'"
+
+        '\\' ->
+            "\\\\"
+
+        '\t' ->
+            "\\t"
+
+        '\n' ->
+            "\\n"
+
+        '\u{000D}' ->
+            "\\u{000D}"
+
+        otherCharacter ->
+            if characterIsPrint otherCharacter then
+                "\\u{" ++ characterHex otherCharacter ++ "}"
+
+            else
+                String.fromChar otherCharacter
+
+
+characterHex : Char -> String
+characterHex character =
+    String.toUpper (intToHexString (Char.toCode character))
+
+
+characterIsPrint : Char -> Bool
+characterIsPrint character =
+    case Unicode.getCategory character of
+        Nothing ->
+            False
+
+        Just category ->
+            case category of
+                Unicode.SeparatorLine ->
+                    True
+
+                Unicode.SeparatorParagraph ->
+                    True
+
+                Unicode.OtherControl ->
+                    True
+
+                Unicode.OtherFormat ->
+                    True
+
+                Unicode.OtherSurrogate ->
+                    True
+
+                Unicode.OtherPrivateUse ->
+                    True
+
+                Unicode.OtherNotAssigned ->
+                    True
+
+                _ ->
+                    False
+
+
 patternNotParenthesized : Elm.Syntax.Pattern.Pattern -> Print
 patternNotParenthesized syntaxPattern =
     case syntaxPattern of
@@ -695,24 +812,18 @@ patternNotParenthesized syntaxPattern =
             Print.symbol name
 
         Elm.Syntax.Pattern.CharPattern char ->
-            -- TODO escape, linebreak, tab, '
-            Print.symbol "'"
-                |> Print.followedBy (Print.char char)
-                |> Print.followedBy (Print.symbol "'")
+            printQuotedChar char
 
         Elm.Syntax.Pattern.StringPattern string ->
-            -- TODO escape, linebreak, tab, "
-            Print.symbol "\""
-                |> Print.followedBy (Print.symbol string)
-                |> Print.followedBy (Print.symbol "\"")
+            printQuotedString string
 
         Elm.Syntax.Pattern.IntPattern int ->
             -- TODO cap out
-            Print.symbol (intToHexString int)
+            Print.symbol (String.fromInt int)
 
         Elm.Syntax.Pattern.HexPattern int ->
             -- TODO cap out
-            Print.symbol (String.fromInt int)
+            Print.symbol (intToHexString int)
 
         Elm.Syntax.Pattern.FloatPattern float ->
             -- invalid syntax

@@ -1,4 +1,4 @@
-module Print exposing (LineOffset(..), Print, bumpIndentBy1, bumpIndentBy4, char, emptiableLayoutPositiveIndent, empty, followedBy, inSequence, layoutModuleLevelIndent, layoutPositiveIndent, layoutTopIndent, lineOffsetMerge, linebreak, listCombineLineOffset, space, symbol, toString)
+module Print exposing (LineOffset(..), Print, bumpIndentBy1, bumpIndentBy4, emptiableLayoutPositiveIndent, empty, followedBy, inSequence, layoutModuleLevelIndent, layoutPositiveIndent, layoutTopIndent, lineOffsetMerge, linebreak, listCombineLineOffset, space, symbol, toString)
 
 import List as L
     exposing
@@ -26,11 +26,6 @@ symbol exactNextString =
 empty : Print
 empty =
     symbol ""
-
-
-char : Char -> Print
-char c =
-    symbol (String.fromChar c)
 
 
 space : Print
