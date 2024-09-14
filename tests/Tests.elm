@@ -450,8 +450,8 @@ a =
 """
                 )
             ]
-        , Test.describe "type alias"
-            [ Test.test "multiple arguments"
+        , Test.describe "type alias declaration"
+            [ Test.test "multiple parameters"
                 (\() ->
                     """module A exposing (..)
 type alias T a b =
@@ -463,7 +463,7 @@ type alias T a b =
     ( a, b )
 """
                 )
-            , Test.test "one argument"
+            , Test.test "one parameter"
                 (\() ->
                     """module A exposing (..)
 type alias T a =
@@ -475,7 +475,7 @@ type alias T a =
     List a
 """
                 )
-            , Test.test "no argument"
+            , Test.test "no parameter"
                 (\() ->
                     """module A exposing (..)
 type alias T =
@@ -485,6 +485,75 @@ type alias T =
 
 type alias T =
     String
+"""
+                )
+            ]
+        , Test.describe "choice type declaration"
+            [ Test.test "multiple parameters, one variant with one parameter"
+                (\() ->
+                    """module A exposing (..)
+type T a b
+    = T ( a, b )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type T a b
+    = T ( a, b )
+"""
+                )
+            , Test.test "one parameter, one variant with multiple parameters"
+                (\() ->
+                    """module A exposing (..)
+type T a
+    = T a a"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type T a
+    = T a a
+"""
+                )
+            , Test.test "no parameter, one variant without parameters"
+                (\() ->
+                    """module A exposing (..)
+type T
+    = T"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type T
+    = T
+"""
+                )
+            , Test.test "no parameter, one variant with multiple multiline parameters"
+                (\() ->
+                    """module A exposing (..)
+type T a
+    = T a (a
+    -> a)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type T a
+    = T
+        a
+        (a
+         -> a
+        )
+"""
+                )
+            , Test.test "no parameter, multiple variants without parameters"
+                (\() ->
+                    """module A exposing (..)
+type T
+    = X
+    | Y"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type T
+    = X
+    | Y
 """
                 )
             ]
