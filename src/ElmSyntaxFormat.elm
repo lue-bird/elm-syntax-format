@@ -1207,12 +1207,28 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
             Print.symbol name
 
         Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node _ syntaxQualifiedTuple) arguments ->
+            let
+                argumentPrints : List Print
+                argumentPrints =
+                    arguments
+                        |> List.map
+                            (\argument -> typeParenthesizedIfSpaceSeparated argument)
+
+                lineOffset : Print.LineOffset
+                lineOffset =
+                    argumentPrints
+                        |> List.map Print.lineOffset
+                        |> Print.listCombineLineOffset
+            in
             qualifiedTuple syntaxQualifiedTuple
                 |> Print.followedBy
                     (Print.inSequence
-                        (arguments
+                        (argumentPrints
                             |> List.map
-                                (\argument -> typeParenthesizedIfSpaceSeparated argument)
+                                (\argumentPrint ->
+                                    Print.layoutPositiveIndent lineOffset
+                                        |> Print.followedBy argumentPrint
+                                )
                         )
                     )
 
