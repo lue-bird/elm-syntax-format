@@ -1,4 +1,4 @@
-module Print exposing (LineOffset(..), Print, bumpIndentBy1, bumpIndentBy4, emptiableLayoutPositiveIndent, empty, followedBy, inSequence, layoutModuleLevelIndent, layoutPositiveIndent, layoutTopIndent, lineOffsetMerge, linebreak, listCombineLineOffset, space, symbol, toString)
+module Print exposing (LineOffset(..), Print, bumpIndentBy1, bumpIndentBy2, bumpIndentBy4, emptiableLayoutPositiveIndent, empty, followedBy, inSequence, layoutPositiveIndent, layoutTopIndent, lineOffset, lineOffsetMerge, linebreak, listCombineLineOffset, space, symbol, toString)
 
 import List as L
     exposing
@@ -16,6 +16,16 @@ type alias Print =
 toString : Print -> String
 toString print =
     print { indent = 0 }
+
+
+lineOffset : Print -> LineOffset
+lineOffset print =
+    -- TODO can performance be improved? defunctionalization etc
+    if toString print |> String.contains "\n" then
+        NextLine
+
+    else
+        SameLine
 
 
 symbol : String -> Print
@@ -60,6 +70,11 @@ bumpIndentBy4 print =
     \soFarState -> print { indent = soFarState.indent + 4 }
 
 
+bumpIndentBy2 : Print -> Print
+bumpIndentBy2 print =
+    \soFarState -> print { indent = soFarState.indent + 2 }
+
+
 bumpIndentBy1 : Print -> Print
 bumpIndentBy1 print =
     \soFarState -> print { indent = soFarState.indent + 1 }
@@ -85,19 +100,9 @@ listCombineLineOffset lineOffsets =
     lineOffsets |> List.foldl lineOffsetMerge SameLine
 
 
-layoutModuleLevelIndent : LineOffset -> Print
-layoutModuleLevelIndent lineOffset =
-    case lineOffset of
-        SameLine ->
-            space
-
-        NextLine ->
-            linebreak
-
-
 layoutTopIndent : LineOffset -> Print
-layoutTopIndent lineOffset =
-    case lineOffset of
+layoutTopIndent lineOffsetToUse =
+    case lineOffsetToUse of
         SameLine ->
             space
 
@@ -106,8 +111,8 @@ layoutTopIndent lineOffset =
 
 
 layoutPositiveIndent : LineOffset -> Print
-layoutPositiveIndent lineOffset =
-    case lineOffset of
+layoutPositiveIndent lineOffsetToUse =
+    case lineOffsetToUse of
         SameLine ->
             space
 
@@ -116,8 +121,8 @@ layoutPositiveIndent lineOffset =
 
 
 emptiableLayoutPositiveIndent : LineOffset -> Print
-emptiableLayoutPositiveIndent lineOffset =
-    case lineOffset of
+emptiableLayoutPositiveIndent lineOffsetToUse =
+    case lineOffsetToUse of
         SameLine ->
             empty
 
