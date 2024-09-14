@@ -35,6 +35,7 @@ import List"""
 import List
 
 
+
 """
                 )
             , Test.test "only name, multiline"
@@ -48,6 +49,7 @@ import
 import List
 
 
+
 """
                 )
             , Test.test "name + alias, already same line"
@@ -58,6 +60,7 @@ import List as CoreList"""
                             """module A exposing (..)
 
 import List as CoreList
+
 
 
 """
@@ -73,6 +76,7 @@ import List
 import List as CoreList
 
 
+
 """
                 )
             , Test.test "name + alias + exposing all, already same line"
@@ -83,6 +87,7 @@ import List as CoreList exposing (..)"""
                             """module A exposing (..)
 
 import List as CoreList exposing (..)
+
 
 
 """
@@ -100,6 +105,7 @@ import List
 import List as CoreList exposing (..)
 
 
+
 """
                 )
             , Test.test "name + alias + exposing one, already same line"
@@ -110,6 +116,7 @@ import List as CoreList exposing (map)"""
                             """module A exposing (..)
 
 import List as CoreList exposing (map)
+
 
 
 """
@@ -126,6 +133,7 @@ import List as CoreList
 import List as CoreList exposing (map)
 
 
+
 """
                 )
             , Test.test "name + alias + exposing multiple, already same line"
@@ -136,6 +144,7 @@ import List as CoreList exposing (filter, map)"""
                             """module A exposing (..)
 
 import List as CoreList exposing (filter, map)
+
 
 
 """
@@ -155,6 +164,7 @@ import List as CoreList
         )
 
 
+
 """
                 )
             , Test.test "exposes get sorted"
@@ -165,6 +175,7 @@ import List exposing (map, filter)"""
                             """module A exposing (..)
 
 import List exposing (filter, map)
+
 
 
 """
@@ -179,6 +190,7 @@ import List exposing (List, filter, map, filter, List)"""
 import List exposing (List, filter, map)
 
 
+
 """
                 )
             , Test.test "open type exposes get deduplicated"
@@ -189,6 +201,7 @@ import Maybe exposing (Maybe(..), map, Maybe)"""
                             """module A exposing (..)
 
 import Maybe exposing (Maybe(..), map)
+
 
 
 """
@@ -202,6 +215,7 @@ import Maybe exposing (Maybe)"""
                             """module A exposing (..)
 
 import Maybe exposing (Maybe(..), map)
+
 
 
 """
@@ -222,6 +236,7 @@ import Maybe
         )
 
 
+
 """
                 )
             , Test.test "import aliases get deduplicated across imports"
@@ -233,6 +248,7 @@ import List as CoreList"""
                             """module A exposing (..)
 
 import List as CoreList exposing (map)
+
 
 
 """
@@ -251,6 +267,7 @@ import B
 import C
 
 
+
 """
                 )
             ]
@@ -265,6 +282,7 @@ import Dummy"""
 import Dummy
 
 
+
 """
                 )
             , Test.test "port exposing all, already on same line"
@@ -275,6 +293,7 @@ import Dummy"""
                             """port module A exposing (..)
 
 import Dummy
+
 
 
 """
@@ -289,6 +308,7 @@ import Dummy"""
 import Dummy
 
 
+
 """
                 )
             , Test.test "effect where subscription exposing all, already on same line"
@@ -301,6 +321,7 @@ import Dummy"""
 import Dummy
 
 
+
 """
                 )
             , Test.test "effect where command, subscription exposing all, already on same line"
@@ -311,6 +332,7 @@ import Dummy"""
                             """effect module A where { command = MyCmd, subscription = MySub } exposing (..)
 
 import Dummy
+
 
 
 """
@@ -327,6 +349,7 @@ import Dummy"""
 import Dummy
 
 
+
 """
                 )
             , Test.test "exposing one, already on same line"
@@ -337,6 +360,7 @@ import Dummy"""
                             """module A exposing (a)
 
 import Dummy
+
 
 
 """
@@ -353,6 +377,7 @@ import Dummy"""
 import Dummy
 
 
+
 """
                 )
             , Test.test "exposing multiple, one line"
@@ -363,6 +388,7 @@ import Dummy"""
                             """module A exposing ((||), B, C(..), a)
 
 import Dummy
+
 
 
 """
@@ -381,6 +407,7 @@ import Dummy"""
     )
 
 import Dummy
+
 
 
 """
@@ -402,6 +429,7 @@ import Dummy"""
 import Dummy
 
 
+
 """
                 )
             , Test.test "before declarations when no import exists"
@@ -418,7 +446,8 @@ a =
 -}
 
 a =
-    "a\""""
+    "a"
+"""
                 )
             ]
         ]

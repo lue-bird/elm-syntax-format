@@ -81,6 +81,7 @@ module_ syntaxModule =
                 |> List.map Elm.Syntax.Node.value
                 |> declarations
             )
+        |> Print.followedBy Print.linebreak
 
 
 moduleDocumentation : Elm.Syntax.File.File -> Maybe (Elm.Syntax.Node.Node String)
