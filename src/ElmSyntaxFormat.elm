@@ -35,7 +35,6 @@ import Unicode
 
 module_ : Elm.Syntax.File.File -> Print
 module_ syntaxModule =
-    -- TODO module documentation
     -- TODO comments
     let
         maybeModuleDocumentation : Maybe (Elm.Syntax.Node.Node String)
@@ -231,8 +230,6 @@ moduleHeader syntaxModuleHeader =
 
 imports : List Elm.Syntax.Import.Import -> Print
 imports syntaxImports =
-    -- TODO group according to doc tags
-    -- TODO check how overlaps with default imports are handled in elm-format
     Print.inSequence
         (syntaxImports
             |> List.sortWith
@@ -907,13 +904,11 @@ characterIsPrint character =
 
 cappedInt : Int -> Print
 cappedInt int =
-    -- TODO cap out
     Print.symbol (String.fromInt int)
 
 
 cappedHex : Int -> Print
 cappedHex int =
-    -- TODO cap out
     Print.symbol (intToHexString int)
 
 
@@ -1728,7 +1723,6 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
             cappedHex int
 
         Elm.Syntax.Expression.Floatable float ->
-            -- TODO cap out?
             Print.symbol (String.fromFloat float)
 
         Elm.Syntax.Expression.Negation negated ->

@@ -4,7 +4,20 @@ in a way consistent with [`elm-format`](https://github.com/avh4/elm-format).
 This could enable some cool stuff like elm-review tests not complaining about whitespace or extra parens, or as a starting point for a gren formatter.
 
 ## status
-Development just started. Don't expect anything finished in a month.
+  - [ ] (!) integrate comments in all places elm-format allows
+  - [ ] (!) <| formatting and better right/non-associative operation formatting in general (adjust indentation for left/right etc)
+  - [ ] port declaration documentation
+  - [ ] int, hex, float overflow like elm-format
+  - [x] module header
+  - [x] imports, except:
+    - [ ] group according to doc tags
+    - [ ] check how overlaps with default imports are handled in elm-format
+  - [x] declaration hulls
+  - [x] pattern
+      - [ ] add more tests
+  - [x] type
+      - [ ] add more tests
+  - [x] module comment
 
 ## considering for the future
   - create a _very_ lenient parser
