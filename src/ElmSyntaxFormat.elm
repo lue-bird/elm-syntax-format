@@ -140,8 +140,12 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy (moduleName (defaultModuleData.moduleName |> Elm.Syntax.Node.value))
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "exposing")
-                |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
-                |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
+                |> Print.followedBy
+                    (Print.bumpIndentBy4
+                        (Print.layoutPositiveIndent lineOffset
+                            |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
+                        )
+                    )
 
         Elm.Syntax.Module.PortModule defaultModuleData ->
             let
@@ -156,8 +160,12 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy (moduleName (defaultModuleData.moduleName |> Elm.Syntax.Node.value))
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "exposing")
-                |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
-                |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
+                |> Print.followedBy
+                    (Print.bumpIndentBy4
+                        (Print.layoutPositiveIndent lineOffset
+                            |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
+                        )
+                    )
 
         Elm.Syntax.Module.EffectModule effectModuleData ->
             let
@@ -213,8 +221,12 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy (Print.symbol "}")
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "exposing")
-                |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
-                |> Print.followedBy (effectModuleData.exposingList |> exposing_ lineOffset)
+                |> Print.followedBy
+                    (Print.bumpIndentBy4
+                        (Print.layoutPositiveIndent lineOffset
+                            |> Print.followedBy (effectModuleData.exposingList |> exposing_ lineOffset)
+                        )
+                    )
 
 
 imports : List Elm.Syntax.Import.Import -> Print
@@ -283,14 +295,16 @@ import_ syntaxImport =
                     Print.empty
 
                 Just syntaxExposing ->
-                    Print.layoutPositiveIndent lineOffset
-                        |> Print.followedBy (Print.symbol "exposing")
-                        |> Print.followedBy
-                            (Print.bumpIndentBy4
-                                (Print.layoutPositiveIndent lineOffset
-                                    |> Print.followedBy (exposing_ lineOffset syntaxExposing)
+                    Print.bumpIndentBy4
+                        (Print.layoutPositiveIndent lineOffset
+                            |> Print.followedBy (Print.symbol "exposing")
+                            |> Print.followedBy
+                                (Print.bumpIndentBy4
+                                    (Print.layoutPositiveIndent lineOffset
+                                        |> Print.followedBy (exposing_ lineOffset syntaxExposing)
+                                    )
                                 )
-                            )
+                        )
             )
 
 
@@ -1449,8 +1463,10 @@ declarationTypeAlias syntaxTypeAliasDeclaration =
                 )
             )
         |> Print.followedBy (Print.symbol "=")
-        |> Print.followedBy (Print.layoutPositiveIndent Print.NextLine)
-        |> Print.followedBy (typeNotParenthesized syntaxTypeAliasDeclaration.typeAnnotation)
+        |> Print.followedBy
+            (Print.bumpIndentBy4 (Print.layoutPositiveIndent Print.NextLine)
+                |> Print.followedBy (typeNotParenthesized syntaxTypeAliasDeclaration.typeAnnotation)
+            )
 
 
 declarationChoiceType : Elm.Syntax.Type.Type -> Print
@@ -1471,53 +1487,56 @@ declarationChoiceType syntaxChoiceTypeDeclaration =
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.symbol (syntaxChoiceTypeDeclaration.name |> Elm.Syntax.Node.value))
-        |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.inSequence
                 (syntaxChoiceTypeDeclaration.generics
                     |> List.map
                         (\(Elm.Syntax.Node.Node _ parameter) ->
-                            Print.symbol parameter
-                                |> Print.followedBy Print.space
+                            Print.space
+                                |> Print.followedBy (Print.symbol parameter)
                         )
                 )
             )
-        |> Print.followedBy (Print.layoutPositiveIndent Print.NextLine)
-        |> Print.followedBy (Print.symbol "=")
-        |> Print.followedBy Print.space
         |> Print.followedBy
-            (Print.inSequence
-                (syntaxChoiceTypeDeclaration.constructors
-                    |> List.map
-                        (\(Elm.Syntax.Node.Node _ variant) ->
-                            let
-                                parameterPrints : List Print
-                                parameterPrints =
-                                    variant.arguments
-                                        |> List.map typeParenthesizedIfSpaceSeparated
+            (Print.bumpIndentBy4
+                (Print.layoutPositiveIndent Print.NextLine
+                    |> Print.followedBy (Print.symbol "=")
+                    |> Print.followedBy Print.space
+                    |> Print.followedBy
+                        (Print.inSequence
+                            (syntaxChoiceTypeDeclaration.constructors
+                                |> List.map
+                                    (\(Elm.Syntax.Node.Node _ variant) ->
+                                        let
+                                            parameterPrints : List Print
+                                            parameterPrints =
+                                                variant.arguments
+                                                    |> List.map typeParenthesizedIfSpaceSeparated
 
-                                parametersLineOffset : Print.LineOffset
-                                parametersLineOffset =
-                                    Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
-                            in
-                            Print.symbol (variant.name |> Elm.Syntax.Node.value)
-                                |> Print.followedBy
-                                    (Print.bumpIndentBy4
-                                        (Print.inSequence
-                                            (parameterPrints
-                                                |> List.map
-                                                    (\parameterPrint ->
-                                                        Print.layoutPositiveIndent parametersLineOffset
-                                                            |> Print.followedBy parameterPrint
+                                            parametersLineOffset : Print.LineOffset
+                                            parametersLineOffset =
+                                                Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
+                                        in
+                                        Print.symbol (variant.name |> Elm.Syntax.Node.value)
+                                            |> Print.followedBy
+                                                (Print.bumpIndentBy4
+                                                    (Print.inSequence
+                                                        (parameterPrints
+                                                            |> List.map
+                                                                (\parameterPrint ->
+                                                                    Print.layoutPositiveIndent parametersLineOffset
+                                                                        |> Print.followedBy parameterPrint
+                                                                )
+                                                        )
                                                     )
-                                            )
-                                        )
+                                                )
                                     )
-                        )
-                    |> List.intersperse
-                        (Print.layoutPositiveIndent Print.NextLine
-                            |> Print.followedBy (Print.symbol "|")
-                            |> Print.followedBy Print.space
+                                |> List.intersperse
+                                    (Print.layoutPositiveIndent Print.NextLine
+                                        |> Print.followedBy (Print.symbol "|")
+                                        |> Print.followedBy Print.space
+                                    )
+                            )
                         )
                 )
             )
@@ -1618,8 +1637,12 @@ declarationExpressionImplementation implementation =
                 )
             )
         |> Print.followedBy (Print.symbol "=")
-        |> Print.followedBy (Print.layoutPositiveIndent Print.NextLine)
-        |> Print.followedBy (expressionNotParenthesized implementation.expression)
+        |> Print.followedBy
+            (Print.bumpIndentBy4
+                (Print.layoutPositiveIndent Print.NextLine
+                    |> Print.followedBy (expressionNotParenthesized implementation.expression)
+                )
+            )
 
 
 expressionNotParenthesized : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Print

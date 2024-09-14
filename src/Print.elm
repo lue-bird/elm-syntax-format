@@ -117,7 +117,7 @@ layoutPositiveIndent lineOffsetToUse =
             space
 
         NextLine ->
-            \state -> "\n" ++ String.repeat (nextMultipleOf4 state.indent) " "
+            \state -> "\n" ++ String.repeat state.indent " "
 
 
 emptiableLayoutPositiveIndent : LineOffset -> Print
@@ -127,9 +127,4 @@ emptiableLayoutPositiveIndent lineOffsetToUse =
             empty
 
         NextLine ->
-            \state -> "\n" ++ String.repeat (nextMultipleOf4 state.indent) " "
-
-
-nextMultipleOf4 : Int -> Int
-nextMultipleOf4 n =
-    (n // 4) * 4 + 4
+            \state -> "\n" ++ String.repeat state.indent " "
