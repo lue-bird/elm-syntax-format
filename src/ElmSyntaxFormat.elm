@@ -40,12 +40,23 @@ module_ syntaxModule =
     syntaxModule.moduleDefinition
         |> Elm.Syntax.Node.value
         |> moduleHeader
-        |> Print.followedBy Print.linebreak
         |> Print.followedBy
-            (syntaxModule.imports
-                |> List.map Elm.Syntax.Node.value
-                |> imports
+            (case syntaxModule.imports of
+                [] ->
+                    Print.empty
+
+                import0 :: import1Up ->
+                    Print.linebreak
+                        |> Print.followedBy Print.linebreak
+                        |> Print.followedBy
+                            ((import0 :: import1Up)
+                                |> List.map Elm.Syntax.Node.value
+                                |> imports
+                            )
             )
+        |> Print.followedBy Print.linebreak
+        |> Print.followedBy Print.linebreak
+        |> Print.followedBy Print.linebreak
         |> Print.followedBy
             (syntaxModule.declarations
                 |> List.map Elm.Syntax.Node.value
