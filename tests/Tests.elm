@@ -450,4 +450,42 @@ a =
 """
                 )
             ]
+        , Test.describe "type alias"
+            [ Test.test "multiple arguments"
+                (\() ->
+                    """module A exposing (..)
+type alias T a b =
+    ( a, b )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T a b =
+    ( a, b )
+"""
+                )
+            , Test.test "one argument"
+                (\() ->
+                    """module A exposing (..)
+type alias T a =
+    List a"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T a =
+    List a
+"""
+                )
+            , Test.test "no argument"
+                (\() ->
+                    """module A exposing (..)
+type alias T =
+    String"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T =
+    String
+"""
+                )
+            ]
         ]
