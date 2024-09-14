@@ -557,4 +557,32 @@ type T
 """
                 )
             ]
+        , Test.describe "declaration port"
+            [ Test.test "already single-line"
+                (\() ->
+                    """port module A exposing (..)
+port sendMessage : String -> Cmd msg
+port messageReceiver : (String -> msg) -> Sub msg"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+port sendMessage : String -> Cmd msg
+
+
+port messageReceiver : (String -> msg) -> Sub msg
+"""
+                )
+            , Test.test "type on next should be single-line"
+                (\() ->
+                    """port module A exposing (..)
+port sendMessage :
+    (String -> Cmd msg
+    )"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+port sendMessage : String -> Cmd msg
+"""
+                )
+            ]
         ]
