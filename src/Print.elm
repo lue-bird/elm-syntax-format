@@ -1,4 +1,37 @@
-module Print exposing (LineOffset(..), Print, emptiableLayout, empty, followedBy, inSequence, indented, layout, lineOffset, lineOffsetMerge, linebreak, listCombineLineOffset, space, symbol, toString)
+module Print exposing
+    ( Print, toString
+    , symbol
+    , empty, space, linebreak
+    , followedBy, inSequence
+    , indented, layout, emptiableLayout
+    , LineOffset(..), lineOffsetMerge, listCombineLineOffset, lineOffset
+    )
+
+{-| simple pretty printing
+
+@docs Print, toString
+
+
+### primitive
+
+@docs symbol
+
+For convenience, these common symbols are exposed as well
+
+@docs empty, space, linebreak
+
+
+### combine
+
+@docs followedBy, inSequence
+
+
+### indent
+
+@docs indented, layout, emptiableLayout
+@docs LineOffset, lineOffsetMerge, listCombineLineOffset, lineOffset
+
+-}
 
 
 type alias Print =
