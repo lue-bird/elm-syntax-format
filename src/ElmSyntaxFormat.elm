@@ -37,11 +37,25 @@ module_ : Elm.Syntax.File.File -> Print
 module_ syntaxModule =
     -- TODO module documentation
     -- TODO comments
-    syntaxModule.moduleDefinition
-        |> Elm.Syntax.Node.value
-        |> moduleHeader
-        |> Print.followedBy
-            (case syntaxModule.imports of
+    let
+        maybeModuleDocumentation : Maybe (Elm.Syntax.Node.Node String)
+        maybeModuleDocumentation =
+            moduleDocumentation syntaxModule
+
+        maybeModuleDocumentationPrint : Print
+        maybeModuleDocumentationPrint =
+            case maybeModuleDocumentation of
+                Nothing ->
+                    Print.empty
+
+                Just (Elm.Syntax.Node.Node _ moduleDocumentationAsString) ->
+                    Print.linebreak
+                        |> Print.followedBy Print.linebreak
+                        |> Print.followedBy (Print.symbol moduleDocumentationAsString)
+
+        importsPrint : Print
+        importsPrint =
+            case syntaxModule.imports of
                 [] ->
                     Print.empty
 
@@ -53,8 +67,13 @@ module_ syntaxModule =
                                 |> List.map Elm.Syntax.Node.value
                                 |> imports
                             )
-            )
-        |> Print.followedBy Print.linebreak
+                        |> Print.followedBy Print.linebreak
+    in
+    syntaxModule.moduleDefinition
+        |> Elm.Syntax.Node.value
+        |> moduleHeader
+        |> Print.followedBy maybeModuleDocumentationPrint
+        |> Print.followedBy importsPrint
         |> Print.followedBy Print.linebreak
         |> Print.followedBy Print.linebreak
         |> Print.followedBy
@@ -62,6 +81,48 @@ module_ syntaxModule =
                 |> List.map Elm.Syntax.Node.value
                 |> declarations
             )
+
+
+moduleDocumentation : Elm.Syntax.File.File -> Maybe (Elm.Syntax.Node.Node String)
+moduleDocumentation ast =
+    let
+        cutOffLine : Int
+        cutOffLine =
+            case ast.imports of
+                (Elm.Syntax.Node.Node firstImportRange _) :: _ ->
+                    firstImportRange.start.row
+
+                [] ->
+                    case ast.declarations of
+                        (Elm.Syntax.Node.Node firstDeclarationRange _) :: _ ->
+                            firstDeclarationRange.start.row
+
+                        [] ->
+                            -- Should not happen, as every module should have at least one declaration
+                            0
+    in
+    moduleDocumentationBeforeCutOffLine cutOffLine ast.comments
+
+
+moduleDocumentationBeforeCutOffLine : Int -> List (Elm.Syntax.Node.Node String) -> Maybe (Elm.Syntax.Node.Node String)
+moduleDocumentationBeforeCutOffLine cutOffLine comments =
+    case comments of
+        [] ->
+            Nothing
+
+        comment :: restOfComments ->
+            let
+                (Elm.Syntax.Node.Node range content) =
+                    comment
+            in
+            if range.start.row > cutOffLine then
+                Nothing
+
+            else if String.startsWith "{-|" content then
+                Just comment
+
+            else
+                moduleDocumentationBeforeCutOffLine cutOffLine restOfComments
 
 
 moduleHeader : Elm.Syntax.Module.Module -> Print

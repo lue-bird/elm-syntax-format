@@ -386,4 +386,39 @@ import Dummy
 """
                 )
             ]
+        , Test.describe "module documentation"
+            [ Test.test "before imports"
+                (\() ->
+                    """module A exposing (..)
+{-| A module about A.
+-}
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+{-| A module about A.
+-}
+
+import Dummy
+
+
+"""
+                )
+            , Test.test "before declarations when no import exists"
+                (\() ->
+                    """module A exposing (..)
+{-| A module about A.
+-}
+a =
+    "a\""""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+{-| A module about A.
+-}
+
+a =
+    "a\""""
+                )
+            ]
         ]
