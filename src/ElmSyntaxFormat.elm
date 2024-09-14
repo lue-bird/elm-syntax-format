@@ -141,8 +141,8 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "exposing")
                 |> Print.followedBy
-                    (Print.bumpIndentBy4
-                        (Print.layoutPositiveIndent lineOffset
+                    (Print.indented 4
+                        (Print.layout lineOffset
                             |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
                         )
                     )
@@ -161,8 +161,8 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "exposing")
                 |> Print.followedBy
-                    (Print.bumpIndentBy4
-                        (Print.layoutPositiveIndent lineOffset
+                    (Print.indented 4
+                        (Print.layout lineOffset
                             |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
                         )
                     )
@@ -222,8 +222,8 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "exposing")
                 |> Print.followedBy
-                    (Print.bumpIndentBy4
-                        (Print.layoutPositiveIndent lineOffset
+                    (Print.indented 4
+                        (Print.layout lineOffset
                             |> Print.followedBy (effectModuleData.exposingList |> exposing_ lineOffset)
                         )
                     )
@@ -295,12 +295,12 @@ import_ syntaxImport =
                     Print.empty
 
                 Just syntaxExposing ->
-                    Print.bumpIndentBy4
-                        (Print.layoutPositiveIndent lineOffset
+                    Print.indented 4
+                        (Print.layout lineOffset
                             |> Print.followedBy (Print.symbol "exposing")
                             |> Print.followedBy
-                                (Print.bumpIndentBy4
-                                    (Print.layoutPositiveIndent lineOffset
+                                (Print.indented 4
+                                    (Print.layout lineOffset
                                         |> Print.followedBy (exposing_ lineOffset syntaxExposing)
                                     )
                                 )
@@ -501,7 +501,7 @@ commaSeparated lineOffset elements =
                 (\elementPrint ->
                     elementPrint
                         |> Print.followedBy
-                            (Print.emptiableLayoutPositiveIndent lineOffset)
+                            (Print.emptiableLayout lineOffset)
                 )
             |> List.intersperse
                 (Print.symbol ","
@@ -1128,9 +1128,9 @@ typeParenthesizedIfSpaceSeparated typeNode =
                 typeNotParenthesized typeNode
         in
         Print.symbol "("
-            |> Print.followedBy (Print.bumpIndentBy1 typePrint)
+            |> Print.followedBy (Print.indented 1 typePrint)
             |> Print.followedBy
-                (Print.emptiableLayoutPositiveIndent (Print.lineOffset typePrint))
+                (Print.emptiableLayout (Print.lineOffset typePrint))
             |> Print.followedBy (Print.symbol ")")
 
     else
@@ -1143,11 +1143,11 @@ typeParenthesizedIfFunction typeNode =
         Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
             Print.symbol "("
                 |> Print.followedBy
-                    (Print.bumpIndentBy1
+                    (Print.indented 1
                         (typeFunctionNotParenthesized inType outType)
                     )
                 |> Print.followedBy
-                    (Print.emptiableLayoutPositiveIndent
+                    (Print.emptiableLayout
                         (lineOffsetBetweenNodes inType outType)
                     )
                 |> Print.followedBy (Print.symbol ")")
@@ -1163,13 +1163,13 @@ typeFunctionNotParenthesized :
 typeFunctionNotParenthesized inType outType =
     typeParenthesizedIfFunction inType
         |> Print.followedBy
-            (Print.layoutPositiveIndent
+            (Print.layout
                 (lineOffsetBetweenNodes inType outType)
             )
         |> Print.followedBy (Print.symbol "->")
-        |> Print.followedBy (Print.layoutPositiveIndent (lineOffsetInNode outType))
+        |> Print.followedBy (Print.layout (lineOffsetInNode outType))
         |> Print.followedBy
-            (Print.bumpIndentBy4 (typeNotParenthesized outType))
+            (Print.indented 4 (typeNotParenthesized outType))
 
 
 typeIsFunction : Elm.Syntax.TypeAnnotation.TypeAnnotation -> Bool
@@ -1192,11 +1192,11 @@ typeParenthesizedIfParenthesizedFunction syntaxType =
             if typeIsFunction (inParens |> Elm.Syntax.Node.value) then
                 Print.symbol "("
                     |> Print.followedBy
-                        (Print.bumpIndentBy1
+                        (Print.indented 1
                             (typeNotParenthesized inParens)
                         )
                     |> Print.followedBy
-                        (Print.emptiableLayoutPositiveIndent
+                        (Print.emptiableLayout
                             (lineOffsetInNode inParens)
                         )
                     |> Print.followedBy (Print.symbol ")")
@@ -1240,7 +1240,7 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                         (argumentPrints
                             |> List.map
                                 (\argumentPrint ->
-                                    Print.layoutPositiveIndent lineOffset
+                                    Print.layout lineOffset
                                         |> Print.followedBy argumentPrint
                                 )
                         )
@@ -1263,12 +1263,12 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                     in
                     Print.symbol "("
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (typeNotParenthesized part0))
-                        |> Print.followedBy (Print.emptiableLayoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized part0))
+                        |> Print.followedBy (Print.emptiableLayout lineOffset)
                         |> Print.followedBy (Print.symbol ",")
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (typeNotParenthesized part1))
-                        |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized part1))
+                        |> Print.followedBy (Print.layout lineOffset)
                         |> Print.followedBy (Print.symbol ")")
 
                 [ part0, part1, part2 ] ->
@@ -1279,16 +1279,16 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                     in
                     Print.symbol "("
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (typeNotParenthesized part0))
-                        |> Print.followedBy (Print.emptiableLayoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized part0))
+                        |> Print.followedBy (Print.emptiableLayout lineOffset)
                         |> Print.followedBy (Print.symbol ",")
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (typeNotParenthesized part1))
-                        |> Print.followedBy (Print.emptiableLayoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized part1))
+                        |> Print.followedBy (Print.emptiableLayout lineOffset)
                         |> Print.followedBy (Print.symbol ",")
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (typeNotParenthesized part2))
-                        |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized part2))
+                        |> Print.followedBy (Print.layout lineOffset)
                         |> Print.followedBy (Print.symbol ")")
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
@@ -1303,7 +1303,7 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                         |> Print.followedBy
                             (commaSeparated lineOffset
                                 ((part0 :: part1 :: part2 :: part3 :: part4Up)
-                                    |> List.map (\part -> Print.bumpIndentBy2 (typeNotParenthesized part))
+                                    |> List.map (\part -> Print.indented 2 (typeNotParenthesized part))
                                 )
                             )
                         |> Print.followedBy (Print.symbol ")")
@@ -1330,8 +1330,8 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                                                 |> Print.followedBy Print.space
                                                 |> Print.followedBy (Print.symbol ":")
                                                 |> Print.followedBy
-                                                    (Print.bumpIndentBy4
-                                                        (Print.layoutPositiveIndent (lineOffsetInNode fieldValue)
+                                                    (Print.indented 4
+                                                        (Print.layout (lineOffsetInNode fieldValue)
                                                             |> Print.followedBy
                                                                 (typeNotParenthesized fieldValue)
                                                         )
@@ -1350,9 +1350,9 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
             Print.symbol "{"
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol recordVariable)
-                |> Print.followedBy (Print.layoutPositiveIndent (lineOffsetInRange fullRange))
+                |> Print.followedBy (Print.layout (lineOffsetInRange fullRange))
                 |> Print.followedBy
-                    (Print.bumpIndentBy4
+                    (Print.indented 4
                         (Print.symbol "|"
                             |> Print.followedBy Print.space
                             |> Print.followedBy
@@ -1364,8 +1364,8 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                                                     |> Print.followedBy Print.space
                                                     |> Print.followedBy (Print.symbol ":")
                                                     |> Print.followedBy
-                                                        (Print.bumpIndentBy4
-                                                            (Print.layoutPositiveIndent (lineOffsetInNode fieldValue)
+                                                        (Print.indented 4
+                                                            (Print.layout (lineOffsetInNode fieldValue)
                                                                 |> Print.followedBy (typeNotParenthesized fieldValue)
                                                             )
                                                         )
@@ -1417,8 +1417,8 @@ declaration syntaxDeclaration =
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "=")
                 |> Print.followedBy
-                    (Print.bumpIndentBy4
-                        (Print.layoutPositiveIndent Print.NextLine
+                    (Print.indented 4
+                        (Print.layout Print.NextLine
                             |> Print.followedBy (expressionNotParenthesized destructuringExpression)
                         )
                     )
@@ -1464,7 +1464,7 @@ declarationTypeAlias syntaxTypeAliasDeclaration =
             )
         |> Print.followedBy (Print.symbol "=")
         |> Print.followedBy
-            (Print.bumpIndentBy4 (Print.layoutPositiveIndent Print.NextLine)
+            (Print.indented 4 (Print.layout Print.NextLine)
                 |> Print.followedBy (typeNotParenthesized syntaxTypeAliasDeclaration.typeAnnotation)
             )
 
@@ -1498,8 +1498,8 @@ declarationChoiceType syntaxChoiceTypeDeclaration =
                 )
             )
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent Print.NextLine
+            (Print.indented 4
+                (Print.layout Print.NextLine
                     |> Print.followedBy (Print.symbol "=")
                     |> Print.followedBy Print.space
                     |> Print.followedBy
@@ -1519,12 +1519,12 @@ declarationChoiceType syntaxChoiceTypeDeclaration =
                                         in
                                         Print.symbol (variant.name |> Elm.Syntax.Node.value)
                                             |> Print.followedBy
-                                                (Print.bumpIndentBy4
+                                                (Print.indented 4
                                                     (Print.inSequence
                                                         (parameterPrints
                                                             |> List.map
                                                                 (\parameterPrint ->
-                                                                    Print.layoutPositiveIndent parametersLineOffset
+                                                                    Print.layout parametersLineOffset
                                                                         |> Print.followedBy parameterPrint
                                                                 )
                                                         )
@@ -1532,7 +1532,7 @@ declarationChoiceType syntaxChoiceTypeDeclaration =
                                                 )
                                     )
                                 |> List.intersperse
-                                    (Print.layoutPositiveIndent Print.NextLine
+                                    (Print.layout Print.NextLine
                                         |> Print.followedBy (Print.symbol "|")
                                         |> Print.followedBy Print.space
                                     )
@@ -1618,7 +1618,7 @@ declarationSignature signature =
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol ":")
         |> Print.followedBy
-            (Print.layoutPositiveIndent (Print.lineOffset typePrint))
+            (Print.layout (Print.lineOffset typePrint))
         |> Print.followedBy typePrint
 
 
@@ -1638,8 +1638,8 @@ declarationExpressionImplementation implementation =
             )
         |> Print.followedBy (Print.symbol "=")
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent Print.NextLine
+            (Print.indented 4
+                (Print.layout Print.NextLine
                     |> Print.followedBy (expressionNotParenthesized implementation.expression)
                 )
             )
@@ -1669,15 +1669,15 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                     in
                     expressionParenthesizedIfSpaceSeparated applied
                         |> Print.followedBy
-                            (Print.bumpIndentBy4
-                                (Print.layoutPositiveIndent (lineOffsetInNode argument0)
+                            (Print.indented 4
+                                (Print.layout (lineOffsetInNode argument0)
                                     |> Print.followedBy (expressionParenthesizedIfSpaceSeparated argument0)
                                     |> Print.followedBy
                                         (Print.inSequence
                                             (argument1Up
                                                 |> List.map
                                                     (\argument ->
-                                                        Print.layoutPositiveIndent argument1UpLineOffset
+                                                        Print.layout argument1UpLineOffset
                                                             |> Print.followedBy (expressionParenthesizedIfSpaceSeparated argument)
                                                     )
                                             )
@@ -1693,12 +1693,12 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
             in
             expressionParenthesizedIfSpaceSeparatedExceptNonParenthesizedOperation left
                 |> Print.followedBy
-                    (Print.bumpIndentBy4
-                        (Print.layoutPositiveIndent lineOffset
+                    (Print.indented 4
+                        (Print.layout lineOffset
                             |> Print.followedBy (Print.symbol operator)
                             |> Print.followedBy
-                                (Print.bumpIndentBy4
-                                    (Print.layoutPositiveIndent lineOffset
+                                (Print.indented 4
+                                    (Print.layout lineOffset
                                         |> Print.followedBy
                                             (expressionParenthesizedIfSpaceSeparatedExceptNonParenthesizedOperation right)
                                     )
@@ -1759,12 +1759,12 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                     in
                     Print.symbol "("
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (expressionNotParenthesized part0))
-                        |> Print.followedBy (Print.emptiableLayoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (expressionNotParenthesized part0))
+                        |> Print.followedBy (Print.emptiableLayout lineOffset)
                         |> Print.followedBy (Print.symbol ",")
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (expressionNotParenthesized part1))
-                        |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (expressionNotParenthesized part1))
+                        |> Print.followedBy (Print.layout lineOffset)
                         |> Print.followedBy (Print.symbol ")")
 
                 [ part0, part1, part2 ] ->
@@ -1775,16 +1775,16 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                     in
                     Print.symbol "("
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (expressionNotParenthesized part0))
-                        |> Print.followedBy (Print.emptiableLayoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (expressionNotParenthesized part0))
+                        |> Print.followedBy (Print.emptiableLayout lineOffset)
                         |> Print.followedBy (Print.symbol ",")
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (expressionNotParenthesized part1))
-                        |> Print.followedBy (Print.emptiableLayoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (expressionNotParenthesized part1))
+                        |> Print.followedBy (Print.emptiableLayout lineOffset)
                         |> Print.followedBy (Print.symbol ",")
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.bumpIndentBy2 (expressionNotParenthesized part2))
-                        |> Print.followedBy (Print.layoutPositiveIndent lineOffset)
+                        |> Print.followedBy (Print.indented 2 (expressionNotParenthesized part2))
+                        |> Print.followedBy (Print.layout lineOffset)
                         |> Print.followedBy (Print.symbol ")")
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
@@ -1799,7 +1799,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                         |> Print.followedBy
                             (commaSeparated lineOffset
                                 ((part0 :: part1 :: part2 :: part3 :: part4Up)
-                                    |> List.map (\part -> Print.bumpIndentBy2 (expressionNotParenthesized part))
+                                    |> List.map (\part -> Print.indented 2 (expressionNotParenthesized part))
                                 )
                             )
                         |> Print.followedBy (Print.symbol ")")
@@ -1838,8 +1838,8 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                                                 |> Print.followedBy Print.space
                                                 |> Print.followedBy (Print.symbol "=")
                                                 |> Print.followedBy
-                                                    (Print.bumpIndentBy4
-                                                        (Print.layoutPositiveIndent (lineOffsetInNode fieldValue)
+                                                    (Print.indented 4
+                                                        (Print.layout (lineOffsetInNode fieldValue)
                                                             |> Print.followedBy
                                                                 (expressionNotParenthesized fieldValue)
                                                         )
@@ -1866,7 +1866,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                             (commaSeparated lineOffset
                                 (elements
                                     |> List.map
-                                        (\element -> Print.bumpIndentBy2 (expressionNotParenthesized element))
+                                        (\element -> Print.indented 2 (expressionNotParenthesized element))
                                 )
                             )
                         |> Print.followedBy (Print.symbol "]")
@@ -1888,9 +1888,9 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
             Print.symbol "{"
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol recordVariable)
-                |> Print.followedBy (Print.layoutPositiveIndent (lineOffsetInRange fullRange))
+                |> Print.followedBy (Print.layout (lineOffsetInRange fullRange))
                 |> Print.followedBy
-                    (Print.bumpIndentBy4
+                    (Print.indented 4
                         (Print.symbol "|"
                             |> Print.followedBy Print.space
                             |> Print.followedBy
@@ -1902,8 +1902,8 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                                                     |> Print.followedBy Print.space
                                                     |> Print.followedBy (Print.symbol "=")
                                                     |> Print.followedBy
-                                                        (Print.bumpIndentBy4
-                                                            (Print.layoutPositiveIndent (lineOffsetInNode fieldValue)
+                                                        (Print.indented 4
+                                                            (Print.layout (lineOffsetInNode fieldValue)
                                                                 |> Print.followedBy (expressionNotParenthesized fieldValue)
                                                             )
                                                         )
@@ -1939,8 +1939,8 @@ expressionLambda syntaxLambda =
             )
         |> Print.followedBy (Print.symbol "->")
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent (Print.lineOffset resultPrint))
+            (Print.indented 4
+                (Print.layout (Print.lineOffset resultPrint))
             )
         |> Print.followedBy resultPrint
 
@@ -1978,26 +1978,26 @@ expressionIfThenElse condition onTrue onFalse =
     in
     Print.symbol "if"
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent conditionLineOffset
+            (Print.indented 4
+                (Print.layout conditionLineOffset
                     |> Print.followedBy conditionPrint
-                    |> Print.followedBy (Print.layoutPositiveIndent conditionLineOffset)
+                    |> Print.followedBy (Print.layout conditionLineOffset)
                 )
             )
         |> Print.followedBy (Print.symbol "then")
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent onTrueLineOffset
+            (Print.indented 4
+                (Print.layout onTrueLineOffset
                     |> Print.followedBy onTruePrint
-                    |> Print.followedBy (Print.layoutPositiveIndent onTrueLineOffset)
+                    |> Print.followedBy (Print.layout onTrueLineOffset)
                 )
             )
         |> Print.followedBy (Print.symbol "else")
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent onFalseLineOffset
+            (Print.indented 4
+                (Print.layout onFalseLineOffset
                     |> Print.followedBy onFalsePrint
-                    |> Print.followedBy (Print.layoutPositiveIndent onFalseLineOffset)
+                    |> Print.followedBy (Print.layout onFalseLineOffset)
                 )
             )
 
@@ -2011,17 +2011,17 @@ expressionCaseOf syntaxCaseOf =
     in
     Print.symbol "case"
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent casedExpressionLineOffset
+            (Print.indented 4
+                (Print.layout casedExpressionLineOffset
                     |> Print.followedBy (expressionNotParenthesized syntaxCaseOf.expression)
                 )
             )
         |> Print.followedBy
-            (Print.layoutPositiveIndent casedExpressionLineOffset)
+            (Print.layout casedExpressionLineOffset)
         |> Print.followedBy (Print.symbol "of")
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent Print.NextLine
+            (Print.indented 4
+                (Print.layout Print.NextLine
                     |> Print.followedBy
                         (Print.inSequence
                             (syntaxCaseOf.cases
@@ -2039,8 +2039,8 @@ case_ ( Elm.Syntax.Node.Node _ casePattern, caseResult ) =
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol "->")
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent Print.NextLine
+            (Print.indented 4
+                (Print.layout Print.NextLine
                     |> Print.followedBy (expressionNotParenthesized caseResult)
                 )
             )
@@ -2050,8 +2050,8 @@ expressionLetIn : Elm.Syntax.Expression.LetBlock -> Print
 expressionLetIn syntaxLetIn =
     Print.symbol "let"
         |> Print.followedBy
-            (Print.bumpIndentBy4
-                (Print.layoutPositiveIndent Print.NextLine
+            (Print.indented 4
+                (Print.layout Print.NextLine
                     |> Print.followedBy
                         (Print.inSequence
                             (syntaxLetIn.declarations
@@ -2061,15 +2061,15 @@ expressionLetIn syntaxLetIn =
                                     )
                                 |> List.intersperse
                                     (Print.linebreak
-                                        |> Print.followedBy (Print.layoutPositiveIndent Print.NextLine)
+                                        |> Print.followedBy (Print.layout Print.NextLine)
                                     )
                             )
                         )
                 )
             )
-        |> Print.followedBy (Print.layoutPositiveIndent Print.NextLine)
+        |> Print.followedBy (Print.layout Print.NextLine)
         |> Print.followedBy (Print.symbol "in")
-        |> Print.followedBy (Print.layoutPositiveIndent Print.NextLine)
+        |> Print.followedBy (Print.layout Print.NextLine)
         |> Print.followedBy (expressionNotParenthesized syntaxLetIn.expression)
 
 
@@ -2099,8 +2099,8 @@ expressionLetDeclaration letDeclaration =
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "=")
                 |> Print.followedBy
-                    (Print.bumpIndentBy4
-                        (Print.layoutPositiveIndent Print.NextLine
+                    (Print.indented 4
+                        (Print.layout Print.NextLine
                             |> Print.followedBy (expressionNotParenthesized destructuredExpression)
                         )
                     )
@@ -2115,9 +2115,9 @@ expressionParenthesizedIfSpaceSeparated expressionNode =
                 expressionNotParenthesized expressionNode
         in
         Print.symbol "("
-            |> Print.followedBy (Print.bumpIndentBy1 expressionPrint)
+            |> Print.followedBy (Print.indented 1 expressionPrint)
             |> Print.followedBy
-                (Print.emptiableLayoutPositiveIndent (Print.lineOffset expressionPrint))
+                (Print.emptiableLayout (Print.lineOffset expressionPrint))
             |> Print.followedBy (Print.symbol ")")
 
     else
@@ -2137,9 +2137,9 @@ expressionParenthesizedIfSpaceSeparatedExceptNonParenthesizedOperation expressio
                 expressionNotParenthesized expressionNode
         in
         Print.symbol "("
-            |> Print.followedBy (Print.bumpIndentBy1 expressionPrint)
+            |> Print.followedBy (Print.indented 1 expressionPrint)
             |> Print.followedBy
-                (Print.emptiableLayoutPositiveIndent (Print.lineOffset expressionPrint))
+                (Print.emptiableLayout (Print.lineOffset expressionPrint))
             |> Print.followedBy (Print.symbol ")")
 
     else

@@ -1,10 +1,4 @@
-module Print exposing (LineOffset(..), Print, bumpIndentBy1, bumpIndentBy2, bumpIndentBy4, emptiableLayoutPositiveIndent, empty, followedBy, inSequence, layoutPositiveIndent, layoutTopIndent, lineOffset, lineOffsetMerge, linebreak, listCombineLineOffset, space, symbol, toString)
-
-import List as L
-    exposing
-        ( filter
-        , map
-        )
+module Print exposing (LineOffset(..), Print, emptiableLayout, empty, followedBy, inSequence, indented, layout, lineOffset, lineOffsetMerge, linebreak, listCombineLineOffset, space, symbol, toString)
 
 
 type alias Print =
@@ -65,19 +59,9 @@ inSequence printSequence =
                     head
 
 
-bumpIndentBy4 : Print -> Print
-bumpIndentBy4 print =
-    \soFarState -> print { indent = soFarState.indent + 4 }
-
-
-bumpIndentBy2 : Print -> Print
-bumpIndentBy2 print =
-    \soFarState -> print { indent = soFarState.indent + 2 }
-
-
-bumpIndentBy1 : Print -> Print
-bumpIndentBy1 print =
-    \soFarState -> print { indent = soFarState.indent + 1 }
+indented : Int -> Print -> Print
+indented indentationIncrease print =
+    \soFarState -> print { indent = soFarState.indent + indentationIncrease }
 
 
 type LineOffset
@@ -100,8 +84,8 @@ listCombineLineOffset lineOffsets =
     lineOffsets |> List.foldl lineOffsetMerge SameLine
 
 
-layoutTopIndent : LineOffset -> Print
-layoutTopIndent lineOffsetToUse =
+layout : LineOffset -> Print
+layout lineOffsetToUse =
     case lineOffsetToUse of
         SameLine ->
             space
@@ -110,18 +94,8 @@ layoutTopIndent lineOffsetToUse =
             \state -> "\n" ++ String.repeat state.indent " "
 
 
-layoutPositiveIndent : LineOffset -> Print
-layoutPositiveIndent lineOffsetToUse =
-    case lineOffsetToUse of
-        SameLine ->
-            space
-
-        NextLine ->
-            \state -> "\n" ++ String.repeat state.indent " "
-
-
-emptiableLayoutPositiveIndent : LineOffset -> Print
-emptiableLayoutPositiveIndent lineOffsetToUse =
+emptiableLayout : LineOffset -> Print
+emptiableLayout lineOffsetToUse =
     case lineOffsetToUse of
         SameLine ->
             empty
