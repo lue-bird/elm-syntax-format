@@ -3,7 +3,7 @@ module Print exposing
     , symbol
     , empty, space, linebreak
     , followedBy, inSequence
-    , indented, layout, emptiableLayout
+    , indentedByNextMultipleOf4, indented, layout, emptiableLayout
     , LineOffset(..), lineOffsetMerge, listCombineLineOffset, lineOffset
     )
 
@@ -28,7 +28,7 @@ For convenience, these common symbols are exposed as well
 
 ### indent
 
-@docs indented, layout, emptiableLayout
+@docs indentedByNextMultipleOf4, indented, layout, emptiableLayout
 @docs LineOffset, lineOffsetMerge, listCombineLineOffset, lineOffset
 
 -}
@@ -92,9 +92,14 @@ inSequence printSequence =
                     head
 
 
-indented : Int -> Print -> Print
+indented : Int -> (Print -> Print)
 indented indentationIncrease print =
     \soFarState -> print { indent = soFarState.indent + indentationIncrease }
+
+
+indentedByNextMultipleOf4 : Print -> Print
+indentedByNextMultipleOf4 print =
+    \soFarState -> print { indent = soFarState.indent // 4 * 4 + 4 }
 
 
 type LineOffset

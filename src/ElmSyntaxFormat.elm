@@ -140,7 +140,7 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "exposing")
                 |> Print.followedBy
-                    (Print.indented 4
+                    (Print.indentedByNextMultipleOf4
                         (Print.layout lineOffset
                             |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
                         )
@@ -160,7 +160,7 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "exposing")
                 |> Print.followedBy
-                    (Print.indented 4
+                    (Print.indentedByNextMultipleOf4
                         (Print.layout lineOffset
                             |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
                         )
@@ -221,7 +221,7 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "exposing")
                 |> Print.followedBy
-                    (Print.indented 4
+                    (Print.indentedByNextMultipleOf4
                         (Print.layout lineOffset
                             |> Print.followedBy (effectModuleData.exposingList |> exposing_ lineOffset)
                         )
@@ -292,11 +292,11 @@ import_ syntaxImport =
                     Print.empty
 
                 Just syntaxExposing ->
-                    Print.indented 4
+                    Print.indentedByNextMultipleOf4
                         (Print.layout lineOffset
                             |> Print.followedBy (Print.symbol "exposing")
                             |> Print.followedBy
-                                (Print.indented 4
+                                (Print.indentedByNextMultipleOf4
                                     (Print.layout lineOffset
                                         |> Print.followedBy (exposing_ lineOffset syntaxExposing)
                                     )
@@ -416,7 +416,7 @@ exposingCombine a b =
 
 lineOffsetBetweenNodes : Elm.Syntax.Node.Node a -> Elm.Syntax.Node.Node b -> Print.LineOffset
 lineOffsetBetweenNodes (Elm.Syntax.Node.Node earlierRange _) (Elm.Syntax.Node.Node laterRange _) =
-    if earlierRange.end.row == laterRange.start.row then
+    if earlierRange.start.row == laterRange.end.row then
         Print.SameLine
 
     else
@@ -1200,15 +1200,40 @@ typeFunctionNotParenthesized :
     -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
     -> Print
 typeFunctionNotParenthesized inType outType =
+    let
+        fullLineOffset : Print.LineOffset
+        fullLineOffset =
+            lineOffsetBetweenNodes inType outType
+    in
     typeParenthesizedIfFunction inType
         |> Print.followedBy
-            (Print.layout
-                (lineOffsetBetweenNodes inType outType)
+            (Print.inSequence
+                (typeFunctionExpand outType
+                    |> List.map
+                        (\afterArrowTypeNode ->
+                            Print.layout fullLineOffset
+                                |> Print.followedBy (Print.symbol "->")
+                                |> Print.followedBy
+                                    (Print.indentedByNextMultipleOf4
+                                        (Print.layout (lineOffsetInNode afterArrowTypeNode)
+                                            |> Print.followedBy (typeParenthesizedIfFunction afterArrowTypeNode)
+                                        )
+                                    )
+                        )
+                )
             )
-        |> Print.followedBy (Print.symbol "->")
-        |> Print.followedBy (Print.layout (lineOffsetInNode outType))
-        |> Print.followedBy
-            (Print.indented 4 (typeNotParenthesized outType))
+
+
+typeFunctionExpand :
+    Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    -> List (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation)
+typeFunctionExpand typeNode =
+    case typeNode of
+        Elm.Syntax.Node.Node _ (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType) ->
+            inType :: typeFunctionExpand outType
+
+        typeNodeNotFunction ->
+            [ typeNodeNotFunction ]
 
 
 typeIsFunction : Elm.Syntax.TypeAnnotation.TypeAnnotation -> Bool
@@ -1370,7 +1395,7 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                                                 |> Print.followedBy Print.space
                                                 |> Print.followedBy (Print.symbol ":")
                                                 |> Print.followedBy
-                                                    (Print.indented 4
+                                                    (Print.indentedByNextMultipleOf4
                                                         (Print.layout (lineOffsetInNode fieldValue)
                                                             |> Print.followedBy
                                                                 (typeNotParenthesized fieldValue)
@@ -1393,7 +1418,7 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                 |> Print.followedBy (Print.symbol recordVariable)
                 |> Print.followedBy (Print.layout lineOffset)
                 |> Print.followedBy
-                    (Print.indented 4
+                    (Print.indentedByNextMultipleOf4
                         (Print.symbol "|"
                             |> Print.followedBy Print.space
                             |> Print.followedBy
@@ -1405,7 +1430,7 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                                                     |> Print.followedBy Print.space
                                                     |> Print.followedBy (Print.symbol ":")
                                                     |> Print.followedBy
-                                                        (Print.indented 4
+                                                        (Print.indentedByNextMultipleOf4
                                                             (Print.layout (lineOffsetInNode fieldValue)
                                                                 |> Print.followedBy (typeNotParenthesized fieldValue)
                                                             )
@@ -1420,6 +1445,18 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
 
         Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
             typeFunctionNotParenthesized inType outType
+
+
+type alias T a =
+    ( { a : Basics.Int, b : () }
+    , { a | v : List String }
+    , {}
+      -> a
+      ->
+        ( Int
+        , Int
+        )
+    )
 
 
 declarations : List Elm.Syntax.Declaration.Declaration -> Print
@@ -1505,7 +1542,7 @@ declarationDestructuring destructuringPattern destructuringExpression =
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol "=")
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout Print.NextLine
                     |> Print.followedBy (expressionNotParenthesized destructuringExpression)
                 )
@@ -1552,8 +1589,10 @@ declarationTypeAlias syntaxTypeAliasDeclaration =
             )
         |> Print.followedBy (Print.symbol "=")
         |> Print.followedBy
-            (Print.indented 4 (Print.layout Print.NextLine)
-                |> Print.followedBy (typeNotParenthesized syntaxTypeAliasDeclaration.typeAnnotation)
+            (Print.indentedByNextMultipleOf4
+                (Print.layout Print.NextLine
+                    |> Print.followedBy (typeNotParenthesized syntaxTypeAliasDeclaration.typeAnnotation)
+                )
             )
 
 
@@ -1586,7 +1625,7 @@ declarationChoiceType syntaxChoiceTypeDeclaration =
                 )
             )
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout Print.NextLine
                     |> Print.followedBy (Print.symbol "=")
                     |> Print.followedBy Print.space
@@ -1607,7 +1646,7 @@ declarationChoiceType syntaxChoiceTypeDeclaration =
                                         in
                                         Print.symbol (variant.name |> Elm.Syntax.Node.value)
                                             |> Print.followedBy
-                                                (Print.indented 4
+                                                (Print.indentedByNextMultipleOf4
                                                     (Print.inSequence
                                                         (parameterPrints
                                                             |> List.map
@@ -1726,7 +1765,7 @@ declarationExpressionImplementation implementation =
             )
         |> Print.followedBy (Print.symbol "=")
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout Print.NextLine
                     |> Print.followedBy (expressionNotParenthesized implementation.expression)
                 )
@@ -1757,7 +1796,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                     in
                     expressionParenthesizedIfSpaceSeparated applied
                         |> Print.followedBy
-                            (Print.indented 4
+                            (Print.indentedByNextMultipleOf4
                                 (Print.layout (lineOffsetInNode argument0)
                                     |> Print.followedBy (expressionParenthesizedIfSpaceSeparated argument0)
                                     |> Print.followedBy
@@ -1781,11 +1820,11 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
             in
             expressionParenthesizedIfSpaceSeparatedExceptNonParenthesizedOperation left
                 |> Print.followedBy
-                    (Print.indented 4
+                    (Print.indentedByNextMultipleOf4
                         (Print.layout lineOffset
                             |> Print.followedBy (Print.symbol operator)
                             |> Print.followedBy
-                                (Print.indented 4
+                                (Print.indentedByNextMultipleOf4
                                     (Print.layout lineOffset
                                         |> Print.followedBy
                                             (expressionParenthesizedIfSpaceSeparatedExceptNonParenthesizedOperation right)
@@ -1926,7 +1965,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                                                 |> Print.followedBy Print.space
                                                 |> Print.followedBy (Print.symbol "=")
                                                 |> Print.followedBy
-                                                    (Print.indented 4
+                                                    (Print.indentedByNextMultipleOf4
                                                         (Print.layout (lineOffsetInNode fieldValue)
                                                             |> Print.followedBy
                                                                 (expressionNotParenthesized fieldValue)
@@ -1980,7 +2019,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                 |> Print.followedBy (Print.symbol recordVariable)
                 |> Print.followedBy (Print.layout (lineOffsetInRange fullRange))
                 |> Print.followedBy
-                    (Print.indented 4
+                    (Print.indentedByNextMultipleOf4
                         (Print.symbol "|"
                             |> Print.followedBy Print.space
                             |> Print.followedBy
@@ -1992,7 +2031,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                                                     |> Print.followedBy Print.space
                                                     |> Print.followedBy (Print.symbol "=")
                                                     |> Print.followedBy
-                                                        (Print.indented 4
+                                                        (Print.indentedByNextMultipleOf4
                                                             (Print.layout (lineOffsetInNode fieldValue)
                                                                 |> Print.followedBy (expressionNotParenthesized fieldValue)
                                                             )
@@ -2030,7 +2069,7 @@ expressionLambda syntaxLambda =
             )
         |> Print.followedBy (Print.symbol "->")
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout (Print.lineOffset resultPrint))
             )
         |> Print.followedBy resultPrint
@@ -2069,7 +2108,7 @@ expressionIfThenElse condition onTrue onFalse =
     in
     Print.symbol "if"
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout conditionLineOffset
                     |> Print.followedBy conditionPrint
                     |> Print.followedBy (Print.layout conditionLineOffset)
@@ -2077,7 +2116,7 @@ expressionIfThenElse condition onTrue onFalse =
             )
         |> Print.followedBy (Print.symbol "then")
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout onTrueLineOffset
                     |> Print.followedBy onTruePrint
                     |> Print.followedBy (Print.layout onTrueLineOffset)
@@ -2085,7 +2124,7 @@ expressionIfThenElse condition onTrue onFalse =
             )
         |> Print.followedBy (Print.symbol "else")
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout onFalseLineOffset
                     |> Print.followedBy onFalsePrint
                     |> Print.followedBy (Print.layout onFalseLineOffset)
@@ -2102,7 +2141,7 @@ expressionCaseOf syntaxCaseOf =
     in
     Print.symbol "case"
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout casedExpressionLineOffset
                     |> Print.followedBy (expressionNotParenthesized syntaxCaseOf.expression)
                 )
@@ -2111,7 +2150,7 @@ expressionCaseOf syntaxCaseOf =
             (Print.layout casedExpressionLineOffset)
         |> Print.followedBy (Print.symbol "of")
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout Print.NextLine
                     |> Print.followedBy
                         (Print.inSequence
@@ -2130,7 +2169,7 @@ case_ ( Elm.Syntax.Node.Node _ casePattern, caseResult ) =
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol "->")
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout Print.NextLine
                     |> Print.followedBy (expressionNotParenthesized caseResult)
                 )
@@ -2141,7 +2180,7 @@ expressionLetIn : Elm.Syntax.Expression.LetBlock -> Print
 expressionLetIn syntaxLetIn =
     Print.symbol "let"
         |> Print.followedBy
-            (Print.indented 4
+            (Print.indentedByNextMultipleOf4
                 (Print.layout Print.NextLine
                     |> Print.followedBy
                         (Print.inSequence
@@ -2190,7 +2229,7 @@ expressionLetDeclaration letDeclaration =
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "=")
                 |> Print.followedBy
-                    (Print.indented 4
+                    (Print.indentedByNextMultipleOf4
                         (Print.layout Print.NextLine
                             |> Print.followedBy (expressionNotParenthesized destructuredExpression)
                         )
