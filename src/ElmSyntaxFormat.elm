@@ -1091,9 +1091,14 @@ patternNotParenthesized syntaxPattern =
 
 qualifiedNameRef : Elm.Syntax.Pattern.QualifiedNameRef -> Print
 qualifiedNameRef syntaxQualifiedNameRef =
-    case syntaxQualifiedNameRef.moduleName of
+    qualifiedTuple ( syntaxQualifiedNameRef.moduleName, syntaxQualifiedNameRef.name )
+
+
+qualifiedTuple : ( Elm.Syntax.ModuleName.ModuleName, String ) -> Print
+qualifiedTuple ( qualification, unqualified ) =
+    case qualification of
         [] ->
-            Print.symbol syntaxQualifiedNameRef.name
+            Print.symbol unqualified
 
         modulePartHead :: modulePartTail ->
             Print.symbol modulePartHead
@@ -1105,11 +1110,7 @@ qualifiedNameRef syntaxQualifiedNameRef =
                             |> List.intersperse (Print.symbol ".")
                         )
                     )
-
-
-qualifiedTuple : ( Elm.Syntax.ModuleName.ModuleName, String ) -> Print
-qualifiedTuple ( qualification, unqualified ) =
-    qualifiedNameRef { moduleName = qualification, name = unqualified }
+                |> Print.followedBy (Print.symbol unqualified)
 
 
 typeIsSpaceSeparated : Elm.Syntax.TypeAnnotation.TypeAnnotation -> Bool
