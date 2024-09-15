@@ -2094,42 +2094,69 @@ expressionIfThenElse condition onTrue onFalse =
         onTruePrint =
             expressionNotParenthesized onTrue
 
-        onTrueLineOffset : Print.LineOffset
-        onTrueLineOffset =
-            Print.lineOffset onTruePrint
-
         onFalsePrint : Print
         onFalsePrint =
             expressionNotParenthesized onFalse
-
-        onFalseLineOffset : Print.LineOffset
-        onFalseLineOffset =
-            Print.lineOffset onFalsePrint
     in
     Print.symbol "if"
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
                 (Print.layout conditionLineOffset
                     |> Print.followedBy conditionPrint
-                    |> Print.followedBy (Print.layout conditionLineOffset)
                 )
             )
+        |> Print.followedBy (Print.layout conditionLineOffset)
         |> Print.followedBy (Print.symbol "then")
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
-                (Print.layout onTrueLineOffset
+                (Print.layout Print.NextLine
                     |> Print.followedBy onTruePrint
-                    |> Print.followedBy (Print.layout onTrueLineOffset)
+                    |> Print.followedBy Print.linebreak
                 )
             )
+        |> Print.followedBy (Print.layout Print.NextLine)
         |> Print.followedBy (Print.symbol "else")
         |> Print.followedBy
-            (Print.indentedByNextMultipleOf4
-                (Print.layout onFalseLineOffset
-                    |> Print.followedBy onFalsePrint
-                    |> Print.followedBy (Print.layout onFalseLineOffset)
-                )
+            (case expressionToNotParenthesized (onFalse |> Elm.Syntax.Node.value) of
+                Elm.Syntax.Expression.IfBlock onFalseCondition onFalseOnTrue onFalseOnFalse ->
+                    Print.space
+                        |> Print.followedBy
+                            (expressionIfThenElse onFalseCondition onFalseOnTrue onFalseOnFalse)
+
+                _ ->
+                    Print.indentedByNextMultipleOf4
+                        (Print.layout Print.NextLine
+                            |> Print.followedBy onFalsePrint
+                        )
             )
+
+
+expressionToNotParenthesized : Elm.Syntax.Expression.Expression -> Elm.Syntax.Expression.Expression
+expressionToNotParenthesized syntaxExpression =
+    case syntaxExpression of
+        Elm.Syntax.Expression.ParenthesizedExpression (Elm.Syntax.Node.Node _ inParens) ->
+            inParens
+
+        Elm.Syntax.Expression.TupledExpression parts ->
+            case parts of
+                [] ->
+                    Elm.Syntax.Expression.TupledExpression parts
+
+                [ Elm.Syntax.Node.Node _ inParens ] ->
+                    -- should be handled by ParenthesizedExpression
+                    inParens
+
+                [ _, _ ] ->
+                    Elm.Syntax.Expression.TupledExpression parts
+
+                [ _, _, _ ] ->
+                    Elm.Syntax.Expression.TupledExpression parts
+
+                _ :: _ :: _ :: _ :: _ ->
+                    Elm.Syntax.Expression.TupledExpression parts
+
+        syntaxExpressionNotParenthesized ->
+            syntaxExpressionNotParenthesized
 
 
 expressionCaseOf : Elm.Syntax.Expression.CaseBlock -> Print

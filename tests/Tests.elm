@@ -668,4 +668,34 @@ type alias T a =
 """
                 )
             ]
+        , Test.describe "expression"
+            [ Test.test "if-then-else with another if-then-else in the else branch"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if True then
+        0
+
+    else
+        (if False then
+            1
+
+         else
+            2
+        )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    if True then
+        0
+
+    else if False then
+        1
+
+    else
+        2
+"""
+                )
+            ]
         ]
