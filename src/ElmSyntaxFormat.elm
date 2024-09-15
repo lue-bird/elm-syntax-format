@@ -485,6 +485,7 @@ exposing_ lineOffset (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                                 (\(Elm.Syntax.Node.Node _ syntaxExpose) -> expose syntaxExpose)
                                         )
                                     )
+                                |> Print.followedBy (Print.emptiableLayout lineOffset)
             )
         |> Print.followedBy (Print.symbol ")")
 
@@ -494,14 +495,9 @@ commaSeparated lineOffset elements =
     -- TODO inline (and check indentation!)
     Print.inSequence
         (elements
-            |> List.map
-                (\elementPrint ->
-                    elementPrint
-                        |> Print.followedBy
-                            (Print.emptiableLayout lineOffset)
-                )
             |> List.intersperse
-                (Print.symbol ","
+                (Print.emptiableLayout lineOffset
+                    |> Print.followedBy (Print.symbol ",")
                     |> Print.followedBy Print.space
                 )
         )
@@ -1033,14 +1029,21 @@ patternNotParenthesized syntaxPattern =
                         |> Print.followedBy (Print.symbol ")")
 
         Elm.Syntax.Pattern.RecordPattern fields ->
-            Print.symbol "{"
-                |> Print.followedBy Print.space
-                |> Print.followedBy
-                    (commaSeparated Print.SameLine
-                        (fields |> List.map (\(Elm.Syntax.Node.Node _ fieldName) -> Print.symbol fieldName))
-                    )
-                |> Print.followedBy Print.space
-                |> Print.followedBy (Print.symbol "}")
+            case fields of
+                [] ->
+                    Print.symbol "{}"
+
+                field0 :: field1Up ->
+                    Print.symbol "{"
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy
+                            (commaSeparated Print.SameLine
+                                ((field0 :: field1Up)
+                                    |> List.map (\(Elm.Syntax.Node.Node _ fieldName) -> Print.symbol fieldName)
+                                )
+                            )
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy (Print.symbol "}")
 
         Elm.Syntax.Pattern.UnConsPattern (Elm.Syntax.Node.Node _ headPattern) (Elm.Syntax.Node.Node _ tailPattern) ->
             patternParenthesizedIfSpaceSeparated headPattern
@@ -1341,6 +1344,7 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                                     |> List.map (\part -> Print.indented 2 (typeNotParenthesized part))
                                 )
                             )
+                        |> Print.followedBy (Print.layout lineOffset)
                         |> Print.followedBy (Print.symbol ")")
 
         Elm.Syntax.TypeAnnotation.Record fields ->
@@ -1374,6 +1378,7 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                                         )
                                 )
                             )
+                        |> Print.followedBy (Print.layout lineOffset)
                         |> Print.followedBy (Print.symbol "}")
 
         Elm.Syntax.TypeAnnotation.GenericRecord (Elm.Syntax.Node.Node _ recordVariable) (Elm.Syntax.Node.Node _ fields) ->
@@ -1385,7 +1390,7 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
             Print.symbol "{"
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol recordVariable)
-                |> Print.followedBy (Print.layout (lineOffsetInRange fullRange))
+                |> Print.followedBy (Print.layout lineOffset)
                 |> Print.followedBy
                     (Print.indented 4
                         (Print.symbol "|"
@@ -1409,6 +1414,7 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
                                 )
                         )
                     )
+                |> Print.followedBy (Print.layout lineOffset)
                 |> Print.followedBy (Print.symbol "}")
 
         Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
@@ -1882,6 +1888,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                                     |> List.map (\part -> Print.indented 2 (expressionNotParenthesized part))
                                 )
                             )
+                        |> Print.followedBy (Print.layout lineOffset)
                         |> Print.followedBy (Print.symbol ")")
 
         Elm.Syntax.Expression.ParenthesizedExpression inParens ->
@@ -1927,6 +1934,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                                         )
                                 )
                             )
+                        |> Print.followedBy (Print.layout lineOffset)
                         |> Print.followedBy (Print.symbol "}")
 
         Elm.Syntax.Expression.ListExpr elements ->
@@ -1949,6 +1957,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                                         (\element -> Print.indented 2 (expressionNotParenthesized element))
                                 )
                             )
+                        |> Print.followedBy (Print.layout lineOffset)
                         |> Print.followedBy (Print.symbol "]")
 
         Elm.Syntax.Expression.RecordAccess record (Elm.Syntax.Node.Node _ accessedFieldName) ->
@@ -1992,6 +2001,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                                 )
                         )
                     )
+                |> Print.followedBy (Print.layout lineOffset)
                 |> Print.followedBy (Print.symbol "}")
 
         Elm.Syntax.Expression.GLSLExpression glsl ->
