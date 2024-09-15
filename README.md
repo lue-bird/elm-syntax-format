@@ -5,16 +5,17 @@ This could enable some cool stuff like elm-review tests not complaining about wh
 
 ## status
   - [ ] (!) integrate comments in all places elm-format allows
-  - [ ] (!) <| formatting and better right/non-associative operation formatting in general (adjust indentation for left/right etc)
   - [ ] port declaration documentation
   - [x] module header
-  - [x] imports, except:
-    - [ ] group according to doc tags
+      - [ ] exposing members group according to doc tags
+  - [x] imports
   - [x] declaration hulls
   - [x] pattern
       - [ ] add more tests
   - [x] type
-      - [ ] add more tests
+  - [x] expression
+      - [ ] if then else if indentation combine
+      - [ ] (!) <| formatting and better right/non-associative operation formatting in general (adjust indentation for left/right etc)
   - [x] module comment
   - [ ] int, float overflow like elm-format (honestly might not do this for now)
   - [ ] format documentation markdown (honestly might not do this for now)
