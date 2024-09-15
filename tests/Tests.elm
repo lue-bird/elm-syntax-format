@@ -731,5 +731,93 @@ a =
             1
 """
                 )
+            , Test.test "let-in with one destructuring declaration"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let { b } = {b=0} in b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        { b } =
+            { b = 0 }
+    in
+    b
+"""
+                )
+            , Test.test "let-in with one function declaration without type"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let b () = 0 in b ()"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        b () =
+            0
+    in
+    b ()
+"""
+                )
+            , Test.test "let-in with one value declaration without type"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let b = 0 in b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        b =
+            0
+    in
+    b
+"""
+                )
+            , Test.test "let-in with one value declaration with type"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let b:Int
+    
+        b = 0 in b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        b : Int
+        b =
+            0
+    in
+    b
+"""
+                )
+            , Test.test "let-in with multiple destructuring declarations"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let { b } = {b=0}
+        { c } = {c=1}
+    in b+c"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        { b } =
+            { b = 0 }
+
+        { c } =
+            { c = 1 }
+    in
+    b + c
+"""
+                )
             ]
         ]

@@ -2246,7 +2246,7 @@ expressionLetDeclaration letDeclaration =
 
                         Just (Elm.Syntax.Node.Node _ signature) ->
                             declarationSignature signature
-                                |> Print.followedBy Print.linebreak
+                                |> Print.followedBy (Print.layout Print.NextLine)
             in
             maybeSignaturePrint
                 |> Print.followedBy
