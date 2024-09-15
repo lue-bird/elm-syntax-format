@@ -588,7 +588,7 @@ port sendMessage : String -> Cmd msg
         , Test.describe "declaration infix"
             [ Test.test "type on next should be single-line"
                 (\() ->
-                    """port module A exposing (..)
+                    """module A exposing (..)
 infix right 0 (<|) = apL
 infix left  0 (|>) = apR
 infix right 2 (||) = or
@@ -609,7 +609,7 @@ infix right 8 (^)  = pow
 infix left  9 (<<) = composeL
 infix right 9 (>>) = composeR"""
                         |> expectPrintedAs
-                            """port module A exposing (..)
+                            """module A exposing (..)
 
 infix right 0 (<|) = apL
 infix left  0 (|>) = apR
@@ -630,6 +630,41 @@ infix left  7 (//) = idiv
 infix right 8 (^) = pow
 infix left  9 (<<) = composeL
 infix right 9 (>>) = composeR
+"""
+                )
+            ]
+        , Test.describe "type"
+            [ Test.test "all kinds, single-line"
+                (\() ->
+                    """module A exposing (..)
+type alias T a =
+    ({a : Basics.Int, b : ()}, { a | v : List String }, {}->a  ->(Int ,Int))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T a =
+    ( { a : Basics.Int, b : () }, { a | v : List String }, {} -> a -> ( Int, Int ) )
+"""
+                )
+            , Test.test "all kinds, multi-line"
+                (\() ->
+                    """module A exposing (..)
+type alias T a =
+    ({a : Basics.Int, b : ()}, { a | v : List String }, {}->a  ->(Int ,Int
+    ))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T a =
+    ( { a : Basics.Int, b : () }
+    , { a | v : List String }
+    , {}
+      -> a
+      ->
+        ( Int
+        , Int
+        )
+    )
 """
                 )
             ]
