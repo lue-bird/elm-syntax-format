@@ -1562,13 +1562,13 @@ infixDirection : Elm.Syntax.Infix.InfixDirection -> Print
 infixDirection syntaxInfixDirection =
     case syntaxInfixDirection of
         Elm.Syntax.Infix.Left ->
-            Print.symbol "left"
+            Print.symbol "left "
 
         Elm.Syntax.Infix.Right ->
             Print.symbol "right"
 
         Elm.Syntax.Infix.Non ->
-            Print.symbol "non"
+            Print.symbol "non  "
 
 
 declarationExpression : Elm.Syntax.Expression.Function -> Print
