@@ -1417,15 +1417,56 @@ typeNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxType) =
 
 declarations : List Elm.Syntax.Declaration.Declaration -> Print
 declarations syntaxDeclarations =
-    Print.inSequence
-        (syntaxDeclarations
-            |> List.map declaration
-            |> List.intersperse
-                (Print.linebreak
-                    |> Print.followedBy Print.linebreak
-                    |> Print.followedBy Print.linebreak
-                )
-        )
+    case syntaxDeclarations of
+        [] ->
+            Print.empty
+
+        declaration0 :: declarations1Up ->
+            declaration declaration0
+                |> Print.followedBy
+                    (Print.inSequence
+                        (declarations1Up |> List.map linebreaksFollowedByDeclaration)
+                    )
+
+
+linebreaksFollowedByDeclaration : Elm.Syntax.Declaration.Declaration -> Print
+linebreaksFollowedByDeclaration syntaxDeclaration =
+    case syntaxDeclaration of
+        Elm.Syntax.Declaration.FunctionDeclaration syntaxExpressionDeclaration ->
+            Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy (declarationExpression syntaxExpressionDeclaration)
+
+        Elm.Syntax.Declaration.AliasDeclaration syntaxTypeAliasDeclaration ->
+            Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy (declarationTypeAlias syntaxTypeAliasDeclaration)
+
+        Elm.Syntax.Declaration.CustomTypeDeclaration syntaxChoiceTypeDeclaration ->
+            Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy (declarationChoiceType syntaxChoiceTypeDeclaration)
+
+        Elm.Syntax.Declaration.PortDeclaration signature ->
+            Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy (declarationPort signature)
+
+        Elm.Syntax.Declaration.InfixDeclaration syntaxInfixDeclaration ->
+            Print.linebreak
+                |> Print.followedBy (declarationInfix syntaxInfixDeclaration)
+
+        Elm.Syntax.Declaration.Destructuring (Elm.Syntax.Node.Node _ destructuringPattern) destructuringExpression ->
+            -- invalid syntax
+            Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy
+                    (declarationDestructuring destructuringPattern destructuringExpression)
 
 
 declaration : Elm.Syntax.Declaration.Declaration -> Print
@@ -1448,15 +1489,20 @@ declaration syntaxDeclaration =
 
         Elm.Syntax.Declaration.Destructuring (Elm.Syntax.Node.Node _ destructuringPattern) destructuringExpression ->
             -- invalid syntax
-            patternParenthesizedIfSpaceSeparated destructuringPattern
-                |> Print.followedBy Print.space
-                |> Print.followedBy (Print.symbol "=")
-                |> Print.followedBy
-                    (Print.indented 4
-                        (Print.layout Print.NextLine
-                            |> Print.followedBy (expressionNotParenthesized destructuringExpression)
-                        )
-                    )
+            declarationDestructuring destructuringPattern destructuringExpression
+
+
+declarationDestructuring : Elm.Syntax.Pattern.Pattern -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Print
+declarationDestructuring destructuringPattern destructuringExpression =
+    patternParenthesizedIfSpaceSeparated destructuringPattern
+        |> Print.followedBy Print.space
+        |> Print.followedBy (Print.symbol "=")
+        |> Print.followedBy
+            (Print.indented 4
+                (Print.layout Print.NextLine
+                    |> Print.followedBy (expressionNotParenthesized destructuringExpression)
+                )
+            )
 
 
 declarationPort : Elm.Syntax.Signature.Signature -> Print

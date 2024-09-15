@@ -585,4 +585,52 @@ port sendMessage : String -> Cmd msg
 """
                 )
             ]
+        , Test.describe "declaration infix"
+            [ Test.test "type on next should be single-line"
+                (\() ->
+                    """port module A exposing (..)
+infix right 0 (<|) = apL
+infix left  0 (|>) = apR
+infix right 2 (||) = or
+infix right 3 (&&) = and
+infix non   4 (==) = eq
+infix non   4 (/=) = neq
+infix non   4 (<)  = lt
+infix non   4 (>)  = gt
+infix non   4 (<=) = le
+infix non   4 (>=) = ge
+infix right 5 (++) = append
+infix left  6 (+)  = add
+infix left  6 (-)  = sub
+infix left  7 (*)  = mul
+infix left  7 (/)  = fdiv
+infix left  7 (//) = idiv
+infix right 8 (^)  = pow
+infix left  9 (<<) = composeL
+infix right 9 (>>) = composeR"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+infix right 0 (<|) = apL
+infix left  0 (|>) = apR
+infix right 2 (||) = or
+infix right 3 (&&) = and
+infix non   4 (==) = eq
+infix non   4 (/=) = neq
+infix non   4 (<) = lt
+infix non   4 (>) = gt
+infix non   4 (<=) = le
+infix non   4 (>=) = ge
+infix right 5 (++) = append
+infix left  6 (+) = add
+infix left  6 (-) = sub
+infix left  7 (*) = mul
+infix left  7 (/) = fdiv
+infix left  7 (//) = idiv
+infix right 8 (^) = pow
+infix left  9 (<<) = composeL
+infix right 9 (>>) = composeR
+"""
+                )
+            ]
         ]
