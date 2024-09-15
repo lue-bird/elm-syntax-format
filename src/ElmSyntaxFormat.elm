@@ -2183,7 +2183,10 @@ expressionCaseOf syntaxCaseOf =
                         (Print.inSequence
                             (syntaxCaseOf.cases
                                 |> List.map case_
-                                |> List.intersperse Print.linebreak
+                                |> List.intersperse
+                                    (Print.linebreak
+                                        |> Print.followedBy (Print.layout Print.NextLine)
+                                    )
                             )
                         )
                 )

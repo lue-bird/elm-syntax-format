@@ -697,5 +697,39 @@ a =
         2
 """
                 )
+            , Test.test "case-of with one case"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case () of
+        () -> 0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case () of
+        () ->
+            0
+"""
+                )
+            , Test.test "case-of with multiple cases"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case 0 == 1 of
+        True -> 0
+        Basics.False -> 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case 0 == 1 of
+        True ->
+            0
+
+        Basics.False ->
+            1
+"""
+                )
             ]
         ]
