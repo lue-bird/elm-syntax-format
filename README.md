@@ -14,7 +14,6 @@ This could enable some cool stuff like elm-review tests not complaining about wh
       - [ ] add more tests
   - [x] type
   - [x] expression
-      - [ ] if then else if indentation combine
       - [ ] (!) <| formatting and better right/non-associative operation formatting in general (adjust indentation for left/right etc)
   - [x] module comment
   - [ ] int, float overflow like elm-format (honestly might not do this for now)
