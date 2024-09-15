@@ -909,7 +909,47 @@ cappedInt int =
 
 cappedHex : Int -> Print
 cappedHex int =
-    Print.symbol (intToHexString int)
+    let
+        maybeSignPrint : Print
+        maybeSignPrint =
+            if int < 0 then
+                Print.symbol "-"
+
+            else
+                Print.empty
+
+        intAbs : Int
+        intAbs =
+            int |> Basics.abs
+
+        digitCountToPrint : Int
+        digitCountToPrint =
+            if intAbs <= 0xFF then
+                2
+
+            else if intAbs <= 0xFFFF then
+                4
+
+            else if intAbs <= 0xFFFFFFFF then
+                8
+
+            else
+                16
+    in
+    maybeSignPrint
+        |> Print.followedBy (Print.symbol "0x")
+        |> Print.followedBy
+            (Print.symbol (intToHexString int |> stringResizePadLeftWith0s digitCountToPrint))
+
+
+stringResizePadLeftWith0s : Int -> (String -> String)
+stringResizePadLeftWith0s length unpaddedString =
+    if length < (unpaddedString |> String.length) then
+        String.left length unpaddedString
+
+    else
+        String.repeat (length - (unpaddedString |> String.length)) "0"
+            ++ unpaddedString
 
 
 patternNotParenthesized : Elm.Syntax.Pattern.Pattern -> Print
