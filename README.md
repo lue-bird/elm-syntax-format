@@ -11,13 +11,13 @@ This could enable some cool stuff like elm-review tests not complaining about wh
   - [x] module header
   - [x] imports, except:
     - [ ] group according to doc tags
-    - [ ] check how overlaps with default imports are handled in elm-format
   - [x] declaration hulls
   - [x] pattern
       - [ ] add more tests
   - [x] type
       - [ ] add more tests
   - [x] module comment
+  - [ ] format documentation markdown (honestly might not do this for now)
 
 ## considering for the future
   - create a _very_ lenient parser
