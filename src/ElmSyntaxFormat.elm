@@ -1817,19 +1817,36 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                 lineOffset : Print.LineOffset
                 lineOffset =
                     lineOffsetInRange fullRange
+
+                operationExpanded :
+                    { leftest : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+                    , operatorExpressionChain :
+                        List
+                            { operator : String
+                            , expression : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+                            }
+                    }
+                operationExpanded =
+                    expressionOperationExpand left operator right
             in
-            expressionParenthesizedIfSpaceSeparatedExceptNonParenthesizedOperation left
+            expressionParenthesizedIfSpaceSeparatedExceptApplication operationExpanded.leftest
                 |> Print.followedBy
                     (Print.indentedByNextMultipleOf4
-                        (Print.layout lineOffset
-                            |> Print.followedBy (Print.symbol operator)
-                            |> Print.followedBy
-                                (Print.indentedByNextMultipleOf4
-                                    (Print.layout lineOffset
-                                        |> Print.followedBy
-                                            (expressionParenthesizedIfSpaceSeparatedExceptNonParenthesizedOperation right)
+                        (Print.inSequence
+                            (operationExpanded.operatorExpressionChain
+                                |> List.map
+                                    (\operatorExpression ->
+                                        Print.layout lineOffset
+                                            |> Print.followedBy (Print.symbol operatorExpression.operator)
+                                            |> Print.followedBy
+                                                (Print.indentedByNextMultipleOf4
+                                                    (Print.space
+                                                        |> Print.followedBy
+                                                            (expressionParenthesizedIfSpaceSeparatedExceptApplication operatorExpression.expression)
+                                                    )
+                                                )
                                     )
-                                )
+                            )
                         )
                     )
 
@@ -2046,6 +2063,59 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
 
         Elm.Syntax.Expression.GLSLExpression glsl ->
             Print.symbol glsl
+
+
+expressionOperationExpand :
+    Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+    -> String
+    -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+    ->
+        { leftest : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+        , operatorExpressionChain :
+            List
+                { operator : String
+                , expression : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+                }
+        }
+expressionOperationExpand left operator right =
+    let
+        rightExpanded =
+            case right of
+                Elm.Syntax.Node.Node _ (Elm.Syntax.Expression.OperatorApplication rightOperator _ rightLeft rightRight) ->
+                    let
+                        rightOperationExpanded :
+                            { leftest : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+                            , operatorExpressionChain :
+                                List
+                                    { operator : String
+                                    , expression : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+                                    }
+                            }
+                        rightOperationExpanded =
+                            expressionOperationExpand rightLeft rightOperator rightRight
+                    in
+                    { operator = operator, expression = rightOperationExpanded.leftest }
+                        :: rightOperationExpanded.operatorExpressionChain
+
+                _ ->
+                    [ { operator = operator, expression = right } ]
+    in
+    case left of
+        Elm.Syntax.Node.Node _ (Elm.Syntax.Expression.OperatorApplication leftOperator _ leftLeft leftRight) ->
+            let
+                leftOperationExpanded =
+                    expressionOperationExpand leftLeft leftOperator leftRight
+            in
+            { leftest = leftOperationExpanded.leftest
+            , operatorExpressionChain =
+                leftOperationExpanded.operatorExpressionChain
+                    ++ rightExpanded
+            }
+
+        _ ->
+            { leftest = left
+            , operatorExpressionChain = rightExpanded
+            }
 
 
 expressionLambda : Elm.Syntax.Expression.Lambda -> Print
@@ -2284,23 +2354,28 @@ expressionParenthesizedIfSpaceSeparated expressionNode =
         expressionNotParenthesized expressionNode
 
 
-expressionParenthesizedIfSpaceSeparatedExceptNonParenthesizedOperation : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Print
-expressionParenthesizedIfSpaceSeparatedExceptNonParenthesizedOperation expressionNode =
+expressionParenthesizedIfSpaceSeparatedExceptApplication : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Print
+expressionParenthesizedIfSpaceSeparatedExceptApplication expressionNode =
     let
         (Elm.Syntax.Node.Node _ syntaxExpression) =
             expressionNode
     in
-    if expressionIsSpaceSeparated syntaxExpression && not (expressionIsParenthesizedOperation syntaxExpression) then
-        let
-            expressionPrint : Print
-            expressionPrint =
+    if expressionIsSpaceSeparated syntaxExpression then
+        case syntaxExpression of
+            Elm.Syntax.Expression.Application _ ->
                 expressionNotParenthesized expressionNode
-        in
-        Print.symbol "("
-            |> Print.followedBy (Print.indented 1 expressionPrint)
-            |> Print.followedBy
-                (Print.emptiableLayout (Print.lineOffset expressionPrint))
-            |> Print.followedBy (Print.symbol ")")
+
+            _ ->
+                let
+                    expressionPrint : Print
+                    expressionPrint =
+                        expressionNotParenthesized expressionNode
+                in
+                Print.symbol "("
+                    |> Print.followedBy (Print.indented 1 expressionPrint)
+                    |> Print.followedBy
+                        (Print.emptiableLayout (Print.lineOffset expressionPrint))
+                    |> Print.followedBy (Print.symbol ")")
 
     else
         expressionNotParenthesized expressionNode

@@ -819,5 +819,61 @@ a =
     b + c
 """
                 )
+            , Test.test "|> pipeline, multi-line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity |> identity identity |>
+    identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        |> identity identity
+        |> identity
+"""
+                )
+            , Test.test "|> pipeline, single-line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity |> identity identity |> identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity |> identity identity |> identity
+"""
+                )
+            , Test.test "various operations, single-line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    3 + (4 * 5 // 3) // 5 - 0 |> identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    3 + (4 * 5 // 3) // 5 - 0 |> identity
+"""
+                )
+            , Test.test "various operations, multi-line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    3 + (4 * 5 // 3) // 5 - 0 |>
+    identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    3
+        + (4 * 5 // 3)
+        // 5
+        - 0
+        |> identity
+"""
+                )
             ]
         ]
