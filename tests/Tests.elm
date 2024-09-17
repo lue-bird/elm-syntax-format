@@ -962,4 +962,27 @@ a =
 """
                 )
             ]
+        , Test.describe "pattern"
+            [ Test.test "various patterns"
+                (\() ->
+                    """module A exposing (..)
+a x =
+    case x of
+        (({y,z}::tail), Maybe.Nothing as nothing, (Just[""],0)) ->
+            0
+        _ ->
+            1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a x =
+    case x of
+        ( { y, z } :: tail, Maybe.Nothing as nothing, ( Just [ "" ], 0 ) ) ->
+            0
+
+        _ ->
+            1
+"""
+                )
+            ]
         ]
