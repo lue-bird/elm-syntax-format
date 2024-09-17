@@ -35,7 +35,6 @@ import Unicode
 
 module_ : Elm.Syntax.File.File -> Print
 module_ syntaxModule =
-    -- TODO comments
     let
         maybeModuleDocumentation : Maybe (Elm.Syntax.Node.Node String)
         maybeModuleDocumentation =
@@ -1835,7 +1834,6 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                 leftestPrint =
                     expressionParenthesizedIfSpaceSeparatedExceptApplication operationExpanded.leftest
             in
-            -- TODO only remove lambda parens if last in chain
             leftestPrint
                 |> Print.followedBy
                     (List.foldr
