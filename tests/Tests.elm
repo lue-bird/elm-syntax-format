@@ -846,6 +846,92 @@ a =
     identity |> identity identity |> identity
 """
                 )
+            , Test.test "<| pipeline, multi-line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity identity <|
+    identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <|
+        identity identity <|
+            identity
+"""
+                )
+            , Test.test "<| pipeline with multi-line application part"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity
+    identity <| identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <|
+        identity
+            identity
+        <|
+            identity
+"""
+                )
+            , Test.test "<| pipeline with multi-line lambda part"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| (\\_ -> (identity
+    )) <| identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <|
+        (\\_ ->
+            identity
+        )
+        <|
+            identity
+"""
+                )
+            , Test.test "<| pipeline, single-line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity identity <| identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <| identity identity <| identity
+"""
+                )
+            , Test.test "<| pipeline, lambda as the rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity identity <| (\\_ -> identity)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <| identity identity <| \\_ -> identity
+"""
+                )
+            , Test.test "<| pipeline, lambda as not the rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| ((\\_ -> identity)) <| identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <| (\\_ -> identity) <| identity
+"""
+                )
             , Test.test "various operations, single-line"
                 (\() ->
                     """module A exposing (..)

@@ -14,7 +14,6 @@ This could enable some cool stuff like elm-review tests not complaining about wh
       - [ ] add more tests
   - [x] type
   - [x] expression
-      - [ ] <| formatting
   - [x] module comment
   - [ ] int, float overflow like elm-format (honestly might not do this for now)
   - [ ] format documentation markdown (honestly might not do this for now)
