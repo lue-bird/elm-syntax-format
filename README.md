@@ -7,16 +7,19 @@ This could enable some cool stuff like elm-review tests not complaining about wh
   - [ ] (!) integrate comments in all places elm-format allows
   - [ ] port declaration documentation
   - [x] module header
-      - [ ] exposing members group according to doc tags
   - [x] imports
   - [x] declaration hulls
   - [x] pattern
-      - [ ] add more tests
   - [x] type
   - [x] expression
   - [x] module comment
   - [ ] int, float overflow like elm-format (honestly might not do this for now)
   - [ ] format documentation markdown (honestly might not do this for now)
+
+
+## known deviations due to missing information in elm-syntax
+  - ranges of `then` and `of` are needed to determine whether they should be on the next line or at the end of last line
+  - `"""` and `"` aren't differentiated
 
 ## considering for the future
   - create a _very_ lenient parser

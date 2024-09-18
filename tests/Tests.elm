@@ -412,6 +412,73 @@ import Dummy
 
 """
                 )
+            , Test.test "exposing multiple, invalid @docs, multiline"
+                (\() ->
+                    """module A exposing ((||), B, C(..), a
+    )
+{-| A
+
+@docs (&&)
+@docs b
+@docs
+@docsa
+
+-}
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing
+    ( (||)
+    , B
+    , C(..)
+    , a
+    )
+
+{-| A
+
+@docs (&&)
+@docs b
+@docs
+@docsa
+
+-}
+
+import Dummy
+
+
+
+"""
+                )
+            , Test.test "exposing multiple with @docs tags, not covering all exposes"
+                (\() ->
+                    """module A exposing ((||), B, C(..), a)
+{-| A
+
+@docs (&&)
+@docs b
+@docs a, B
+
+-}
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing
+    ( a, B
+    , (||), C(..)
+    )
+
+{-| A
+
+@docs (&&)
+@docs b
+@docs a, B
+
+-}
+
+import Dummy
+
+
+
+"""
+                )
             ]
         , Test.describe "module documentation"
             [ Test.test "before imports"

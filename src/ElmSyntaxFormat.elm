@@ -29,7 +29,7 @@ import Elm.Syntax.Signature
 import Elm.Syntax.Type
 import Elm.Syntax.TypeAlias
 import Elm.Syntax.TypeAnnotation
-import Print exposing (LineOffset, Print)
+import Print exposing (Print)
 import Unicode
 
 
@@ -39,6 +39,28 @@ module_ syntaxModule =
         maybeModuleDocumentation : Maybe (Elm.Syntax.Node.Node String)
         maybeModuleDocumentation =
             moduleDocumentation syntaxModule
+
+        commentsAndPortDocumentationComments : List (Elm.Syntax.Node.Node String)
+        commentsAndPortDocumentationComments =
+            case maybeModuleDocumentation of
+                Nothing ->
+                    syntaxModule.comments
+
+                Just syntaxModuleDocumentation ->
+                    syntaxModule.comments
+                        |> List.filter (\comment -> comment /= syntaxModuleDocumentation)
+
+        atDocsLines : List (List String)
+        atDocsLines =
+            case maybeModuleDocumentation of
+                Nothing ->
+                    []
+
+                Just (Elm.Syntax.Node.Node _ syntaxModuleDocumentation) ->
+                    syntaxModuleDocumentation
+                        |> moduleDocumentationParse
+                        |> .whileAtDocsLines
+                        |> List.map .atDocsLine
 
         maybeModuleDocumentationPrint : Print
         maybeModuleDocumentationPrint =
@@ -69,7 +91,7 @@ module_ syntaxModule =
     in
     syntaxModule.moduleDefinition
         |> Elm.Syntax.Node.value
-        |> moduleHeader
+        |> moduleHeader atDocsLines
         |> Print.followedBy maybeModuleDocumentationPrint
         |> Print.followedBy importsPrint
         |> Print.followedBy Print.linebreak
@@ -124,14 +146,163 @@ moduleDocumentationBeforeCutOffLine cutOffLine comments =
                 moduleDocumentationBeforeCutOffLine cutOffLine restOfComments
 
 
-moduleHeader : Elm.Syntax.Module.Module -> Print
-moduleHeader syntaxModuleHeader =
+atDocsLineToExposesAndRemaining :
+    List String
+    -> List Elm.Syntax.Exposing.TopLevelExpose
+    ->
+        { remainingExposes : List Elm.Syntax.Exposing.TopLevelExpose
+        , exposes : List Elm.Syntax.Exposing.TopLevelExpose
+        }
+atDocsLineToExposesAndRemaining atDocsLine remainingExposes =
+    atDocsLine
+        |> List.foldr
+            (\exposeAsAtDocsString soFar ->
+                let
+                    toExposeReferencedByAtDocsString : Elm.Syntax.Exposing.TopLevelExpose -> Maybe Elm.Syntax.Exposing.TopLevelExpose
+                    toExposeReferencedByAtDocsString ex =
+                        if (ex |> exposeToAtDocsString) == exposeAsAtDocsString then
+                            Just ex
+
+                        else
+                            Nothing
+                in
+                case soFar.remainingExposes |> listFirstJustMap toExposeReferencedByAtDocsString of
+                    Nothing ->
+                        soFar
+
+                    Just exposeReferencedByAtDocsString ->
+                        { remainingExposes =
+                            soFar.remainingExposes
+                                |> List.filter (\ex -> ex /= exposeReferencedByAtDocsString)
+                        , exposes = exposeReferencedByAtDocsString :: soFar.exposes
+                        }
+            )
+            { remainingExposes = remainingExposes
+            , exposes = []
+            }
+
+
+exposingMaybeGroupedByAtDocsLines :
+    List (List String)
+    -> Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing
+    -> Print
+exposingMaybeGroupedByAtDocsLines atDocsLines (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
+    case syntaxExposing of
+        Elm.Syntax.Exposing.All _ ->
+            Print.symbol "("
+                |> Print.followedBy (Print.symbol "..")
+                |> Print.followedBy (Print.symbol ")")
+
+        Elm.Syntax.Exposing.Explicit exposingSet ->
+            case exposingSet |> exposeListToNormal of
+                [] ->
+                    Print.symbol "()"
+
+                [ Elm.Syntax.Node.Node _ onlySyntaxExpose ] ->
+                    Print.symbol "("
+                        |> Print.followedBy (expose onlySyntaxExpose)
+                        |> Print.followedBy (Print.symbol ")")
+
+                expose0 :: expose1 :: expose2Up ->
+                    case atDocsLines of
+                        atDocsLine0 :: atDocsLine1Up ->
+                            let
+                                atDocsExposeLines :
+                                    { remainingExposes : List Elm.Syntax.Exposing.TopLevelExpose
+                                    , atDocsExposeLines : List (List Elm.Syntax.Exposing.TopLevelExpose)
+                                    }
+                                atDocsExposeLines =
+                                    (atDocsLine0 :: atDocsLine1Up)
+                                        |> List.foldr
+                                            (\atDocsLine soFar ->
+                                                let
+                                                    atDocsExposeLine :
+                                                        { remainingExposes : List Elm.Syntax.Exposing.TopLevelExpose
+                                                        , exposes : List Elm.Syntax.Exposing.TopLevelExpose
+                                                        }
+                                                    atDocsExposeLine =
+                                                        atDocsLineToExposesAndRemaining atDocsLine soFar.remainingExposes
+                                                in
+                                                { atDocsExposeLines =
+                                                    atDocsExposeLine.exposes :: soFar.atDocsExposeLines
+                                                , remainingExposes = atDocsExposeLine.remainingExposes
+                                                }
+                                            )
+                                            { remainingExposes =
+                                                (expose0 :: expose1 :: expose2Up)
+                                                    |> exposeListToNormal
+                                                    |> List.map Elm.Syntax.Node.value
+                                            , atDocsExposeLines = []
+                                            }
+                            in
+                            case atDocsExposeLines.atDocsExposeLines |> List.filter (\line -> line /= []) of
+                                [] ->
+                                    exposingMulti (lineOffsetInRange exposingRange) expose0 expose1 expose2Up
+
+                                atDocsExposeLine0 :: atDocsExposeLine1Up ->
+                                    Print.symbol "("
+                                        |> Print.followedBy Print.space
+                                        |> Print.followedBy
+                                            (Print.inSequence
+                                                ((atDocsExposeLine0 :: atDocsExposeLine1Up)
+                                                    |> List.map
+                                                        (\atDocsLine ->
+                                                            Print.inSequence
+                                                                (atDocsLine
+                                                                    |> List.map expose
+                                                                    |> List.intersperse
+                                                                        (Print.symbol ","
+                                                                            |> Print.followedBy Print.space
+                                                                        )
+                                                                )
+                                                        )
+                                                    |> List.intersperse
+                                                        (Print.layout Print.NextLine
+                                                            |> Print.followedBy (Print.symbol ",")
+                                                            |> Print.followedBy Print.space
+                                                        )
+                                                )
+                                            )
+                                        |> Print.followedBy (Print.layout Print.NextLine)
+                                        |> Print.followedBy
+                                            (case atDocsExposeLines.remainingExposes of
+                                                [] ->
+                                                    Print.empty
+
+                                                remainingExpose0 :: remainingExpose1Up ->
+                                                    Print.symbol ","
+                                                        |> Print.followedBy Print.space
+                                                        |> Print.followedBy
+                                                            (Print.inSequence
+                                                                ((remainingExpose0 :: remainingExpose1Up)
+                                                                    |> List.map expose
+                                                                    |> List.intersperse
+                                                                        (Print.symbol ","
+                                                                            |> Print.followedBy Print.space
+                                                                        )
+                                                                )
+                                                            )
+                                                        |> Print.followedBy (Print.layout Print.NextLine)
+                                            )
+                                        |> Print.followedBy (Print.symbol ")")
+
+                        [] ->
+                            exposingMulti (lineOffsetInRange exposingRange) expose0 expose1 expose2Up
+
+
+moduleHeader : List (List String) -> Elm.Syntax.Module.Module -> Print
+moduleHeader atDocsLines syntaxModuleHeader =
     case syntaxModuleHeader of
         Elm.Syntax.Module.NormalModule defaultModuleData ->
             let
-                lineOffset : LineOffset
+                exposingPrint : Print
+                exposingPrint =
+                    defaultModuleData.exposingList
+                        |> exposingMaybeGroupedByAtDocsLines atDocsLines
+
+                lineOffset : Print.LineOffset
                 lineOffset =
-                    defaultModuleData.exposingList |> exposingLineOffset
+                    exposingPrint |> Print.lineOffset
             in
             Print.symbol "module"
                 |> Print.followedBy Print.space
@@ -141,15 +312,20 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy
                     (Print.indentedByNextMultipleOf4
                         (Print.layout lineOffset
-                            |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
+                            |> Print.followedBy exposingPrint
                         )
                     )
 
         Elm.Syntax.Module.PortModule defaultModuleData ->
             let
-                lineOffset : LineOffset
+                exposingPrint : Print
+                exposingPrint =
+                    defaultModuleData.exposingList
+                        |> exposingMaybeGroupedByAtDocsLines atDocsLines
+
+                lineOffset : Print.LineOffset
                 lineOffset =
-                    defaultModuleData.exposingList |> exposingLineOffset
+                    exposingPrint |> Print.lineOffset
             in
             Print.symbol "port"
                 |> Print.followedBy Print.space
@@ -161,15 +337,20 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy
                     (Print.indentedByNextMultipleOf4
                         (Print.layout lineOffset
-                            |> Print.followedBy (defaultModuleData.exposingList |> exposing_ lineOffset)
+                            |> Print.followedBy exposingPrint
                         )
                     )
 
         Elm.Syntax.Module.EffectModule effectModuleData ->
             let
-                lineOffset : LineOffset
+                exposingPrint : Print
+                exposingPrint =
+                    effectModuleData.exposingList
+                        |> exposingMaybeGroupedByAtDocsLines atDocsLines
+
+                lineOffset : Print.LineOffset
                 lineOffset =
-                    effectModuleData.exposingList |> exposingLineOffset
+                    exposingPrint |> Print.lineOffset
             in
             Print.symbol "effect"
                 |> Print.followedBy Print.space
@@ -222,9 +403,25 @@ moduleHeader syntaxModuleHeader =
                 |> Print.followedBy
                     (Print.indentedByNextMultipleOf4
                         (Print.layout lineOffset
-                            |> Print.followedBy (effectModuleData.exposingList |> exposing_ lineOffset)
+                            |> Print.followedBy exposingPrint
                         )
                     )
+
+
+exposeToAtDocsString : Elm.Syntax.Exposing.TopLevelExpose -> String
+exposeToAtDocsString syntaxExpose =
+    case syntaxExpose of
+        Elm.Syntax.Exposing.InfixExpose operatorSymbol ->
+            "(" ++ operatorSymbol ++ ")"
+
+        Elm.Syntax.Exposing.FunctionExpose name ->
+            name
+
+        Elm.Syntax.Exposing.TypeOrAliasExpose name ->
+            name
+
+        Elm.Syntax.Exposing.TypeExpose choiceTypeExpose ->
+            choiceTypeExpose.name
 
 
 imports : List Elm.Syntax.Import.Import -> Print
@@ -241,7 +438,7 @@ imports syntaxImports =
         )
 
 
-exposingLineOffset : Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing -> LineOffset
+exposingLineOffset : Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing -> Print.LineOffset
 exposingLineOffset syntaxExposing =
     case syntaxExposing of
         Elm.Syntax.Node.Node _ (Elm.Syntax.Exposing.All _) ->
@@ -261,16 +458,6 @@ exposingLineOffset syntaxExposing =
 
 import_ : Elm.Syntax.Import.Import -> Print
 import_ syntaxImport =
-    let
-        lineOffset : Print.LineOffset
-        lineOffset =
-            case syntaxImport.exposingList of
-                Nothing ->
-                    Print.SameLine
-
-                Just syntaxExposing ->
-                    syntaxExposing |> exposingLineOffset
-    in
     Print.symbol "import"
         |> Print.followedBy Print.space
         |> Print.followedBy (moduleName (Elm.Syntax.Node.value syntaxImport.moduleName))
@@ -291,13 +478,22 @@ import_ syntaxImport =
                     Print.empty
 
                 Just syntaxExposing ->
+                    let
+                        exposingPrint : Print
+                        exposingPrint =
+                            exposing_ syntaxExposing
+
+                        lineOffset : Print.LineOffset
+                        lineOffset =
+                            Print.lineOffset exposingPrint
+                    in
                     Print.indentedByNextMultipleOf4
                         (Print.layout lineOffset
                             |> Print.followedBy (Print.symbol "exposing")
                             |> Print.followedBy
                                 (Print.indentedByNextMultipleOf4
                                     (Print.layout lineOffset
-                                        |> Print.followedBy (exposing_ lineOffset syntaxExposing)
+                                        |> Print.followedBy exposingPrint
                                     )
                                 )
                         )
@@ -328,7 +524,15 @@ importToNormal syntaxImport =
     { moduleName = syntaxImport.moduleName
     , moduleAlias = syntaxImport.moduleAlias
     , exposingList =
-        syntaxImport.exposingList |> exposingToNormal
+        case syntaxImport.exposingList of
+            Nothing ->
+                Nothing
+
+            Just (Elm.Syntax.Node.Node exposingRange syntaxExposing) ->
+                Just
+                    (Elm.Syntax.Node.Node exposingRange
+                        (syntaxExposing |> exposingToNormal)
+                    )
     }
 
 
@@ -343,23 +547,14 @@ exposeListToNormal syntaxExposeList =
         |> List.map Elm.Syntax.Node.empty
 
 
-exposingToNormal :
-    Maybe (Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing)
-    -> Maybe (Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing)
+exposingToNormal : Elm.Syntax.Exposing.Exposing -> Elm.Syntax.Exposing.Exposing
 exposingToNormal syntaxExposing =
     case syntaxExposing of
-        Just (Elm.Syntax.Node.Node exposingAllRange (Elm.Syntax.Exposing.All allRange)) ->
-            Just (Elm.Syntax.Node.Node exposingAllRange (Elm.Syntax.Exposing.All allRange))
+        Elm.Syntax.Exposing.All allRange ->
+            Elm.Syntax.Exposing.All allRange
 
-        Just (Elm.Syntax.Node.Node exposingExplicitRange (Elm.Syntax.Exposing.Explicit exposeSet)) ->
-            Just
-                (Elm.Syntax.Node.Node
-                    exposingExplicitRange
-                    (Elm.Syntax.Exposing.Explicit (exposeSet |> exposeListToNormal))
-                )
-
-        Nothing ->
-            Nothing
+        Elm.Syntax.Exposing.Explicit exposeSet ->
+            Elm.Syntax.Exposing.Explicit (exposeSet |> exposeListToNormal)
 
 
 importsMerge : Elm.Syntax.Import.Import -> Elm.Syntax.Import.Import -> Elm.Syntax.Import.Import
@@ -450,43 +645,100 @@ lineOffsetInRange range =
         Print.NextLine
 
 
-exposing_ : LineOffset -> Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing -> Print
-exposing_ lineOffset (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
+exposing_ : Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing -> Print
+exposing_ (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
+    case syntaxExposing of
+        Elm.Syntax.Exposing.All _ ->
+            Print.symbol "("
+                |> Print.followedBy (Print.symbol "..")
+                |> Print.followedBy (Print.symbol ")")
+
+        Elm.Syntax.Exposing.Explicit exposingSet ->
+            case exposingSet of
+                [] ->
+                    Print.symbol "()"
+
+                [ Elm.Syntax.Node.Node _ onlySyntaxExpose ] ->
+                    Print.symbol "("
+                        |> Print.followedBy (expose onlySyntaxExpose)
+                        |> Print.followedBy (Print.symbol ")")
+
+                expose0 :: expose1 :: expose2Up ->
+                    exposingMulti (lineOffsetInRange exposingRange) expose0 expose1 expose2Up
+
+
+exposingMulti :
+    Print.LineOffset
+    -> Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose
+    -> Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose
+    -> List (Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose)
+    -> Print
+exposingMulti lineOffset expose0 expose1 expose2Up =
     Print.symbol "("
         |> Print.followedBy
-            (case syntaxExposing of
-                Elm.Syntax.Exposing.All _ ->
-                    Print.symbol ".."
+            (case lineOffset of
+                Print.SameLine ->
+                    Print.empty
 
-                Elm.Syntax.Exposing.Explicit exposingSet ->
-                    case exposingSet of
-                        [] ->
-                            Print.empty
-
-                        [ Elm.Syntax.Node.Node _ onlySyntaxExpose ] ->
-                            expose onlySyntaxExpose
-
-                        _ :: _ :: _ ->
-                            (case lineOffset of
-                                Print.SameLine ->
-                                    Print.empty
-
-                                Print.NextLine ->
-                                    Print.space
-                            )
-                                |> Print.followedBy
-                                    (commaSeparated
-                                        lineOffset
-                                        (exposingSet
-                                            |> List.sortWith
-                                                (\(Elm.Syntax.Node.Node _ a) (Elm.Syntax.Node.Node _ b) -> exposeCompare a b)
-                                            |> List.map
-                                                (\(Elm.Syntax.Node.Node _ syntaxExpose) -> expose syntaxExpose)
-                                        )
-                                    )
-                                |> Print.followedBy (Print.emptiableLayout lineOffset)
+                Print.NextLine ->
+                    Print.space
             )
+        |> Print.followedBy
+            (commaSeparated
+                lineOffset
+                ((expose0 :: expose1 :: expose2Up)
+                    |> List.map
+                        (\(Elm.Syntax.Node.Node _ syntaxExpose) -> expose syntaxExpose)
+                )
+            )
+        |> Print.followedBy (Print.emptiableLayout lineOffset)
         |> Print.followedBy (Print.symbol ")")
+
+
+atDocsStringLength : Int
+atDocsStringLength =
+    "@docs" |> String.length
+
+
+moduleDocumentationParse :
+    String
+    ->
+        { whileAtDocsLines : List { rawBefore : String, atDocsLine : List String }
+        , rawAfterAtDocsLines : String
+        }
+moduleDocumentationParse moduleDocumentationContent =
+    let
+        parsed :
+            { rawSinceAtDocs : String
+            , finishedBlocks : List { rawBefore : String, atDocsLine : List String }
+            }
+        parsed =
+            moduleDocumentationContent
+                |> String.lines
+                |> List.foldl
+                    (\line soFar ->
+                        if String.startsWith "@docs " line then
+                            { rawSinceAtDocs = ""
+                            , finishedBlocks =
+                                { rawBefore = soFar.rawSinceAtDocs
+                                , atDocsLine =
+                                    String.slice atDocsStringLength (line |> String.length) line
+                                        |> String.split ","
+                                        |> List.map String.trim
+                                }
+                                    :: soFar.finishedBlocks
+                            }
+
+                        else
+                            { rawSinceAtDocs = soFar.rawSinceAtDocs ++ "\n"
+                            , finishedBlocks = soFar.finishedBlocks
+                            }
+                    )
+                    { rawSinceAtDocs = "", finishedBlocks = [] }
+    in
+    { whileAtDocsLines = parsed.finishedBlocks |> List.reverse
+    , rawAfterAtDocsLines = parsed.rawSinceAtDocs
+    }
 
 
 commaSeparated : Print.LineOffset -> List Print -> Print
@@ -1789,7 +2041,7 @@ expressionNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
 
                 applied :: argument0 :: argument1Up ->
                     let
-                        argument1UpLineOffset : LineOffset
+                        argument1UpLineOffset : Print.LineOffset
                         argument1UpLineOffset =
                             lineOffsetInRange fullRange
                     in
@@ -2622,3 +2874,18 @@ expressionIsSpaceSeparated syntaxExpression =
 
         Elm.Syntax.Expression.GLSLExpression _ ->
             False
+
+
+listFirstJustMap : (a -> Maybe b) -> (List a -> Maybe b)
+listFirstJustMap elementToMaybe list =
+    case list of
+        [] ->
+            Nothing
+
+        head :: tail ->
+            case elementToMaybe head of
+                Nothing ->
+                    listFirstJustMap elementToMaybe tail
+
+                Just b ->
+                    Just b
