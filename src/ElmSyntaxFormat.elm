@@ -1,16 +1,15 @@
 module ElmSyntaxFormat exposing
-    ( module_, moduleName, exposing_, expose, imports, import_
+    ( module_, moduleName, exposing_, expose, imports, import_, moduleLevelComments, comments, comment
     , declarations, declaration, declarationChoiceType, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
-    , patternNotParenthesized, patternParenthesizedIfSpaceSeparated, typeNotParenthesized
-    , case_
+    , case_, patternNotParenthesized, patternParenthesizedIfSpaceSeparated, typeNotParenthesized
     )
 
 {-| Pretty printing an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/) tree
 in a way consistent with [`elm-format`](https://github.com/avh4/elm-format).
 
-@docs module_, moduleName, exposing_, expose, imports, import_
+@docs module_, moduleName, exposing_, expose, imports, import_, moduleLevelComments, comments, comment
 @docs declarations, declaration, declarationChoiceType, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
-@docs expression, patternNotParenthesized, patternParenthesizedIfSpaceSeparated, typeNotParenthesized
+@docs expression, case_, patternNotParenthesized, patternParenthesizedIfSpaceSeparated, typeNotParenthesized
 
 -}
 
@@ -48,7 +47,7 @@ module_ syntaxModule =
 
                 Just syntaxModuleDocumentation ->
                     syntaxModule.comments
-                        |> List.filter (\comment -> comment /= syntaxModuleDocumentation)
+                        |> List.filter (\c -> c /= syntaxModuleDocumentation)
 
         atDocsLines : List (List String)
         atDocsLines =
@@ -98,8 +97,7 @@ module_ syntaxModule =
         |> Print.followedBy Print.linebreak
         |> Print.followedBy
             (syntaxModule.declarations
-                |> List.map Elm.Syntax.Node.value
-                |> declarations
+                |> declarations commentsAndPortDocumentationComments
             )
         |> Print.followedBy Print.linebreak
 
@@ -126,21 +124,21 @@ moduleDocumentation ast =
 
 
 moduleDocumentationBeforeCutOffLine : Int -> List (Elm.Syntax.Node.Node String) -> Maybe (Elm.Syntax.Node.Node String)
-moduleDocumentationBeforeCutOffLine cutOffLine comments =
-    case comments of
+moduleDocumentationBeforeCutOffLine cutOffLine allComments =
+    case allComments of
         [] ->
             Nothing
 
-        comment :: restOfComments ->
+        headComment :: restOfComments ->
             let
                 (Elm.Syntax.Node.Node range content) =
-                    comment
+                    headComment
             in
             if range.start.row > cutOffLine then
                 Nothing
 
             else if String.startsWith "{-|" content then
-                Just comment
+                Just headComment
 
             else
                 moduleDocumentationBeforeCutOffLine cutOffLine restOfComments
@@ -693,6 +691,159 @@ exposingMulti lineOffset expose0 expose1 expose2Up =
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
         |> Print.followedBy (Print.symbol ")")
+
+
+{-| `--` or `{- -}` comments placed _within a declaration_.
+For top-level comments: [`moduleLevelComments`](#moduleLevelComments)
+-}
+comments : List String -> Print
+comments syntaxComments =
+    Print.inSequence
+        (syntaxComments
+            |> List.map
+                (\syntaxComment ->
+                    comment syntaxComment
+                        |> Print.followedBy (Print.layout Print.NextLine)
+                )
+        )
+
+
+moduleLevelComments : List String -> Print
+moduleLevelComments syntaxComments =
+    case syntaxComments of
+        [] ->
+            Print.empty
+
+        comment0 :: comment1Up ->
+            comment comment0
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy
+                    (Print.inSequence
+                        (comment1Up
+                            |> List.map
+                                (\syntaxComment ->
+                                    if syntaxComment == "{--}" then
+                                        Print.linebreak
+                                            |> Print.followedBy Print.linebreak
+                                            |> Print.followedBy (comment syntaxComment)
+                                            |> Print.followedBy Print.linebreak
+
+                                    else
+                                        comment syntaxComment
+                                            |> Print.followedBy Print.linebreak
+                                )
+                        )
+                    )
+
+
+comment : String -> Print
+comment syntaxComment =
+    if syntaxComment == "{--}" then
+        Print.symbol "{--}"
+
+    else if syntaxComment |> String.startsWith "--" then
+        Print.symbol (syntaxComment |> String.trimRight)
+
+    else
+        -- comment starts with {-
+        let
+            commentContent : List String
+            commentContent =
+                syntaxComment
+                    |> -- {-
+                       String.dropLeft 2
+                    |> -- -}
+                       String.dropRight 2
+                    |> String.lines
+                    |> List.map String.trim
+                    |> listDropLastIfIs (\line -> line == "")
+
+            -- TODO drop last if == ""
+        in
+        Print.symbol "{-"
+            |> Print.followedBy
+                -- if original commentContent contains >= 2 lines, keep but
+                (case commentContent of
+                    -- only spaces
+                    [] ->
+                        Print.symbol "  "
+
+                    [ singleLine ] ->
+                        Print.space
+                            |> Print.followedBy (Print.symbol singleLine)
+                            |> Print.followedBy Print.space
+
+                    firstLine :: secondLine :: thirdLineUp ->
+                        (case firstLine of
+                            "" ->
+                                Print.layout Print.NextLine
+
+                            lineNotEmpty ->
+                                Print.space
+                                    |> Print.followedBy (Print.symbol lineNotEmpty)
+                                    |> Print.followedBy (Print.layout Print.NextLine)
+                        )
+                            |> Print.followedBy
+                                (Print.inSequence
+                                    ((secondLine :: thirdLineUp)
+                                        |> List.map
+                                            (\line ->
+                                                case line of
+                                                    "" ->
+                                                        Print.layout Print.NextLine
+
+                                                    lineNotEmpty ->
+                                                        Print.symbol "   "
+                                                            |> Print.followedBy (Print.symbol lineNotEmpty)
+                                                            |> Print.followedBy (Print.layout Print.NextLine)
+                                            )
+                                    )
+                                )
+                )
+            |> Print.followedBy (Print.symbol "-}")
+
+
+listDropLastIfIs : (a -> Bool) -> List a -> List a
+listDropLastIfIs lastElementShouldBeRemoved list =
+    case list of
+        [] ->
+            []
+
+        [ onlyElement ] ->
+            if onlyElement |> lastElementShouldBeRemoved then
+                []
+
+            else
+                [ onlyElement ]
+
+        element0 :: element1 :: element2Up ->
+            element0 :: listDropLastIfIs lastElementShouldBeRemoved (element1 :: element2Up)
+
+
+commentsInRange : Elm.Syntax.Range.Range -> List (Elm.Syntax.Node.Node String) -> List String
+commentsInRange range sortedComments =
+    case sortedComments of
+        [] ->
+            []
+
+        (Elm.Syntax.Node.Node headCommentRange headComment) :: tailComments ->
+            case Elm.Syntax.Range.compareLocations headCommentRange.start range.start of
+                LT ->
+                    commentsInRange range tailComments
+
+                EQ ->
+                    headComment :: commentsInRange range tailComments
+
+                GT ->
+                    case Elm.Syntax.Range.compareLocations headCommentRange.end range.end of
+                        GT ->
+                            []
+
+                        LT ->
+                            headComment :: commentsInRange range tailComments
+
+                        EQ ->
+                            headComment :: commentsInRange range tailComments
 
 
 atDocsStringLength : Int
@@ -1710,22 +1861,72 @@ type alias T a =
     )
 
 
-declarations : List Elm.Syntax.Declaration.Declaration -> Print
-declarations syntaxDeclarations =
+declarations :
+    List (Elm.Syntax.Node.Node String)
+    -> List (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration)
+    -> Print
+declarations syntaxComments syntaxDeclarations =
     case syntaxDeclarations of
         [] ->
+            -- invalid syntax
             Print.empty
 
-        declaration0 :: declarations1Up ->
+        (Elm.Syntax.Node.Node declaration0Range declaration0) :: declarations1Up ->
             declaration declaration0
                 |> Print.followedBy
-                    (Print.inSequence
-                        (declarations1Up |> List.map linebreaksFollowedByDeclaration)
+                    (declarations1Up
+                        |> List.foldl
+                            (\(Elm.Syntax.Node.Node declarationRange syntaxDeclaration) soFar ->
+                                { print =
+                                    soFar.print
+                                        |> Print.followedBy
+                                            (case commentsInRange { start = soFar.previousRange.end, end = declarationRange.start } syntaxComments of
+                                                comment0 :: comment1Up ->
+                                                    Print.linebreak
+                                                        |> Print.followedBy Print.linebreak
+                                                        |> Print.followedBy Print.linebreak
+                                                        |> Print.followedBy Print.linebreak
+                                                        |> Print.followedBy (moduleLevelComments (comment0 :: comment1Up))
+                                                        |> Print.followedBy
+                                                            (if listFilledLast ( comment0, comment1Up ) == "{--}" then
+                                                                -- don't ask me why elm-format formats it that way
+                                                                Print.empty
+
+                                                             else
+                                                                Print.linebreak
+                                                                    |> Print.followedBy Print.linebreak
+                                                            )
+                                                        |> Print.followedBy (declaration syntaxDeclaration)
+
+                                                [] ->
+                                                    linebreaksFollowedByDeclaration syntaxComments
+                                                        syntaxDeclaration
+                                            )
+                                , previousRange = declarationRange
+                                }
+                            )
+                            { print = Print.empty
+                            , previousRange = declaration0Range
+                            }
+                        |> .print
                     )
 
 
-linebreaksFollowedByDeclaration : Elm.Syntax.Declaration.Declaration -> Print
-linebreaksFollowedByDeclaration syntaxDeclaration =
+listFilledLast : ( a, List a ) -> a
+listFilledLast ( head, tail ) =
+    case tail of
+        [] ->
+            head
+
+        tailHead :: tailTail ->
+            listFilledLast ( tailHead, tailTail )
+
+
+linebreaksFollowedByDeclaration :
+    List (Elm.Syntax.Node.Node String)
+    -> Elm.Syntax.Declaration.Declaration
+    -> Print
+linebreaksFollowedByDeclaration syntaxComments syntaxDeclaration =
     case syntaxDeclaration of
         Elm.Syntax.Declaration.FunctionDeclaration syntaxExpressionDeclaration ->
             Print.linebreak

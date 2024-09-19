@@ -1052,4 +1052,163 @@ a x =
 """
                 )
             ]
+        , Test.describe "comment"
+            [ Test.test "module level {--} has new lines in front if preceded by other comments"
+                (\() ->
+                    """module A exposing (..)
+a =
+    0
+--
+{--}
+--
+b =
+    1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    0
+
+
+
+--
+
+
+{--}
+--
+
+
+b =
+    1
+"""
+                )
+            , Test.test "module level {--} eats linebreaks after if not followed by comments"
+                (\() ->
+                    """module A exposing (..)
+a =
+    0
+--
+{--}
+b =
+    1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    0
+
+
+
+--
+
+
+{--}
+b =
+    1
+"""
+                )
+            , Test.test "{- -} trimmed same-line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    0
+{-x
+-}
+b =
+    1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    0
+
+
+
+{- x -}
+
+
+b =
+    1
+"""
+                )
+            , Test.test "{- -} only one linebreak"
+                (\() ->
+                    """module A exposing (..)
+a =
+    0
+{-
+-}
+b =
+    1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    0
+
+
+
+{-  -}
+
+
+b =
+    1
+"""
+                )
+            , Test.test "{- -} multiple linebreaks and spaces"
+                (\() ->
+                    """module A exposing (..)
+a =
+    0
+{-   
+    
+-}
+b =
+    1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    0
+
+
+
+{-
+
+-}
+
+
+b =
+    1
+"""
+                )
+            , Test.test "{- -} multiple linebreaks, some characters and spaces"
+                (\() ->
+                    """module A exposing (..)
+a =
+    0
+{-   x   
+    
+a-}
+b =
+    1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    0
+
+
+
+{- x
+
+   a
+-}
+
+
+b =
+    1
+"""
+                )
+            ]
         ]
