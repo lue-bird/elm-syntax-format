@@ -16,17 +16,14 @@ import Docs.ReviewAtDocs
 import Docs.ReviewLinksAndSections
 import Docs.UpToDateReadmeLinks
 import EqualsCaseable
-import MultipleAppendToConcat
 import NoAlways
+import NoCatchAllForSpecificRemainingPatterns
 import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoDeprecated
 import NoDuplicatePorts
 import NoExposingEverything
 import NoForbiddenWords
-import NoFunctionOutsideOfModules
-import NoImportAs
-import NoImportingEverything
 import NoMissingTypeAnnotation
 import NoMissingTypeAnnotationInLetIn
 import NoMissingTypeExpose
@@ -41,7 +38,6 @@ import NoUnoptimizedRecursion
 import NoUnsafeDivision
 import NoUnsafePorts
 import NoUnsortedCases
-import NoUnsortedLetDeclarations
 import NoUnsortedTopLevelDeclarations
 import NoUnused.CustomTypeConstructorArgs
 import NoUnused.CustomTypeConstructors
@@ -52,6 +48,7 @@ import NoUnused.Patterns
 import NoUnused.Variables
 import NoUnusedPorts
 import OnlyAllSingleUseTypeVarsEndWith_
+import Review.Documentation.CodeSnippet
 import Review.ImportSimple
 import Review.OpaqueType
 import Review.Pattern.As
@@ -70,6 +67,8 @@ import VariablesBetweenCaseOf.AccessInCases
 config : List Review.Rule.Rule
 config =
     [ -- ## documentation
+      -- enable on a per-project basis
+      --, Review.Documentation.CodeSnippet.check
       Docs.ReviewLinksAndSections.rule
     , Docs.ReviewAtDocs.rule
     , Docs.NoMissing.rule
@@ -87,32 +86,11 @@ config =
     , NoUnusedPorts.rule
     , Simplify.rule
         (Simplify.defaults |> Simplify.expectNaN)
-    , NoSinglePatternCase.rule
-        (NoSinglePatternCase.fixInArgument
-            |> NoSinglePatternCase.ifAsPatternRequired
-                (NoSinglePatternCase.fixInLetInstead
-                    |> NoSinglePatternCase.andIfNoLetExists
-                        NoSinglePatternCase.createNewLet
-                )
-        )
-    , MultipleAppendToConcat.rule MultipleAppendToConcat.PipeRightList
 
     -- ## sort
-    , NoUnsortedCases.rule
-        (NoUnsortedCases.defaults
-            |> -- i would want to sort by complexity last (number of arguments (+ their respective complexity))
-               -- but such an ordering is not supported by the rule
-               NoUnsortedCases.sortOnlyMatchingTypes (\_ _ -> False)
-            |> NoUnsortedCases.doNotSortLiterals
-        )
     , NoUnsortedTopLevelDeclarations.rule
         (NoUnsortedTopLevelDeclarations.sortTopLevelDeclarations
             |> NoUnsortedTopLevelDeclarations.glueHelpersAfter
-            |> NoUnsortedTopLevelDeclarations.glueDependenciesBeforeFirstDependent
-        )
-    , NoUnsortedLetDeclarations.rule
-        (NoUnsortedLetDeclarations.sortLetDeclarations
-            |> NoUnsortedLetDeclarations.glueDependenciesBeforeFirstDependent
         )
 
     -- ## limit
@@ -169,6 +147,14 @@ config =
                   ]
                     |> String.concat
                 ]
+      , ReviewPipelineStyles.parentheticalApplicationPipelines
+            |> ReviewPipelineStyles.forbid
+            |> ReviewPipelineStyles.that
+                (ReviewPipelineStyles.Predicates.haveAnyNonInputStepThatIs
+                    ReviewPipelineStyles.Predicates.aSemanticallyInfixFunction
+                )
+            |> ReviewPipelineStyles.andTryToFixThemBy ReviewPipelineStyles.Fixes.convertingToRightPizza
+            |> ReviewPipelineStyles.andCallThem "parenthetical application of a semantically-infix function"
       ]
         |> ReviewPipelineStyles.rule
     , UseCamelCase.rule
@@ -181,14 +167,10 @@ config =
     , OnlyAllSingleUseTypeVarsEndWith_.rule
     , NoRecordAliasConstructor.rule
     , NoExposingEverything.rule
-    , NoForbiddenWords.rule forbiddenWords
-    , NoImportingEverything.rule []
-    , NoImportAs.rule
+    , NoForbiddenWords.rule [ "REPLACEME", "TODO", "- []" ]
     , NoMissingTypeAnnotation.rule
     , NoMissingTypeAnnotationInLetIn.rule
     , NoMissingTypeExpose.rule
-    , NoFunctionOutsideOfModules.rule
-        [ ( forbiddenFunctionOrValues, [] ) ]
     , NoAlways.rule
     , NoDebug.Log.rule
         |> Review.Rule.ignoreErrorsForDirectories [ "tests/" ]
@@ -211,39 +193,9 @@ config =
     , Review.Pattern.As.forbid
     , Review.PhantomType.forbid
     , Review.OpaqueType.forbid
+    , NoCatchAllForSpecificRemainingPatterns.rule
     ]
         |> List.map (Review.Rule.ignoreErrorsForDirectories [ "VerifyExamples/" ])
-
-
-forbiddenFunctionOrValues : List String
-forbiddenFunctionOrValues =
-    -- these should one day be fully fledged
-    [ -- use tuple destructuring instead
-      -- for improved descriptiveness
-      "Tuple.first"
-    , "Tuple.second"
-    , -- use `mapFirst |> mapSecond` instead
-      "Tuple.mapBoth"
-    , -- use `String.indexes` instead
-      "String.indices"
-    , -- use a `case` instead
-      "String.isEmpty"
-    , "List.isEmpty"
-    , "List.tail"
-
-    -- use a `Set`, `Dict` or `List.sortWith`
-    , "List.sort"
-    , "List.sortBy"
-    ]
-
-
-forbiddenWords : List String
-forbiddenWords =
-    [ [ "REPLACEME", "FIXME", "REMOVEME", "CHECKME" ]
-    , [ "TOREPLACE", "TOFIX", "TOREMOVE", "TOCHECK", "TODO" ]
-    , [ "- []" ]
-    ]
-        |> List.concat
 
 
 toCamelCase : String -> String
