@@ -2638,10 +2638,45 @@ declarationExpressionImplementation syntaxComments implementation =
         parameterPrints : List Print
         parameterPrints =
             implementation.arguments
-                |> List.map
-                    (\parameterPattern ->
-                        patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
+                |> List.foldl
+                    (\parameterPattern soFar ->
+                        let
+                            parameterPrintedRange : Elm.Syntax.Range.Range
+                            parameterPrintedRange =
+                                if parameterPattern |> Elm.Syntax.Node.value |> patternIsSpaceSeparated then
+                                    parameterPattern |> Elm.Syntax.Node.range
+
+                                else
+                                    parameterPattern |> patternToNotParenthesized |> Elm.Syntax.Node.range
+                        in
+                        { prints =
+                            ((case
+                                commentsInRange
+                                    { start = soFar.end, end = parameterPrintedRange.start }
+                                    syntaxComments
+                              of
+                                [] ->
+                                    Print.empty
+
+                                comment0 :: comment1Up ->
+                                    comments (comment0 :: comment1Up)
+                                        |> Print.followedBy (Print.layout Print.NextLine)
+                             )
+                                |> Print.followedBy
+                                    (patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern)
+                            )
+                                :: soFar.prints
+                        , end = parameterPrintedRange.end
+                        }
                     )
+                    { prints = []
+                    , end =
+                        implementation.name
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    }
+                |> .prints
+                |> List.reverse
 
         argumentsLineOffset : Print.LineOffset
         argumentsLineOffset =
@@ -2654,7 +2689,7 @@ declarationExpressionImplementation syntaxComments implementation =
                     { start =
                         implementation.name
                             |> Elm.Syntax.Node.range
-                            |> .start
+                            |> .end
                     , end =
                         implementation.expression
                             |> Elm.Syntax.Node.range

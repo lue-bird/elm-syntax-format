@@ -1058,16 +1058,48 @@ a =
         |> identity
 """
                 )
-            , Test.test "comments between last argument and result"
+            , Test.test "comments between parameters"
                 (\() ->
                     """module A exposing (..)
-a argument {- 0 -} =
+a parameterA {--} parameterB =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    parameterA
+    {--}
+    parameterB
+    =
+    0
+"""
+                )
+            , Test.test "comments before first parameter"
+                (\() ->
+                    """module A exposing (..)
+a {--} parameterA parameterB =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    {--}
+    parameterA
+    parameterB
+    =
+    0
+"""
+                )
+            , Test.test "comments between last parameter and result"
+                (\() ->
+                    """module A exposing (..)
+a parameter {- 0 -} =
     {- 1 -}
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
-a argument =
+a parameter =
     {- 0 -}
     {- 1 -}
     0
