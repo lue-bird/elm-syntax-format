@@ -2635,18 +2635,17 @@ declarationExpressionImplementation :
     -> Print
 declarationExpressionImplementation syntaxComments implementation =
     let
-        argumentPrints : List Print
-        argumentPrints =
+        parameterPrints : List Print
+        parameterPrints =
             implementation.arguments
                 |> List.map
                     (\parameterPattern ->
                         patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
-                            |> Print.followedBy Print.space
                     )
 
         argumentsLineOffset : Print.LineOffset
         argumentsLineOffset =
-            Print.listCombineLineOffset (argumentPrints |> List.map Print.lineOffset)
+            Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
 
         rangeBetweenArgumentsAndResult : Elm.Syntax.Range.Range
         rangeBetweenArgumentsAndResult =
@@ -2679,10 +2678,10 @@ declarationExpressionImplementation syntaxComments implementation =
                 (Print.layout argumentsLineOffset
                     |> Print.followedBy
                         (Print.inSequence
-                            (implementation.arguments
+                            (parameterPrints
                                 |> List.map
-                                    (\parameterPattern ->
-                                        patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
+                                    (\parameterPrint ->
+                                        parameterPrint
                                             |> Print.followedBy (Print.layout argumentsLineOffset)
                                     )
                             )
