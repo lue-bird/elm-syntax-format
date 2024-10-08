@@ -1380,19 +1380,19 @@ patternIsSpaceSeparated syntaxPattern =
 
         Elm.Syntax.Pattern.TuplePattern parts ->
             case parts of
-                [ _, _ ] ->
-                    False
-
-                [ _, _, _ ] ->
-                    False
+                [ Elm.Syntax.Node.Node _ inParens ] ->
+                    -- should be covered by ParenthesizedPattern
+                    patternIsSpaceSeparated inParens
 
                 [] ->
                     -- should be covered by UnitPattern
                     False
 
-                [ Elm.Syntax.Node.Node _ inParens ] ->
-                    -- should be covered by ParenthesizedPattern
-                    patternIsSpaceSeparated inParens
+                [ _, _ ] ->
+                    False
+
+                [ _, _, _ ] ->
+                    False
 
                 _ :: _ :: _ :: _ :: _ ->
                     -- invalid syntax
@@ -2647,6 +2647,31 @@ declarationExpressionImplementation syntaxComments implementation =
         argumentsLineOffset : Print.LineOffset
         argumentsLineOffset =
             Print.listCombineLineOffset (argumentPrints |> List.map Print.lineOffset)
+
+        rangeBetweenArgumentsAndResult : Elm.Syntax.Range.Range
+        rangeBetweenArgumentsAndResult =
+            case implementation.arguments of
+                [] ->
+                    { start =
+                        implementation.name
+                            |> Elm.Syntax.Node.range
+                            |> .start
+                    , end =
+                        implementation.expression
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    }
+
+                parameter0 :: parameter1Up ->
+                    { start =
+                        listFilledLast ( parameter0, parameter1Up )
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    , end =
+                        implementation.expression
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    }
     in
     Print.symbol (implementation.name |> Elm.Syntax.Node.value)
         |> Print.followedBy
@@ -2665,6 +2690,15 @@ declarationExpressionImplementation syntaxComments implementation =
                     |> Print.followedBy (Print.symbol "=")
                     |> Print.followedBy
                         (Print.layout Print.NextLine
+                            |> Print.followedBy
+                                (case commentsInRange rangeBetweenArgumentsAndResult syntaxComments of
+                                    [] ->
+                                        Print.empty
+
+                                    comment0 :: comment1Up ->
+                                        comments (comment0 :: comment1Up)
+                                            |> Print.followedBy (Print.layout Print.NextLine)
+                                )
                             |> Print.followedBy
                                 (expressionNotParenthesized syntaxComments
                                     implementation.expression

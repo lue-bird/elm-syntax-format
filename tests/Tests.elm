@@ -1058,6 +1058,36 @@ a =
         |> identity
 """
                 )
+            , Test.test "comments between last argument and result"
+                (\() ->
+                    """module A exposing (..)
+a argument {- 0 -} =
+    {- 1 -}
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a argument =
+    {- 0 -}
+    {- 1 -}
+    0
+"""
+                )
+            , Test.test "comments between implementation name and result"
+                (\() ->
+                    """module A exposing (..)
+a {- 0 -} =
+    {- 1 -}
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    {- 0 -}
+    {- 1 -}
+    0
+"""
+                )
             ]
         , Test.describe "pattern"
             [ Test.test "various patterns"
