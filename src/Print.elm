@@ -35,9 +35,7 @@ For convenience, these common symbols are exposed as well
 
 
 type alias Print =
-    { indent : Int
-    }
-    -> String
+    { indent : Int } -> String
 
 
 toString : Print -> String
