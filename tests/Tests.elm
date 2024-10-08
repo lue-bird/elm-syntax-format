@@ -1081,6 +1081,55 @@ a x =
             1
 """
                 )
+            , Test.test "parenthesized with comments only before"
+                (\() ->
+                    """module A exposing (..)
+a ({--}_ as argument) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    ({--}
+     _ as argument
+    )
+    =
+    0
+"""
+                )
+            , Test.test "parenthesized with comments only after"
+                (\() ->
+                    """module A exposing (..)
+a (_ as argument{--}) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    (_ as argument
+     {--}
+    )
+    =
+    0
+"""
+                )
+            , Test.test "parenthesized with comments before and after"
+                (\() ->
+                    """module A exposing (..)
+a ({--}_ as argument{--}) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    ({--}
+     _ as argument
+     {--}
+    )
+    =
+    0
+"""
+                )
             ]
         , Test.describe "comment"
             [ Test.test "module level {--} has new lines in front if preceded by other comments"

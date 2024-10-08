@@ -1276,15 +1276,75 @@ expose syntaxExpose =
                         |> Print.followedBy (Print.symbol "(..)")
 
 
-patternParenthesizedIfSpaceSeparated : Elm.Syntax.Pattern.Pattern -> Print
-patternParenthesizedIfSpaceSeparated syntaxPattern =
-    if patternIsSpaceSeparated syntaxPattern then
+patternParenthesizedIfSpaceSeparated :
+    List (Elm.Syntax.Node.Node String)
+    -> Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+    -> Print
+patternParenthesizedIfSpaceSeparated syntaxComments syntaxPattern =
+    if patternIsSpaceSeparated (syntaxPattern |> Elm.Syntax.Node.value) then
+        let
+            (Elm.Syntax.Node.Node innerRange _) =
+                syntaxPattern |> patternToNotParenthesized
+
+            innerPrint : Print
+            innerPrint =
+                patternNotParenthesized syntaxComments syntaxPattern
+
+            commentsBeforeInner : List String
+            commentsBeforeInner =
+                commentsInRange
+                    { start = (syntaxPattern |> Elm.Syntax.Node.range).start
+                    , end = innerRange.start
+                    }
+                    syntaxComments
+
+            commentsAfterInner : List String
+            commentsAfterInner =
+                commentsInRange
+                    { start = innerRange.end
+                    , end = (syntaxPattern |> Elm.Syntax.Node.range).end
+                    }
+                    syntaxComments
+        in
         Print.symbol "("
-            |> Print.followedBy (patternNotParenthesized syntaxPattern)
+            |> Print.followedBy
+                (case commentsBeforeInner of
+                    [] ->
+                        case commentsAfterInner of
+                            [] ->
+                                Print.indented 1 innerPrint
+                                    |> Print.followedBy
+                                        (Print.layout (innerPrint |> Print.lineOffset))
+
+                            comment0AfterInner :: comment1UpAfterInner ->
+                                Print.indented 1
+                                    (innerPrint
+                                        |> Print.followedBy (Print.layout Print.NextLine)
+                                        |> Print.followedBy (comments (comment0AfterInner :: comment1UpAfterInner))
+                                    )
+                                    |> Print.followedBy (Print.layout Print.NextLine)
+
+                    comment0BeforeInner :: comment1UpBeforeInner ->
+                        Print.indented 1
+                            (comments (comment0BeforeInner :: comment1UpBeforeInner)
+                                |> Print.followedBy (Print.layout Print.NextLine)
+                                |> Print.followedBy innerPrint
+                                |> Print.followedBy
+                                    (case commentsAfterInner of
+                                        [] ->
+                                            Print.empty
+
+                                        comment0AfterInner :: comment1UpAfterInner ->
+                                            Print.layout Print.NextLine
+                                                |> Print.followedBy (comments (comment0AfterInner :: comment1UpAfterInner))
+                                    )
+                            )
+                            |> Print.followedBy (Print.layout Print.NextLine)
+                )
             |> Print.followedBy (Print.symbol ")")
 
     else
-        patternNotParenthesized syntaxPattern
+        patternNotParenthesized syntaxComments syntaxPattern
 
 
 patternIsSpaceSeparated : Elm.Syntax.Pattern.Pattern -> Bool
@@ -1654,10 +1714,82 @@ stringResizePadLeftWith0s length unpaddedString =
             ++ unpaddedString
 
 
+patternToNotParenthesized :
+    Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+    -> Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+patternToNotParenthesized (Elm.Syntax.Node.Node patternRange syntaxPattern) =
+    case syntaxPattern of
+        Elm.Syntax.Pattern.ParenthesizedPattern inParens ->
+            inParens
+
+        Elm.Syntax.Pattern.TuplePattern parts ->
+            case parts of
+                [ inParens ] ->
+                    -- should be covered by ParenthesizedPattern
+                    inParens
+
+                [ part0, part1 ] ->
+                    Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.TuplePattern [ part0, part1 ])
+
+                [ part0, part1, part2 ] ->
+                    Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.TuplePattern [ part0, part1, part2 ])
+
+                [] ->
+                    -- should be covered by UnitPattern
+                    Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.TuplePattern [])
+
+                part0 :: part1 :: part2 :: part3 :: part4Up ->
+                    -- invalid syntax
+                    Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.TuplePattern (part0 :: part1 :: part2 :: part3 :: part4Up))
+
+        Elm.Syntax.Pattern.AllPattern ->
+            Elm.Syntax.Node.Node patternRange Elm.Syntax.Pattern.AllPattern
+
+        Elm.Syntax.Pattern.UnitPattern ->
+            Elm.Syntax.Node.Node patternRange Elm.Syntax.Pattern.UnitPattern
+
+        Elm.Syntax.Pattern.VarPattern name ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.VarPattern name)
+
+        Elm.Syntax.Pattern.CharPattern char ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.CharPattern char)
+
+        Elm.Syntax.Pattern.StringPattern string ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.StringPattern string)
+
+        Elm.Syntax.Pattern.IntPattern int ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.IntPattern int)
+
+        Elm.Syntax.Pattern.HexPattern int ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.HexPattern int)
+
+        Elm.Syntax.Pattern.FloatPattern float ->
+            -- invalid syntax
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.FloatPattern float)
+
+        Elm.Syntax.Pattern.RecordPattern fields ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.RecordPattern fields)
+
+        Elm.Syntax.Pattern.UnConsPattern headPattern tailPattern ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.UnConsPattern headPattern tailPattern)
+
+        Elm.Syntax.Pattern.ListPattern elementPatterns ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.ListPattern elementPatterns)
+
+        Elm.Syntax.Pattern.NamedPattern syntaxQualifiedNameRef argumentPatterns ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.NamedPattern syntaxQualifiedNameRef argumentPatterns)
+
+        Elm.Syntax.Pattern.AsPattern aliasedPattern aliasNameNode ->
+            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.AsPattern aliasedPattern aliasNameNode)
+
+
 {-| Print an [`Elm.Syntax.Pattern.Pattern`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Pattern#Pattern)
 -}
-patternNotParenthesized : Elm.Syntax.Pattern.Pattern -> Print
-patternNotParenthesized syntaxPattern =
+patternNotParenthesized :
+    List (Elm.Syntax.Node.Node String)
+    -> Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+    -> Print
+patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntaxPattern) =
     case syntaxPattern of
         Elm.Syntax.Pattern.AllPattern ->
             Print.symbol "_"
@@ -1684,31 +1816,31 @@ patternNotParenthesized syntaxPattern =
             -- invalid syntax
             Print.symbol (String.fromFloat float)
 
-        Elm.Syntax.Pattern.ParenthesizedPattern (Elm.Syntax.Node.Node _ inParens) ->
-            patternNotParenthesized inParens
+        Elm.Syntax.Pattern.ParenthesizedPattern inParens ->
+            patternNotParenthesized syntaxComments inParens
 
         Elm.Syntax.Pattern.TuplePattern parts ->
             case parts of
-                [ Elm.Syntax.Node.Node _ part0, Elm.Syntax.Node.Node _ part1 ] ->
+                [ part0, part1 ] ->
                     Print.symbol "("
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (patternNotParenthesized part0)
+                        |> Print.followedBy (patternNotParenthesized syntaxComments part0)
                         |> Print.followedBy (Print.symbol ",")
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (patternNotParenthesized part1)
+                        |> Print.followedBy (patternNotParenthesized syntaxComments part1)
                         |> Print.followedBy Print.space
                         |> Print.followedBy (Print.symbol ")")
 
-                [ Elm.Syntax.Node.Node _ part0, Elm.Syntax.Node.Node _ part1, Elm.Syntax.Node.Node _ part2 ] ->
+                [ part0, part1, part2 ] ->
                     Print.symbol "("
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (patternNotParenthesized part0)
+                        |> Print.followedBy (patternNotParenthesized syntaxComments part0)
                         |> Print.followedBy (Print.symbol ",")
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (patternNotParenthesized part1)
+                        |> Print.followedBy (patternNotParenthesized syntaxComments part1)
                         |> Print.followedBy (Print.symbol ",")
                         |> Print.followedBy Print.space
-                        |> Print.followedBy (patternNotParenthesized part2)
+                        |> Print.followedBy (patternNotParenthesized syntaxComments part2)
                         |> Print.followedBy Print.space
                         |> Print.followedBy (Print.symbol ")")
 
@@ -1716,9 +1848,9 @@ patternNotParenthesized syntaxPattern =
                     -- should be covered by UnitPattern
                     Print.symbol "()"
 
-                [ Elm.Syntax.Node.Node _ inParens ] ->
+                [ inParens ] ->
                     -- should be covered by ParenthesizedPattern
-                    patternNotParenthesized inParens
+                    patternNotParenthesized syntaxComments inParens
 
                 part0 :: part1 :: part2 :: part3Up ->
                     -- invalid syntax
@@ -1728,8 +1860,8 @@ patternNotParenthesized syntaxPattern =
                             (commaSeparated Print.SameLine
                                 ((part0 :: part1 :: part2 :: part3Up)
                                     |> List.map
-                                        (\(Elm.Syntax.Node.Node _ partPattern) ->
-                                            patternNotParenthesized partPattern
+                                        (\partPattern ->
+                                            patternNotParenthesized syntaxComments partPattern
                                         )
                                 )
                             )
@@ -1753,12 +1885,12 @@ patternNotParenthesized syntaxPattern =
                         |> Print.followedBy Print.space
                         |> Print.followedBy (Print.symbol "}")
 
-        Elm.Syntax.Pattern.UnConsPattern (Elm.Syntax.Node.Node _ headPattern) (Elm.Syntax.Node.Node _ tailPattern) ->
-            patternParenthesizedIfSpaceSeparated headPattern
+        Elm.Syntax.Pattern.UnConsPattern headPattern tailPattern ->
+            patternParenthesizedIfSpaceSeparated syntaxComments headPattern
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "::")
                 |> Print.followedBy Print.space
-                |> Print.followedBy (patternParenthesizedIfSpaceSeparated tailPattern)
+                |> Print.followedBy (patternParenthesizedIfSpaceSeparated syntaxComments tailPattern)
 
         Elm.Syntax.Pattern.ListPattern elementPatterns ->
             Print.symbol "["
@@ -1767,8 +1899,8 @@ patternNotParenthesized syntaxPattern =
                     (commaSeparated Print.SameLine
                         (elementPatterns
                             |> List.map
-                                (\(Elm.Syntax.Node.Node _ elementPattern) ->
-                                    patternNotParenthesized elementPattern
+                                (\elementPattern ->
+                                    patternNotParenthesized syntaxComments elementPattern
                                 )
                         )
                     )
@@ -1781,16 +1913,16 @@ patternNotParenthesized syntaxPattern =
                     (Print.inSequence
                         (argumentPatterns
                             |> List.map
-                                (\(Elm.Syntax.Node.Node _ argumentPattern) ->
+                                (\argumentPattern ->
                                     Print.space
                                         |> Print.followedBy
-                                            (patternParenthesizedIfSpaceSeparated argumentPattern)
+                                            (patternParenthesizedIfSpaceSeparated syntaxComments argumentPattern)
                                 )
                         )
                     )
 
-        Elm.Syntax.Pattern.AsPattern (Elm.Syntax.Node.Node _ aliasedPattern) (Elm.Syntax.Node.Node _ aliasName) ->
-            patternParenthesizedIfSpaceSeparated aliasedPattern
+        Elm.Syntax.Pattern.AsPattern aliasedPattern (Elm.Syntax.Node.Node _ aliasName) ->
+            patternParenthesizedIfSpaceSeparated syntaxComments aliasedPattern
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "as")
                 |> Print.followedBy Print.space
@@ -2247,19 +2379,23 @@ linebreaksFollowedByDeclaration syntaxComments syntaxDeclaration =
             Print.linebreak
                 |> Print.followedBy (declarationInfix syntaxInfixDeclaration)
 
-        Elm.Syntax.Declaration.Destructuring (Elm.Syntax.Node.Node _ destructuringPattern) destructuringExpression ->
+        Elm.Syntax.Declaration.Destructuring destructuringPattern destructuringExpression ->
             -- invalid syntax
             Print.linebreak
                 |> Print.followedBy Print.linebreak
                 |> Print.followedBy Print.linebreak
                 |> Print.followedBy
-                    (declarationDestructuring destructuringPattern destructuringExpression)
+                    (declarationDestructuring syntaxComments destructuringPattern destructuringExpression)
 
 
-declarationDestructuring : Elm.Syntax.Pattern.Pattern -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Print
-declarationDestructuring destructuringPattern destructuringExpression =
+declarationDestructuring :
+    List (Elm.Syntax.Node.Node String)
+    -> Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+    -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+    -> Print
+declarationDestructuring syntaxComments destructuringPattern destructuringExpression =
     -- invalid syntax
-    patternParenthesizedIfSpaceSeparated destructuringPattern
+    patternParenthesizedIfSpaceSeparated syntaxComments destructuringPattern
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol "=")
         |> Print.followedBy
@@ -2293,9 +2429,9 @@ declaration syntaxComments syntaxDeclaration =
         Elm.Syntax.Declaration.InfixDeclaration syntaxInfixDeclaration ->
             declarationInfix syntaxInfixDeclaration
 
-        Elm.Syntax.Declaration.Destructuring (Elm.Syntax.Node.Node _ destructuringPattern) destructuringExpression ->
+        Elm.Syntax.Declaration.Destructuring destructuringPattern destructuringExpression ->
             -- invalid syntax
-            declarationDestructuring destructuringPattern destructuringExpression
+            declarationDestructuring syntaxComments destructuringPattern destructuringExpression
 
 
 declarationSignature :
@@ -2498,25 +2634,41 @@ declarationExpressionImplementation :
     -> Elm.Syntax.Expression.FunctionImplementation
     -> Print
 declarationExpressionImplementation syntaxComments implementation =
+    let
+        argumentPrints : List Print
+        argumentPrints =
+            implementation.arguments
+                |> List.map
+                    (\parameterPattern ->
+                        patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
+                            |> Print.followedBy Print.space
+                    )
+
+        argumentsLineOffset : Print.LineOffset
+        argumentsLineOffset =
+            Print.listCombineLineOffset (argumentPrints |> List.map Print.lineOffset)
+    in
     Print.symbol (implementation.name |> Elm.Syntax.Node.value)
-        |> Print.followedBy Print.space
-        |> Print.followedBy
-            (Print.inSequence
-                (implementation.arguments
-                    |> List.map
-                        (\(Elm.Syntax.Node.Node _ parameterPattern) ->
-                            patternParenthesizedIfSpaceSeparated parameterPattern
-                                |> Print.followedBy Print.space
-                        )
-                )
-            )
-        |> Print.followedBy (Print.symbol "=")
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
-                (Print.layout Print.NextLine
+                (Print.layout argumentsLineOffset
                     |> Print.followedBy
-                        (expressionNotParenthesized syntaxComments
-                            implementation.expression
+                        (Print.inSequence
+                            (implementation.arguments
+                                |> List.map
+                                    (\parameterPattern ->
+                                        patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
+                                            |> Print.followedBy (Print.layout argumentsLineOffset)
+                                    )
+                            )
+                        )
+                    |> Print.followedBy (Print.symbol "=")
+                    |> Print.followedBy
+                        (Print.layout Print.NextLine
+                            |> Print.followedBy
+                                (expressionNotParenthesized syntaxComments
+                                    implementation.expression
+                                )
                         )
                 )
             )
@@ -3361,8 +3513,8 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node lambdaRange syntaxLambda) 
             (Print.inSequence
                 (syntaxLambda.args
                     |> List.map
-                        (\(Elm.Syntax.Node.Node _ parameterPattern) ->
-                            patternParenthesizedIfSpaceSeparated parameterPattern
+                        (\parameterPattern ->
+                            patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
                                 |> Print.followedBy Print.space
                         )
                 )
@@ -3534,8 +3686,8 @@ expressionLetDeclaration syntaxComments letDeclaration =
                         (letDeclarationExpression.declaration |> Elm.Syntax.Node.value)
                     )
 
-        Elm.Syntax.Expression.LetDestructuring (Elm.Syntax.Node.Node _ destructuringPattern) destructuredExpression ->
-            patternParenthesizedIfSpaceSeparated destructuringPattern
+        Elm.Syntax.Expression.LetDestructuring destructuringPattern destructuredExpression ->
+            patternParenthesizedIfSpaceSeparated syntaxComments destructuringPattern
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "=")
                 |> Print.followedBy
@@ -3583,8 +3735,8 @@ case_ :
     List (Elm.Syntax.Node.Node String)
     -> Elm.Syntax.Expression.Case
     -> Print
-case_ syntaxComments ( Elm.Syntax.Node.Node _ casePattern, caseResult ) =
-    patternNotParenthesized casePattern
+case_ syntaxComments ( casePattern, caseResult ) =
+    patternNotParenthesized syntaxComments casePattern
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol "->")
         |> Print.followedBy
