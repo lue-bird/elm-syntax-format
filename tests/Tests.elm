@@ -3,22 +3,8 @@ module Tests exposing (suite)
 import Elm.Parser
 import ElmSyntaxFormat
 import Expect
-import Fuzz
 import Print
 import Test exposing (Test)
-
-
-expectPrintedAs : String -> String -> Expect.Expectation
-expectPrintedAs expected actual =
-    case actual |> Elm.Parser.parseToFile of
-        Err deadEnds ->
-            Expect.fail ("failed to parse actual source: " ++ (deadEnds |> Debug.toString))
-
-        Ok parsed ->
-            parsed
-                |> ElmSyntaxFormat.module_
-                |> Print.toString
-                |> Expect.equal expected
 
 
 suite : Test
@@ -68,7 +54,7 @@ import List as CoreList
             , Test.test "name + alias, multiline"
                 (\() ->
                     """module A exposing (..)
-import List 
+import List
     as CoreList"""
                         |> expectPrintedAs
                             """module A exposing (..)
@@ -122,6 +108,7 @@ import List as CoreList exposing (map)
 """
                 )
             , Test.test "name + alias + exposing one, multiline"
+                -- This is in important difference between module exposing and import exposing.
                 (\() ->
                     """module A exposing (..)
 import List as CoreList
@@ -130,7 +117,10 @@ import List as CoreList
                         |> expectPrintedAs
                             """module A exposing (..)
 
-import List as CoreList exposing (map)
+import List as CoreList
+    exposing
+        ( map
+        )
 
 
 
@@ -265,6 +255,46 @@ import B"""
 import A
 import B
 import C
+
+
+
+"""
+                )
+            , Test.test "comments in imports (except in exposing list)"
+                (\() ->
+                    -- elm-format eats comments of earlier duplicate imports
+                    """module A exposing (..)
+import -- -1
+    A
+import -- 0
+    A -- 1
+import B as
+    -- 2
+    B2
+import C as C2
+    -- 3
+    exposing
+    -- 4
+    (..)
+"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+-- 1
+
+import
+    -- 0
+    A
+import
+    B
+        as
+            -- 2
+            B2
+import C as C2
+    exposing
+        -- 3
+        -- 4
+        (..)
 
 
 
@@ -851,7 +881,7 @@ a =
                     """module A exposing (..)
 a =
     let b:Int
-    
+
         b = 0 in b"""
                         |> expectPrintedAs
                             """module A exposing (..)
@@ -1160,8 +1190,8 @@ b =
                     """module A exposing (..)
 a =
     0
-{-   
-    
+{-
+
 -}
 b =
     1"""
@@ -1187,8 +1217,8 @@ b =
                     """module A exposing (..)
 a =
     0
-{-   x   
-    
+{-   x
+
 a-}
 b =
     1"""
@@ -1212,3 +1242,29 @@ b =
                 )
             ]
         ]
+
+
+expectPrintedAs : String -> String -> Expect.Expectation
+expectPrintedAs expected actual =
+    case actual |> Elm.Parser.parseToFile of
+        Err deadEnds ->
+            Expect.fail ("failed to parse actual source: " ++ (deadEnds |> Debug.toString))
+
+        Ok parsed ->
+            let
+                printed : String
+                printed =
+                    parsed
+                        |> ElmSyntaxFormat.module_
+                        |> Print.toString
+            in
+            if printed == expected then
+                Expect.pass
+
+            else
+                Expect.fail
+                    ("actual printed source is\n\n"
+                        ++ printed
+                        ++ "\n\nbut I expected\n\n"
+                        ++ expected
+                    )
