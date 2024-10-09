@@ -2481,32 +2481,113 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                 Just (Elm.Syntax.Node.Node _ documentation) ->
                     Print.symbol documentation
                         |> Print.followedBy Print.linebreak
+
+        parameterPrints : List Print
+        parameterPrints =
+            syntaxTypeAliasDeclaration.generics
+                |> List.foldl
+                    (\parameterPattern soFar ->
+                        let
+                            parameterPrintedRange : Elm.Syntax.Range.Range
+                            parameterPrintedRange =
+                                parameterPattern |> Elm.Syntax.Node.range
+                        in
+                        { prints =
+                            ((case
+                                commentsInRange
+                                    { start = soFar.end, end = parameterPrintedRange.start }
+                                    syntaxComments
+                              of
+                                [] ->
+                                    Print.empty
+
+                                comment0 :: comment1Up ->
+                                    comments (comment0 :: comment1Up)
+                                        |> Print.followedBy (Print.layout Print.NextLine)
+                             )
+                                |> Print.followedBy
+                                    (Print.symbol (parameterPattern |> Elm.Syntax.Node.value))
+                            )
+                                :: soFar.prints
+                        , end = parameterPrintedRange.end
+                        }
+                    )
+                    { prints = []
+                    , end =
+                        syntaxTypeAliasDeclaration.name
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    }
+                |> .prints
+                |> List.reverse
+
+        parametersLineOffset : Print.LineOffset
+        parametersLineOffset =
+            Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
+
+        rangeBetweenArgumentsAndResult : Elm.Syntax.Range.Range
+        rangeBetweenArgumentsAndResult =
+            case syntaxTypeAliasDeclaration.generics of
+                [] ->
+                    { start =
+                        syntaxTypeAliasDeclaration.name
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    , end =
+                        syntaxTypeAliasDeclaration.typeAnnotation
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    }
+
+                parameter0 :: parameter1Up ->
+                    { start =
+                        listFilledLast ( parameter0, parameter1Up )
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    , end =
+                        syntaxTypeAliasDeclaration.typeAnnotation
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    }
     in
     maybeDocumentationPrint
         |> Print.followedBy (Print.symbol "type")
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol "alias")
-        |> Print.followedBy Print.space
-        |> Print.followedBy
-            (Print.symbol (syntaxTypeAliasDeclaration.name |> Elm.Syntax.Node.value))
-        |> Print.followedBy Print.space
-        |> Print.followedBy
-            (Print.inSequence
-                (syntaxTypeAliasDeclaration.generics
-                    |> List.map
-                        (\(Elm.Syntax.Node.Node _ parameter) ->
-                            Print.symbol parameter
-                                |> Print.followedBy Print.space
-                        )
-                )
-            )
-        |> Print.followedBy (Print.symbol "=")
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
-                (Print.layout Print.NextLine
+                (Print.layout parametersLineOffset
                     |> Print.followedBy
-                        (typeNotParenthesized syntaxComments
-                            syntaxTypeAliasDeclaration.typeAnnotation
+                        (Print.symbol (syntaxTypeAliasDeclaration.name |> Elm.Syntax.Node.value))
+                    |> Print.followedBy
+                        (Print.indentedByNextMultipleOf4
+                            (Print.inSequence
+                                (parameterPrints
+                                    |> List.map
+                                        (\parameterPrint ->
+                                            Print.layout parametersLineOffset
+                                                |> Print.followedBy parameterPrint
+                                        )
+                                )
+                            )
+                        )
+                    |> Print.followedBy (Print.layout parametersLineOffset)
+                    |> Print.followedBy (Print.symbol "=")
+                    |> Print.followedBy
+                        (Print.layout Print.NextLine
+                            |> Print.followedBy
+                                (case commentsInRange rangeBetweenArgumentsAndResult syntaxComments of
+                                    [] ->
+                                        Print.empty
+
+                                    comment0 :: comment1Up ->
+                                        comments (comment0 :: comment1Up)
+                                            |> Print.followedBy (Print.layout Print.NextLine)
+                                )
+                            |> Print.followedBy
+                                (typeNotParenthesized syntaxComments
+                                    syntaxTypeAliasDeclaration.typeAnnotation
+                                )
                         )
                 )
             )
@@ -2678,8 +2759,8 @@ declarationExpressionImplementation syntaxComments implementation =
                 |> .prints
                 |> List.reverse
 
-        argumentsLineOffset : Print.LineOffset
-        argumentsLineOffset =
+        parametersLineOffset : Print.LineOffset
+        parametersLineOffset =
             Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
 
         rangeBetweenArgumentsAndResult : Elm.Syntax.Range.Range
@@ -2710,14 +2791,14 @@ declarationExpressionImplementation syntaxComments implementation =
     Print.symbol (implementation.name |> Elm.Syntax.Node.value)
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
-                (Print.layout argumentsLineOffset
+                (Print.layout parametersLineOffset
                     |> Print.followedBy
                         (Print.inSequence
                             (parameterPrints
                                 |> List.map
                                     (\parameterPrint ->
                                         parameterPrint
-                                            |> Print.followedBy (Print.layout argumentsLineOffset)
+                                            |> Print.followedBy (Print.layout parametersLineOffset)
                                     )
                             )
                         )

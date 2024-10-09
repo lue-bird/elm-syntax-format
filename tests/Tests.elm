@@ -584,6 +584,70 @@ type alias T =
     String
 """
                 )
+            , Test.test "comments between parameters"
+                (\() ->
+                    """module A exposing (..)
+type alias A parameterA {--} parameterB =
+    (parameterA,parameterB)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias
+    A
+        parameterA
+        {--}
+        parameterB
+    =
+    ( parameterA, parameterB )
+"""
+                )
+            , Test.test "comments before first parameter"
+                (\() ->
+                    """module A exposing (..)
+type alias A {--} parameterA parameterB =
+    (parameterA,parameterB)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias
+    A
+        {--}
+        parameterA
+        parameterB
+    =
+    ( parameterA, parameterB )
+"""
+                )
+            , Test.test "comments between last parameter and type"
+                (\() ->
+                    """module A exposing (..)
+type alias A parameter {- 0 -} =
+    {- 1 -}
+    parameter"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A parameter =
+    {- 0 -}
+    {- 1 -}
+    parameter
+"""
+                )
+            , Test.test "comments between name and type"
+                (\() ->
+                    """module A exposing (..)
+type alias A {- 0 -} =
+    {- 1 -}
+    Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    {- 0 -}
+    {- 1 -}
+    Int
+"""
+                )
             ]
         , Test.describe "choice type declaration"
             [ Test.test "multiple parameters, one variant with one parameter"
