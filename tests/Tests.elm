@@ -717,6 +717,82 @@ type T
     | Y
 """
                 )
+            , Test.test "comments between parameters"
+                (\() ->
+                    """module A exposing (..)
+type A parameterA {--} parameterB
+    = A (parameterA,parameterB)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type
+    A
+        parameterA
+        {--}
+        parameterB
+    = A ( parameterA, parameterB )
+"""
+                )
+            , Test.test "comments before first parameter"
+                (\() ->
+                    """module A exposing (..)
+type A {--} parameterA parameterB
+    = A (parameterA,parameterB)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type
+    A
+        {--}
+        parameterA
+        parameterB
+    = A ( parameterA, parameterB )
+"""
+                )
+            , Test.test "comments between last parameter and first variant"
+                (\() ->
+                    """module A exposing (..)
+type A parameter {- 0 -}
+    = {- 1 -} A parameter"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A parameter
+    = {- 0 -}
+      {- 1 -}
+      A parameter
+"""
+                )
+            , Test.test "comments between name and first variant"
+                (\() ->
+                    """module A exposing (..)
+type A {- 0 -}
+    = {- 1 -} A Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A
+    = {- 0 -}
+      {- 1 -}
+      A Int
+"""
+                )
+            , Test.test "comments between variants"
+                (\() ->
+                    """module A exposing (..)
+type A
+    = A Int {- 0 -}
+    | {- 1 -} B String"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A
+    = A Int
+    | {- 0 -}
+      {- 1 -}
+      B String
+"""
+                )
             ]
         , Test.describe "declaration port"
             [ Test.test "already single-line"

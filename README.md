@@ -5,11 +5,16 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
 
 ## TODO
   - [ ] (!) integrate comments in all places elm-format allows
+      - [ ] variant declaration parameters
+      - [ ] some patterns
+      - [ ] some expressions
+      - [ ] type
+      - [ ] expression/let declaration/port: between name and type (and name and implementation)
   - [ ] port declaration documentation
 
 ## known deviations
   - ranges of `then`, `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
-  - ranges of `=` and `,` (and the keywords) are needed to determine whether comments are before or after
+  - ranges of `=`, `,` and `|` (and the keywords) are needed to determine whether comments are before or after
   - `"""` and `"` aren't differentiated
   - some floats in exponent representation are formatted to without it and the other way around
   - handling int, float overflow
