@@ -20,8 +20,8 @@ Don't directly use this for code-generation. Better bets are [`mdgriffith/elm-co
 
 
 ## known deviations due to missing information in elm-syntax
-  - ranges of `then`, `of`, `exposing` and `as` are needed to determine whether words/comments/... should be on the next line or at the end of last line
-  - ranges of list and record `,` are needed to determine whether comments are before or after
+  - ranges of `then`, `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
+  - ranges of `=` and `,` (and the keywords) are needed to determine whether comments are before or after
   - `"""` and `"` aren't differentiated
   - some floats in exponent representation are formatted to without it and the other way around
 
