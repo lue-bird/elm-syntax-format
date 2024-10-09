@@ -2100,6 +2100,48 @@ typeIsSpaceSeparated syntaxType =
             True
 
 
+typeToNotParenthesized :
+    Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+typeToNotParenthesized (Elm.Syntax.Node.Node typeRange syntaxType) =
+    case syntaxType of
+        Elm.Syntax.TypeAnnotation.GenericType name ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericType name)
+
+        Elm.Syntax.TypeAnnotation.Typed reference arguments ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Typed reference arguments)
+
+        Elm.Syntax.TypeAnnotation.Unit ->
+            Elm.Syntax.Node.Node typeRange Elm.Syntax.TypeAnnotation.Unit
+
+        Elm.Syntax.TypeAnnotation.Tupled parts ->
+            case parts of
+                [ inParens ] ->
+                    typeToNotParenthesized inParens
+
+                [] ->
+                    -- should be handled by Unit
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [])
+
+                [ part0, part1 ] ->
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ part0, part1 ])
+
+                [ part0, part1, part2 ] ->
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ part0, part1, part2 ])
+
+                part0 :: part1 :: part2 :: part3 :: part4Up ->
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled (part0 :: part1 :: part2 :: part3 :: part4Up))
+
+        Elm.Syntax.TypeAnnotation.Record fields ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Record fields)
+
+        Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFields ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFields)
+
+        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType)
+
+
 {-| Print an [`Elm.Syntax.TypeAnnotation.TypeAnnotation`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-TypeAnnotation#TypeAnnotation)
 -}
 typeNotParenthesized :
@@ -2525,6 +2567,12 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
         parametersLineOffset =
             Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
 
+        typeNotParenthesizedRange : Elm.Syntax.Range.Range
+        typeNotParenthesizedRange =
+            syntaxTypeAliasDeclaration.typeAnnotation
+                |> typeToNotParenthesized
+                |> Elm.Syntax.Node.range
+
         rangeBetweenArgumentsAndResult : Elm.Syntax.Range.Range
         rangeBetweenArgumentsAndResult =
             case syntaxTypeAliasDeclaration.generics of
@@ -2534,8 +2582,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                             |> Elm.Syntax.Node.range
                             |> .end
                     , end =
-                        syntaxTypeAliasDeclaration.typeAnnotation
-                            |> Elm.Syntax.Node.range
+                        typeNotParenthesizedRange
                             |> .end
                     }
 
@@ -2545,8 +2592,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                             |> Elm.Syntax.Node.range
                             |> .end
                     , end =
-                        syntaxTypeAliasDeclaration.typeAnnotation
-                            |> Elm.Syntax.Node.range
+                        typeNotParenthesizedRange
                             |> .end
                     }
     in
