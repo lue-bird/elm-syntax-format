@@ -1,34 +1,25 @@
-Goal: Pretty printing an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/) tree
-in a way consistent with [`elm-format`](https://github.com/avh4/elm-format).
-
-This could enable some cool stuff like elm-review tests not complaining about whitespace or extra parens, or as a starting point for a gren formatter.
+Pretty print an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/) tree as [`elm-format`](https://github.com/avh4/elm-format) would
+(breaking lines and inserting comments in the right places).
 
 Don't directly use this for code-generation. Better bets are [`mdgriffith/elm-codegen`](https://dark.elm.dmy.fr/packages/mdgriffith/elm-codegen/latest/) and [`elm-syntax-dsl`](https://dark.elm.dmy.fr/packages/the-sett/elm-syntax-dsl/latest/).
 
-## status
+## TODO
   - [ ] (!) integrate comments in all places elm-format allows
   - [ ] port declaration documentation
-  - [x] module header
-  - [x] imports
-  - [x] declaration hulls
-  - [x] pattern
-  - [x] type
-  - [x] expression
-  - [x] module comment
-  - [ ] int, float overflow like elm-format (honestly might not do this for now)
-  - [ ] format documentation markdown (honestly might not do this for now)
 
-
-## known deviations due to missing information in elm-syntax
+## known deviations
   - ranges of `then`, `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
   - ranges of `=` and `,` (and the keywords) are needed to determine whether comments are before or after
   - `"""` and `"` aren't differentiated
   - some floats in exponent representation are formatted to without it and the other way around
+  - handling int, float overflow
+  - formatting documentation markdown
 
+I'm 100% sure there are other deviations I've missed. Please [report](https://github.com/lue-bird/elm-syntax-format/issues/new) if you notice some <3
 
 ## performance problems?
-Performance is not a primary goal
-but if you notice it's unusable for your use case, please open an issue.
+Great performance is not a primary goal
+but if you notice it's unusable for your use case, please [open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new).
 
 Ideas:
   - pre-filter comments per declaration
