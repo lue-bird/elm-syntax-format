@@ -2683,15 +2683,15 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                 |> typeNormalizeParens
                 |> Elm.Syntax.Node.range
 
-        rangeBetweenArgumentsAndResult : Elm.Syntax.Range.Range
-        rangeBetweenArgumentsAndResult =
+        rangeBetweenParametersAndType : Elm.Syntax.Range.Range
+        rangeBetweenParametersAndType =
             case syntaxTypeAliasDeclaration.generics of
                 [] ->
                     { start =
                         syntaxTypeAliasDeclaration.name
                             |> Elm.Syntax.Node.range
                             |> .end
-                    , end = typeNotParenthesizedRange.end
+                    , end = typeNotParenthesizedRange.start
                     }
 
                 parameter0 :: parameter1Up ->
@@ -2699,9 +2699,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                         listFilledLast ( parameter0, parameter1Up )
                             |> Elm.Syntax.Node.range
                             |> .end
-                    , end =
-                        typeNotParenthesizedRange
-                            |> .end
+                    , end = typeNotParenthesizedRange.start
                     }
     in
     maybeDocumentationPrint
@@ -2730,7 +2728,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                     |> Print.followedBy
                         (Print.layout Print.NextLine
                             |> Print.followedBy
-                                (case commentsInRange rangeBetweenArgumentsAndResult syntaxComments of
+                                (case commentsInRange rangeBetweenParametersAndType syntaxComments of
                                     [] ->
                                         Print.empty
 
@@ -2803,19 +2801,21 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                             parametersLineOffset =
                                                 Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
                                         in
-                                        Print.symbol (variant.name |> Elm.Syntax.Node.value)
-                                            |> Print.followedBy
-                                                (Print.indentedByNextMultipleOf4
-                                                    (Print.inSequence
-                                                        (parameterPrints
-                                                            |> List.map
-                                                                (\parameterPrint ->
-                                                                    Print.layout parametersLineOffset
-                                                                        |> Print.followedBy parameterPrint
-                                                                )
+                                        Print.indented 2
+                                            (Print.symbol (variant.name |> Elm.Syntax.Node.value)
+                                                |> Print.followedBy
+                                                    (Print.indentedByNextMultipleOf4
+                                                        (Print.inSequence
+                                                            (parameterPrints
+                                                                |> List.map
+                                                                    (\parameterPrint ->
+                                                                        Print.layout parametersLineOffset
+                                                                            |> Print.followedBy parameterPrint
+                                                                    )
+                                                            )
                                                         )
                                                     )
-                                                )
+                                            )
                                     )
                                 |> List.intersperse
                                     (Print.layout Print.NextLine
@@ -2917,8 +2917,8 @@ declarationExpressionImplementation syntaxComments implementation =
         parametersLineOffset =
             Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
 
-        rangeBetweenArgumentsAndResult : Elm.Syntax.Range.Range
-        rangeBetweenArgumentsAndResult =
+        rangeBetweenParametersAndResult : Elm.Syntax.Range.Range
+        rangeBetweenParametersAndResult =
             case implementation.arguments of
                 [] ->
                     { start =
@@ -2928,7 +2928,7 @@ declarationExpressionImplementation syntaxComments implementation =
                     , end =
                         implementation.expression
                             |> Elm.Syntax.Node.range
-                            |> .end
+                            |> .start
                     }
 
                 parameter0 :: parameter1Up ->
@@ -2939,7 +2939,7 @@ declarationExpressionImplementation syntaxComments implementation =
                     , end =
                         implementation.expression
                             |> Elm.Syntax.Node.range
-                            |> .end
+                            |> .start
                     }
     in
     Print.symbol (implementation.name |> Elm.Syntax.Node.value)
@@ -2960,7 +2960,7 @@ declarationExpressionImplementation syntaxComments implementation =
                     |> Print.followedBy
                         (Print.layout Print.NextLine
                             |> Print.followedBy
-                                (case commentsInRange rangeBetweenArgumentsAndResult syntaxComments of
+                                (case commentsInRange rangeBetweenParametersAndResult syntaxComments of
                                     [] ->
                                         Print.empty
 
