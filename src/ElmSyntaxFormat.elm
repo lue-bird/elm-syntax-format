@@ -2100,16 +2100,30 @@ typeIsSpaceSeparated syntaxType =
             True
 
 
-typeToNotParenthesized :
+{-| Remove as many parens as possible
+-}
+typeNormalizeParens :
     Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
     -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
-typeToNotParenthesized (Elm.Syntax.Node.Node typeRange syntaxType) =
+typeNormalizeParens (Elm.Syntax.Node.Node typeRange syntaxType) =
     case syntaxType of
         Elm.Syntax.TypeAnnotation.GenericType name ->
             Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericType name)
 
         Elm.Syntax.TypeAnnotation.Typed reference arguments ->
-            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Typed reference arguments)
+            Elm.Syntax.Node.Node typeRange
+                (Elm.Syntax.TypeAnnotation.Typed reference
+                    (arguments
+                        |> List.map
+                            (\argument ->
+                                if argument |> Elm.Syntax.Node.value |> typeIsSpaceSeparated then
+                                    typeNormalizeParensButKeepOneOuter argument
+
+                                else
+                                    typeNormalizeParens argument
+                            )
+                    )
+                )
 
         Elm.Syntax.TypeAnnotation.Unit ->
             Elm.Syntax.Node.Node typeRange Elm.Syntax.TypeAnnotation.Unit
@@ -2117,29 +2131,125 @@ typeToNotParenthesized (Elm.Syntax.Node.Node typeRange syntaxType) =
         Elm.Syntax.TypeAnnotation.Tupled parts ->
             case parts of
                 [ inParens ] ->
-                    typeToNotParenthesized inParens
+                    typeNormalizeParens inParens
 
                 [] ->
                     -- should be handled by Unit
                     Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [])
 
                 [ part0, part1 ] ->
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ typeNormalizeParens part0, typeNormalizeParens part1 ])
+
+                [ part0, part1, part2 ] ->
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ typeNormalizeParens part0, typeNormalizeParens part1, typeNormalizeParens part2 ])
+
+                part0 :: part1 :: part2 :: part3 :: part4Up ->
+                    Elm.Syntax.Node.Node typeRange
+                        (Elm.Syntax.TypeAnnotation.Tupled
+                            ((part0 :: part1 :: part2 :: part3 :: part4Up)
+                                |> List.map typeNormalizeParens
+                            )
+                        )
+
+        Elm.Syntax.TypeAnnotation.Record fields ->
+            Elm.Syntax.Node.Node typeRange
+                (Elm.Syntax.TypeAnnotation.Record
+                    (fields
+                        |> List.map
+                            (\fieldNode ->
+                                fieldNode |> Elm.Syntax.Node.map typeFieldNormalizeParens
+                            )
+                    )
+                )
+
+        Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFieldsNode ->
+            Elm.Syntax.Node.Node typeRange
+                (Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName
+                    (additionalFieldsNode
+                        |> Elm.Syntax.Node.map
+                            (\additionalFields ->
+                                additionalFields
+                                    |> List.map
+                                        (\fieldNode ->
+                                            fieldNode |> Elm.Syntax.Node.map typeFieldNormalizeParens
+                                        )
+                            )
+                    )
+                )
+
+        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
+            typeFunctionExpand outType
+                |> List.foldl
+                    (\next soFar ->
+                        Elm.Syntax.Node.Node
+                            { start = soFar |> Elm.Syntax.Node.range |> .end
+                            , end = next |> Elm.Syntax.Node.range |> .start
+                            }
+                            (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation soFar next)
+                    )
+                    inType
+
+
+typeFieldNormalizeParens :
+    Elm.Syntax.TypeAnnotation.RecordField
+    -> Elm.Syntax.TypeAnnotation.RecordField
+typeFieldNormalizeParens ( typeFieldName, typeFieldValue ) =
+    ( typeFieldName, typeNormalizeParens typeFieldValue )
+
+
+{-| `typeNormalizeParens` but keep one layer of parens
+-}
+typeNormalizeParensButKeepOneOuter :
+    Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+typeNormalizeParensButKeepOneOuter (Elm.Syntax.Node.Node typeRange syntaxType) =
+    case syntaxType of
+        Elm.Syntax.TypeAnnotation.Tupled parts ->
+            case parts of
+                [ inParens ] ->
+                    Elm.Syntax.Node.Node typeRange
+                        (Elm.Syntax.TypeAnnotation.Tupled [ typeNormalizeParens inParens ])
+
+                [] ->
+                    -- should be handled by Unit
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [])
+                        |> typeNormalizeParens
+
+                [ part0, part1 ] ->
                     Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ part0, part1 ])
+                        |> typeNormalizeParens
 
                 [ part0, part1, part2 ] ->
                     Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ part0, part1, part2 ])
+                        |> typeNormalizeParens
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
                     Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled (part0 :: part1 :: part2 :: part3 :: part4Up))
+                        |> typeNormalizeParens
+
+        Elm.Syntax.TypeAnnotation.Unit ->
+            Elm.Syntax.Node.Node typeRange Elm.Syntax.TypeAnnotation.Unit
+                |> typeNormalizeParens
+
+        Elm.Syntax.TypeAnnotation.GenericType name ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericType name)
+                |> typeNormalizeParens
+
+        Elm.Syntax.TypeAnnotation.Typed reference arguments ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Typed reference arguments)
+                |> typeNormalizeParens
 
         Elm.Syntax.TypeAnnotation.Record fields ->
             Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Record fields)
+                |> typeNormalizeParens
 
-        Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFields ->
-            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFields)
+        Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFieldsNode ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFieldsNode)
+                |> typeNormalizeParens
 
         Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
             Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType)
+                |> typeNormalizeParens
 
 
 {-| Print an [`Elm.Syntax.TypeAnnotation.TypeAnnotation`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-TypeAnnotation#TypeAnnotation)
@@ -2570,7 +2680,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
         typeNotParenthesizedRange : Elm.Syntax.Range.Range
         typeNotParenthesizedRange =
             syntaxTypeAliasDeclaration.typeAnnotation
-                |> typeToNotParenthesized
+                |> typeNormalizeParens
                 |> Elm.Syntax.Node.range
 
         rangeBetweenArgumentsAndResult : Elm.Syntax.Range.Range
@@ -2581,9 +2691,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                         syntaxTypeAliasDeclaration.name
                             |> Elm.Syntax.Node.range
                             |> .end
-                    , end =
-                        typeNotParenthesizedRange
-                            |> .end
+                    , end = typeNotParenthesizedRange.end
                     }
 
                 parameter0 :: parameter1Up ->
