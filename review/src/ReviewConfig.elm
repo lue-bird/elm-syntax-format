@@ -48,6 +48,7 @@ import NoUnused.Patterns
 import NoUnused.Variables
 import NoUnusedPorts
 import OnlyAllSingleUseTypeVarsEndWith_
+import Review.Action
 import Review.Documentation.CodeSnippet
 import Review.ImportSimple
 import Review.OpaqueType
@@ -77,7 +78,7 @@ config =
         }
     , Docs.UpToDateReadmeLinks.rule
 
-    -- ## simplify
+    -- ## simplify/refactor
     , NoUnused.Dependencies.rule
     , NoUnused.Exports.rule
     , NoUnused.Parameters.rule
@@ -86,6 +87,7 @@ config =
     , NoUnusedPorts.rule
     , Simplify.rule
         (Simplify.defaults |> Simplify.expectNaN)
+    , Review.Action.rule
 
     -- ## sort
     , NoUnsortedTopLevelDeclarations.rule
