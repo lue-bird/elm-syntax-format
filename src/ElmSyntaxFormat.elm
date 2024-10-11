@@ -227,18 +227,6 @@ commentsInRange range sortedComments =
                             headComment :: commentsInRange range tailComments
 
 
-commaSeparated : Print.LineOffset -> List Print -> Print
-commaSeparated lineOffset elements =
-    Print.inSequence
-        (elements
-            |> List.intersperse
-                (Print.emptiableLayout lineOffset
-                    |> Print.followedBy (Print.symbol ",")
-                    |> Print.followedBy Print.space
-                )
-        )
-
-
 lineOffsetInRange : Elm.Syntax.Range.Range -> Print.LineOffset
 lineOffsetInRange range =
     if range.start.row == range.end.row then
@@ -281,11 +269,15 @@ exposingMulti syntaxComments syntaxExposing =
                     Print.space
             )
         |> Print.followedBy
-            (commaSeparated
-                lineOffset
+            (Print.inSequence
                 ((syntaxExposing.expose0 :: syntaxExposing.expose1Up)
                     |> List.map
                         (\(Elm.Syntax.Node.Node _ syntaxExpose) -> expose syntaxExpose)
+                    |> List.intersperse
+                        (Print.emptiableLayout lineOffset
+                            |> Print.followedBy (Print.symbol ",")
+                            |> Print.followedBy Print.space
+                        )
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -1842,11 +1834,16 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
                     Print.symbol "("
                         |> Print.followedBy Print.space
                         |> Print.followedBy
-                            (commaSeparated Print.SameLine
+                            (Print.inSequence
                                 ((part0 :: part1 :: part2 :: part3Up)
                                     |> List.map
                                         (\partPattern ->
                                             patternNotParenthesized syntaxComments partPattern
+                                        )
+                                    |> List.intersperse
+                                        (Print.emptiableLayout Print.SameLine
+                                            |> Print.followedBy (Print.symbol ",")
+                                            |> Print.followedBy Print.space
                                         )
                                 )
                             )
@@ -1862,9 +1859,14 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
                     Print.symbol "{"
                         |> Print.followedBy Print.space
                         |> Print.followedBy
-                            (commaSeparated Print.SameLine
+                            (Print.inSequence
                                 ((field0 :: field1Up)
                                     |> List.map (\(Elm.Syntax.Node.Node _ fieldName) -> Print.symbol fieldName)
+                                    |> List.intersperse
+                                        (Print.emptiableLayout Print.SameLine
+                                            |> Print.followedBy (Print.symbol ",")
+                                            |> Print.followedBy Print.space
+                                        )
                                 )
                             )
                         |> Print.followedBy Print.space
@@ -1881,11 +1883,16 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
             Print.symbol "["
                 |> Print.followedBy Print.space
                 |> Print.followedBy
-                    (commaSeparated Print.SameLine
+                    (Print.inSequence
                         (elementPatterns
                             |> List.map
                                 (\elementPattern ->
                                     patternNotParenthesized syntaxComments elementPattern
+                                )
+                            |> List.intersperse
+                                (Print.emptiableLayout Print.SameLine
+                                    |> Print.followedBy (Print.symbol ",")
+                                    |> Print.followedBy Print.space
                                 )
                         )
                     )
@@ -2566,11 +2573,16 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                     Print.symbol "("
                         |> Print.followedBy Print.space
                         |> Print.followedBy
-                            (commaSeparated lineOffset
+                            (Print.inSequence
                                 ((part0 :: part1 :: part2 :: part3 :: part4Up)
                                     |> List.map
                                         (\part ->
                                             Print.indented 2 (typeNotParenthesized syntaxComments part)
+                                        )
+                                    |> List.intersperse
+                                        (Print.emptiableLayout lineOffset
+                                            |> Print.followedBy (Print.symbol ",")
+                                            |> Print.followedBy Print.space
                                         )
                                 )
                             )
@@ -2591,7 +2603,7 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                     Print.symbol "{"
                         |> Print.followedBy Print.space
                         |> Print.followedBy
-                            (commaSeparated lineOffset
+                            (Print.inSequence
                                 ((field0 :: field1Up)
                                     |> List.map
                                         (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
@@ -2605,6 +2617,11 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                                                                 (typeNotParenthesized syntaxComments fieldValue)
                                                         )
                                                     )
+                                        )
+                                    |> List.intersperse
+                                        (Print.emptiableLayout lineOffset
+                                            |> Print.followedBy (Print.symbol ",")
+                                            |> Print.followedBy Print.space
                                         )
                                 )
                             )
@@ -2626,7 +2643,7 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                         (Print.symbol "|"
                             |> Print.followedBy Print.space
                             |> Print.followedBy
-                                (commaSeparated lineOffset
+                                (Print.inSequence
                                     (fields
                                         |> List.map
                                             (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
@@ -2639,6 +2656,11 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                                                                 |> Print.followedBy (typeNotParenthesized syntaxComments fieldValue)
                                                             )
                                                         )
+                                            )
+                                        |> List.intersperse
+                                            (Print.emptiableLayout lineOffset
+                                                |> Print.followedBy (Print.symbol ",")
+                                                |> Print.followedBy Print.space
                                             )
                                     )
                                 )
@@ -3564,14 +3586,17 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                     Print.symbol "("
                         |> Print.followedBy Print.space
                         |> Print.followedBy
-                            (commaSeparated lineOffset
+                            (Print.inSequence
                                 ((part0 :: part1 :: part2 :: part3 :: part4Up)
                                     |> List.map
                                         (\part ->
                                             Print.indented 2
-                                                (expressionNotParenthesized syntaxComments
-                                                    part
-                                                )
+                                                (expressionNotParenthesized syntaxComments part)
+                                        )
+                                    |> List.intersperse
+                                        (Print.emptiableLayout lineOffset
+                                            |> Print.followedBy (Print.symbol ",")
+                                            |> Print.followedBy Print.space
                                         )
                                 )
                             )
@@ -4010,7 +4035,7 @@ expressionList syntaxComments syntaxList =
             Print.symbol "["
                 |> Print.followedBy Print.space
                 |> Print.followedBy
-                    (commaSeparated lineOffset
+                    (Print.inSequence
                         ((element0 :: element1Up)
                             |> List.map
                                 (\element ->
@@ -4018,6 +4043,11 @@ expressionList syntaxComments syntaxList =
                                         (expressionNotParenthesized syntaxComments
                                             element
                                         )
+                                )
+                            |> List.intersperse
+                                (Print.emptiableLayout lineOffset
+                                    |> Print.followedBy (Print.symbol ",")
+                                    |> Print.followedBy Print.space
                                 )
                         )
                     )
@@ -4046,7 +4076,7 @@ expressionRecord syntaxComments syntaxRecord =
             Print.symbol "{"
                 |> Print.followedBy Print.space
                 |> Print.followedBy
-                    (commaSeparated lineOffset
+                    (Print.inSequence
                         ((field0 :: field1Up)
                             |> List.map
                                 (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
@@ -4062,6 +4092,11 @@ expressionRecord syntaxComments syntaxRecord =
                                                         )
                                                 )
                                             )
+                                )
+                            |> List.intersperse
+                                (Print.emptiableLayout lineOffset
+                                    |> Print.followedBy (Print.symbol ",")
+                                    |> Print.followedBy Print.space
                                 )
                         )
                     )
@@ -4092,7 +4127,7 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                 (Print.symbol "|"
                     |> Print.followedBy Print.space
                     |> Print.followedBy
-                        (commaSeparated lineOffset
+                        (Print.inSequence
                             (syntaxRecordUpdate.fields
                                 |> List.map
                                     (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
@@ -4108,6 +4143,11 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                                                             )
                                                     )
                                                 )
+                                    )
+                                |> List.intersperse
+                                    (Print.emptiableLayout lineOffset
+                                        |> Print.followedBy (Print.symbol ",")
+                                        |> Print.followedBy Print.space
                                     )
                             )
                         )
