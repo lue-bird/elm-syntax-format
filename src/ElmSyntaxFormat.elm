@@ -3110,6 +3110,7 @@ declaration syntaxComments syntaxDeclaration =
 
 
 declarationSignature :
+    --3
     List (Elm.Syntax.Node.Node String)
     -> Elm.Syntax.Signature.Signature
     -> Print
@@ -3118,13 +3119,35 @@ declarationSignature syntaxComments signature =
         typePrint : Print
         typePrint =
             typeNotParenthesized syntaxComments signature.typeAnnotation
+
+        typeNormal : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+        typeNormal =
+            signature.typeAnnotation |> typeNormalizeParens
+
+        rangeBetweenNameAndType : Elm.Syntax.Range.Range
+        rangeBetweenNameAndType =
+            { start = signature.name |> Elm.Syntax.Node.range |> .end
+            , end = typeNormal |> Elm.Syntax.Node.range |> .start
+            }
     in
     Print.symbol (signature.name |> Elm.Syntax.Node.value)
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol ":")
         |> Print.followedBy
-            (Print.layout (Print.lineOffset typePrint))
-        |> Print.followedBy typePrint
+            (Print.indentedByNextMultipleOf4
+                ((case commentsInRange rangeBetweenNameAndType syntaxComments of
+                    [] ->
+                        Print.layout (Print.lineOffset typePrint)
+
+                    comment0 :: comment1Up ->
+                        Print.layout Print.NextLine
+                            |> Print.followedBy
+                                (comments (comment0 :: comment1Up))
+                            |> Print.followedBy (Print.layout Print.NextLine)
+                 )
+                    |> Print.followedBy typePrint
+                )
+            )
 
 
 {-| Print a `port` [`Elm.Syntax.Declaration.Declaration`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Declaration#Declaration)

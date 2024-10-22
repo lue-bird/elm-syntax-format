@@ -1015,6 +1015,58 @@ infix right 9 (>>) = composeR
 """
                 )
             ]
+        , Test.describe "declaration expression"
+            [ Test.test "value, single-line annotation as multiline"
+                (\() ->
+                    """module A exposing (..)
+a
+    :
+ Int
+a =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a : Int
+a =
+    0
+"""
+                )
+            , Test.test "value, comment before single-line annotation"
+                (\() ->
+                    """module A exposing (..)
+a : {- will always be 0 -} Int
+a =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a :
+    {- will always be 0 -}
+    Int
+a =
+    0
+"""
+                )
+            , Test.test "function, comment before multi-line annotation"
+                (\() ->
+                    """module A exposing (..)
+a : ({- will always return 0 -} Int
+ -> Int)
+a _ =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a :
+    {- will always return 0 -}
+    Int
+    -> Int
+a _ =
+    0
+"""
+                )
+            ]
         , Test.describe "type"
             [ Test.test "all kinds, single-line"
                 (\() ->

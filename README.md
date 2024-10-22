@@ -9,7 +9,6 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
       - [ ] some patterns
       - [ ] some expressions
       - [ ] type
-      - [ ] expression/let declaration/port: between name and type
 
 ## known deviations
   - ranges of `then`, `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
