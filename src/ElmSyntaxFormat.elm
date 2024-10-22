@@ -49,31 +49,6 @@ printToString print =
     print |> Print.toString
 
 
-{-| Resulting lists are sorted by range
--}
-splitOffPortDocumentationComments :
-    List (Elm.Syntax.Node.Node String)
-    ->
-        { portDocumentationComments : List (Elm.Syntax.Node.Node String)
-        , comments : List (Elm.Syntax.Node.Node String)
-        }
-splitOffPortDocumentationComments commentsAndPortDocumentationComments =
-    commentsAndPortDocumentationComments
-        |> List.foldr
-            (\commentOrPortDocumentationComments soFar ->
-                if commentOrPortDocumentationComments |> Elm.Syntax.Node.value |> String.startsWith "{-|" then
-                    { comments = soFar.comments
-                    , portDocumentationComments = commentOrPortDocumentationComments :: soFar.portDocumentationComments
-                    }
-
-                else
-                    { comments = commentOrPortDocumentationComments :: soFar.comments
-                    , portDocumentationComments = soFar.portDocumentationComments
-                    }
-            )
-            { comments = [], portDocumentationComments = [] }
-
-
 {-| Print an [`Elm.Syntax.File.File`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-File#File)
 -}
 module_ : Elm.Syntax.File.File -> Print
@@ -107,9 +82,22 @@ module_ syntaxModule =
                         |> .whileAtDocsLines
                         |> List.map .atDocsLine
 
-        maybeModuleDocumentationPrint : Print
-        maybeModuleDocumentationPrint =
-            case maybeModuleDocumentation of
+        lastSyntaxLocationBeforeDeclarations : Elm.Syntax.Range.Location
+        lastSyntaxLocationBeforeDeclarations =
+            case syntaxModule.imports of
+                (Elm.Syntax.Node.Node firstImportRange _) :: _ ->
+                    firstImportRange.end
+
+                [] ->
+                    syntaxModule.moduleDefinition
+                        |> Elm.Syntax.Node.range
+                        |> .end
+    in
+    syntaxModule.moduleDefinition
+        |> Elm.Syntax.Node.value
+        |> moduleHeader { atDocsLines = atDocsLines, comments = commentsAndPortDocumentationComments.comments }
+        |> Print.followedBy
+            (case maybeModuleDocumentation of
                 Nothing ->
                     Print.empty
 
@@ -117,49 +105,121 @@ module_ syntaxModule =
                     Print.linebreak
                         |> Print.followedBy Print.linebreak
                         |> Print.followedBy (Print.symbol moduleDocumentationAsString)
-
-        importsPrint : Print
-        importsPrint =
-            case syntaxModule.imports of
+            )
+        |> Print.followedBy
+            (case syntaxModule.imports of
                 [] ->
                     Print.empty
 
-                import0 :: import1Up ->
-                    Print.linebreak
+                (Elm.Syntax.Node.Node import0Range import0) :: import1Up ->
+                    (case
+                        commentsInRange
+                            { start =
+                                syntaxModule.moduleDefinition
+                                    |> Elm.Syntax.Node.range
+                                    |> .end
+                            , end = import0Range.start
+                            }
+                            commentsAndPortDocumentationComments.comments
+                     of
+                        [] ->
+                            Print.linebreak
+
+                        comment0 :: comment1Up ->
+                            Print.linebreak
+                                |> Print.followedBy Print.linebreak
+                                |> Print.followedBy
+                                    (moduleLevelComments (comment0 :: comment1Up))
+                    )
                         |> Print.followedBy Print.linebreak
                         |> Print.followedBy
-                            ((import0 :: import1Up) |> imports commentsAndPortDocumentationComments.comments)
+                            ((Elm.Syntax.Node.Node import0Range import0 :: import1Up)
+                                |> imports commentsAndPortDocumentationComments.comments
+                            )
                         |> Print.followedBy Print.linebreak
-    in
-    syntaxModule.moduleDefinition
-        |> Elm.Syntax.Node.value
-        |> moduleHeader { atDocsLines = atDocsLines, comments = commentsAndPortDocumentationComments.comments }
-        |> Print.followedBy maybeModuleDocumentationPrint
-        |> Print.followedBy importsPrint
+            )
         |> Print.followedBy Print.linebreak
         |> Print.followedBy Print.linebreak
+        |> Print.followedBy
+            (case syntaxModule.declarations of
+                [] ->
+                    -- invalid syntax
+                    Print.empty
+
+                (Elm.Syntax.Node.Node declaration0Range _) :: _ ->
+                    case
+                        commentsInRange
+                            { start = lastSyntaxLocationBeforeDeclarations
+                            , end = declaration0Range.start
+                            }
+                            commentsAndPortDocumentationComments.comments
+                    of
+                        [] ->
+                            Print.empty
+
+                        comment0 :: comment1Up ->
+                            moduleLevelCommentsBeforeDeclaration
+                                { comment0 = comment0, comment1Up = comment1Up }
+            )
         |> Print.followedBy
             (syntaxModule.declarations
                 |> declarations
                     { comments = commentsAndPortDocumentationComments.comments
                     , portDocumentationComments = commentsAndPortDocumentationComments.portDocumentationComments
-                    , previousEnd =
-                        case syntaxModule.imports of
-                            (Elm.Syntax.Node.Node firstImportRange _) :: _ ->
-                                firstImportRange.end
-
-                            [] ->
-                                case maybeModuleDocumentation of
-                                    Nothing ->
-                                        syntaxModule.moduleDefinition
-                                            |> Elm.Syntax.Node.range
-                                            |> .end
-
-                                    Just (Elm.Syntax.Node.Node moduleDocumentationRange _) ->
-                                        moduleDocumentationRange.end
+                    , previousEnd = lastSyntaxLocationBeforeDeclarations
                     }
             )
         |> Print.followedBy Print.linebreak
+        |> Print.followedBy
+            (case syntaxModule.declarations of
+                [] ->
+                    -- invalid syntax
+                    Print.empty
+
+                declaration0 :: declaration1Up ->
+                    case
+                        commentsAfter
+                            (listFilledLast ( declaration0, declaration1Up )
+                                |> Elm.Syntax.Node.range
+                                |> .end
+                            )
+                            commentsAndPortDocumentationComments.comments
+                    of
+                        [] ->
+                            Print.empty
+
+                        comment0 :: comment1Up ->
+                            Print.linebreak
+                                |> Print.followedBy Print.linebreak
+                                |> Print.followedBy Print.linebreak
+                                |> Print.followedBy
+                                    (moduleLevelComments (comment0 :: comment1Up))
+            )
+
+
+{-| Resulting lists are sorted by range
+-}
+splitOffPortDocumentationComments :
+    List (Elm.Syntax.Node.Node String)
+    ->
+        { portDocumentationComments : List (Elm.Syntax.Node.Node String)
+        , comments : List (Elm.Syntax.Node.Node String)
+        }
+splitOffPortDocumentationComments commentsAndPortDocumentationComments =
+    commentsAndPortDocumentationComments
+        |> List.foldr
+            (\commentOrPortDocumentationComments soFar ->
+                if commentOrPortDocumentationComments |> Elm.Syntax.Node.value |> String.startsWith "{-|" then
+                    { comments = soFar.comments
+                    , portDocumentationComments = commentOrPortDocumentationComments :: soFar.portDocumentationComments
+                    }
+
+                else
+                    { comments = commentOrPortDocumentationComments :: soFar.comments
+                    , portDocumentationComments = soFar.portDocumentationComments
+                    }
+            )
+            { comments = [], portDocumentationComments = [] }
 
 
 moduleDocumentation : Elm.Syntax.File.File -> Maybe (Elm.Syntax.Node.Node String)
@@ -243,6 +303,41 @@ moduleDocumentationParse moduleDocumentationContent =
     { whileAtDocsLines = parsed.finishedBlocks |> List.reverse
     , rawAfterAtDocsLines = parsed.rawSinceAtDocs
     }
+
+
+commentsAfter : Elm.Syntax.Range.Location -> List (Elm.Syntax.Node.Node String) -> List String
+commentsAfter end sortedComments =
+    case sortedComments of
+        [] ->
+            []
+
+        (Elm.Syntax.Node.Node headCommentRange headComment) :: tailComments ->
+            case Elm.Syntax.Range.compareLocations headCommentRange.start end of
+                LT ->
+                    commentsAfter end tailComments
+
+                GT ->
+                    headComment :: (tailComments |> List.map Elm.Syntax.Node.value)
+
+                EQ ->
+                    headComment :: (tailComments |> List.map Elm.Syntax.Node.value)
+
+
+moduleLevelCommentsBeforeDeclaration : { comment0 : String, comment1Up : List String } -> Print
+moduleLevelCommentsBeforeDeclaration syntaxComments =
+    Print.linebreak
+        |> Print.followedBy
+            (moduleLevelComments (syntaxComments.comment0 :: syntaxComments.comment1Up))
+        |> Print.followedBy
+            (case listFilledLast ( syntaxComments.comment0, syntaxComments.comment1Up ) of
+                "{--}" ->
+                    -- don't ask me why elm-format formats it that way
+                    Print.empty
+
+                _ ->
+                    Print.linebreak
+                        |> Print.followedBy Print.linebreak
+            )
 
 
 commentsInRange : Elm.Syntax.Range.Range -> List (Elm.Syntax.Node.Node String) -> List String
@@ -1859,11 +1954,11 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
             case parts of
                 [ part0, part1 ] ->
                     { part0 = part0, part1 = part1, fullRange = patternRange }
-                        |> patternTuple2 syntaxComments
+                        |> patternTuple syntaxComments
 
                 [ part0, part1, part2 ] ->
                     { part0 = part0, part1 = part1, part2 = part2, fullRange = patternRange }
-                        |> patternTuple3 syntaxComments
+                        |> patternTriple syntaxComments
 
                 [] ->
                     -- should be covered by UnitPattern
@@ -1965,7 +2060,7 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
                 |> Print.followedBy (Print.symbol aliasName)
 
 
-patternTuple2 :
+patternTuple :
     List (Elm.Syntax.Node.Node String)
     ->
         { part0 : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
@@ -1973,20 +2068,20 @@ patternTuple2 :
         , fullRange : Elm.Syntax.Range.Range
         }
     -> Print
-patternTuple2 syntaxComments tuple2 =
+patternTuple syntaxComments tuple =
     let
         part0NormalParensRange : Elm.Syntax.Range.Range
         part0NormalParensRange =
-            tuple2.part0 |> patternToNotParenthesized |> Elm.Syntax.Node.range
+            tuple.part0 |> patternToNotParenthesized |> Elm.Syntax.Node.range
 
         part1NormalParensRange : Elm.Syntax.Range.Range
         part1NormalParensRange =
-            tuple2.part1 |> patternToNotParenthesized |> Elm.Syntax.Node.range
+            tuple.part1 |> patternToNotParenthesized |> Elm.Syntax.Node.range
 
         beforePart0Comments : List String
         beforePart0Comments =
             commentsInRange
-                { start = tuple2.fullRange.start
+                { start = tuple.fullRange.start
                 , end = part0NormalParensRange.start
                 }
                 syntaxComments
@@ -2003,7 +2098,7 @@ patternTuple2 syntaxComments tuple2 =
         afterPart1Comments =
             commentsInRange
                 { start = part1NormalParensRange.end
-                , end = tuple2.fullRange.end
+                , end = tuple.fullRange.end
                 }
                 syntaxComments
 
@@ -2034,7 +2129,7 @@ patternTuple2 syntaxComments tuple2 =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments tuple2.part0)
+                    |> Print.followedBy (patternNotParenthesized syntaxComments tuple.part0)
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -2050,7 +2145,7 @@ patternTuple2 syntaxComments tuple2 =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments tuple2.part1)
+                    |> Print.followedBy (patternNotParenthesized syntaxComments tuple.part1)
                     |> Print.followedBy
                         (case afterPart1Comments of
                             [] ->
@@ -2066,7 +2161,7 @@ patternTuple2 syntaxComments tuple2 =
         |> Print.followedBy (Print.symbol ")")
 
 
-patternTuple3 :
+patternTriple :
     List (Elm.Syntax.Node.Node String)
     ->
         { part0 : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
@@ -2075,24 +2170,24 @@ patternTuple3 :
         , fullRange : Elm.Syntax.Range.Range
         }
     -> Print
-patternTuple3 syntaxComments tuple3 =
+patternTriple syntaxComments triple =
     let
         part0NormalParensRange : Elm.Syntax.Range.Range
         part0NormalParensRange =
-            tuple3.part0 |> patternToNotParenthesized |> Elm.Syntax.Node.range
+            triple.part0 |> patternToNotParenthesized |> Elm.Syntax.Node.range
 
         part1NormalParensRange : Elm.Syntax.Range.Range
         part1NormalParensRange =
-            tuple3.part1 |> patternToNotParenthesized |> Elm.Syntax.Node.range
+            triple.part1 |> patternToNotParenthesized |> Elm.Syntax.Node.range
 
         part2NormalParensRange : Elm.Syntax.Range.Range
         part2NormalParensRange =
-            tuple3.part2 |> patternToNotParenthesized |> Elm.Syntax.Node.range
+            triple.part2 |> patternToNotParenthesized |> Elm.Syntax.Node.range
 
         beforePart0Comments : List String
         beforePart0Comments =
             commentsInRange
-                { start = tuple3.fullRange.start
+                { start = triple.fullRange.start
                 , end = part0NormalParensRange.start
                 }
                 syntaxComments
@@ -2117,7 +2212,7 @@ patternTuple3 syntaxComments tuple3 =
         afterPart2Comments =
             commentsInRange
                 { start = part2NormalParensRange.end
-                , end = tuple3.fullRange.end
+                , end = triple.fullRange.end
                 }
                 syntaxComments
 
@@ -2151,7 +2246,7 @@ patternTuple3 syntaxComments tuple3 =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments tuple3.part0)
+                    |> Print.followedBy (patternNotParenthesized syntaxComments triple.part0)
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -2167,7 +2262,7 @@ patternTuple3 syntaxComments tuple3 =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments tuple3.part1)
+                    |> Print.followedBy (patternNotParenthesized syntaxComments triple.part1)
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -2183,7 +2278,7 @@ patternTuple3 syntaxComments tuple3 =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments tuple3.part2)
+                    |> Print.followedBy (patternNotParenthesized syntaxComments triple.part2)
                     |> Print.followedBy
                         (case afterPart2Comments of
                             [] ->
@@ -2739,8 +2834,7 @@ declarations context syntaxDeclarations =
                 , portDocumentationComment =
                     case declaration0 of
                         Elm.Syntax.Declaration.PortDeclaration _ ->
-                            commentsInRange { start = context.previousEnd, end = declaration0Range.start } context.portDocumentationComments
-                                |> List.head
+                            firstCommentInRange { start = context.previousEnd, end = declaration0Range.start } context.portDocumentationComments
 
                         _ ->
                             Nothing
@@ -2751,12 +2845,11 @@ declarations context syntaxDeclarations =
                         |> List.foldl
                             (\(Elm.Syntax.Node.Node declarationRange syntaxDeclaration) soFar ->
                                 let
-                                    maybeDeclarationPortDocumentationComment : Maybe String
+                                    maybeDeclarationPortDocumentationComment : Maybe (Elm.Syntax.Node.Node String)
                                     maybeDeclarationPortDocumentationComment =
                                         case syntaxDeclaration of
                                             Elm.Syntax.Declaration.PortDeclaration _ ->
-                                                commentsInRange { start = soFar.previousRange.end, end = declarationRange.start } context.portDocumentationComments
-                                                    |> List.head
+                                                firstCommentInRange { start = soFar.previousRange.end, end = declarationRange.start } context.portDocumentationComments
 
                                             _ ->
                                                 Nothing
@@ -2769,17 +2862,9 @@ declarations context syntaxDeclarations =
                                                     Print.linebreak
                                                         |> Print.followedBy Print.linebreak
                                                         |> Print.followedBy Print.linebreak
-                                                        |> Print.followedBy Print.linebreak
-                                                        |> Print.followedBy (moduleLevelComments (comment0 :: comment1Up))
                                                         |> Print.followedBy
-                                                            (case listFilledLast ( comment0, comment1Up ) of
-                                                                "{--}" ->
-                                                                    -- don't ask me why elm-format formats it that way
-                                                                    Print.empty
-
-                                                                _ ->
-                                                                    Print.linebreak
-                                                                        |> Print.followedBy Print.linebreak
+                                                            (moduleLevelCommentsBeforeDeclaration
+                                                                { comment0 = comment0, comment1Up = comment1Up }
                                                             )
                                                         |> Print.followedBy
                                                             (declaration
@@ -2806,8 +2891,37 @@ declarations context syntaxDeclarations =
                     )
 
 
+firstCommentInRange :
+    Elm.Syntax.Range.Range
+    -> List (Elm.Syntax.Node.Node String)
+    -> Maybe (Elm.Syntax.Node.Node String)
+firstCommentInRange range sortedComments =
+    case sortedComments of
+        [] ->
+            Nothing
+
+        (Elm.Syntax.Node.Node headCommentRange headComment) :: tailComments ->
+            case Elm.Syntax.Range.compareLocations headCommentRange.start range.start of
+                LT ->
+                    firstCommentInRange range tailComments
+
+                EQ ->
+                    Just (Elm.Syntax.Node.Node headCommentRange headComment)
+
+                GT ->
+                    case Elm.Syntax.Range.compareLocations headCommentRange.end range.end of
+                        GT ->
+                            Nothing
+
+                        LT ->
+                            Just (Elm.Syntax.Node.Node headCommentRange headComment)
+
+                        EQ ->
+                            Just (Elm.Syntax.Node.Node headCommentRange headComment)
+
+
 linebreaksFollowedByDeclaration :
-    { portDocumentationComment : Maybe String
+    { portDocumentationComment : Maybe (Elm.Syntax.Node.Node String)
     , comments : List (Elm.Syntax.Node.Node String)
     }
     -> Elm.Syntax.Declaration.Declaration
@@ -2888,7 +3002,7 @@ declarationDestructuring syntaxComments destructuringPattern destructuringExpres
 {-| Print an [`Elm.Syntax.Declaration.Declaration`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Declaration#Declaration)
 -}
 declaration :
-    { portDocumentationComment : Maybe String
+    { portDocumentationComment : Maybe (Elm.Syntax.Node.Node String)
     , comments : List (Elm.Syntax.Node.Node String)
     }
     -> Elm.Syntax.Declaration.Declaration
@@ -2940,7 +3054,7 @@ declarationSignature syntaxComments signature =
 {-| Print a `port` [`Elm.Syntax.Declaration.Declaration`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Declaration#Declaration)
 -}
 declarationPort :
-    { documentationComment : Maybe String
+    { documentationComment : Maybe (Elm.Syntax.Node.Node String)
     , comments : List (Elm.Syntax.Node.Node String)
     }
     -> Elm.Syntax.Signature.Signature
@@ -2950,9 +3064,21 @@ declarationPort syntaxComments signature =
         Nothing ->
             Print.empty
 
-        Just documentation ->
+        Just (Elm.Syntax.Node.Node documentationRange documentation) ->
             Print.symbol documentation
                 |> Print.followedBy Print.linebreak
+                |> Print.followedBy
+                    (commentsBetweenDocumentationAndDeclaration
+                        (commentsInRange
+                            { start = documentationRange.start
+                            , end =
+                                signature.name
+                                    |> Elm.Syntax.Node.range
+                                    |> .start
+                            }
+                            syntaxComments.comments
+                        )
+                    )
     )
         |> Print.followedBy (Print.symbol "port")
         |> Print.followedBy Print.space
@@ -2967,16 +3093,6 @@ declarationTypeAlias :
     -> Print
 declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
     let
-        maybeDocumentationPrint : Print
-        maybeDocumentationPrint =
-            case syntaxTypeAliasDeclaration.documentation of
-                Nothing ->
-                    Print.empty
-
-                Just (Elm.Syntax.Node.Node _ documentation) ->
-                    Print.symbol documentation
-                        |> Print.followedBy Print.linebreak
-
         parameterPrints : List Print
         parameterPrints =
             syntaxTypeAliasDeclaration.generics
@@ -3045,7 +3161,26 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                     , end = typeNotParenthesizedRange.start
                     }
     in
-    maybeDocumentationPrint
+    (case syntaxTypeAliasDeclaration.documentation of
+        Nothing ->
+            Print.empty
+
+        Just (Elm.Syntax.Node.Node documentationRange documentation) ->
+            Print.symbol documentation
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy
+                    (commentsBetweenDocumentationAndDeclaration
+                        (commentsInRange
+                            { start = documentationRange.start
+                            , end =
+                                syntaxTypeAliasDeclaration.name
+                                    |> Elm.Syntax.Node.range
+                                    |> .start
+                            }
+                            syntaxComments
+                        )
+                    )
+    )
         |> Print.followedBy (Print.symbol "type")
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol "alias")
@@ -3096,16 +3231,6 @@ declarationChoiceType :
     -> Print
 declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
     let
-        maybeDocumentationPrint : Print
-        maybeDocumentationPrint =
-            case syntaxChoiceTypeDeclaration.documentation of
-                Nothing ->
-                    Print.empty
-
-                Just (Elm.Syntax.Node.Node _ documentation) ->
-                    Print.symbol documentation
-                        |> Print.followedBy Print.linebreak
-
         parameterPrints : List Print
         parameterPrints =
             syntaxChoiceTypeDeclaration.generics
@@ -3225,7 +3350,26 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                 |> .prints
                 |> List.reverse
     in
-    maybeDocumentationPrint
+    (case syntaxChoiceTypeDeclaration.documentation of
+        Nothing ->
+            Print.empty
+
+        Just (Elm.Syntax.Node.Node documentationRange documentation) ->
+            Print.symbol documentation
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy
+                    (commentsBetweenDocumentationAndDeclaration
+                        (commentsInRange
+                            { start = documentationRange.start
+                            , end =
+                                syntaxChoiceTypeDeclaration.name
+                                    |> Elm.Syntax.Node.range
+                                    |> .start
+                            }
+                            syntaxComments
+                        )
+                    )
+    )
         |> Print.followedBy (Print.symbol "type")
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
@@ -3412,6 +3556,22 @@ declarationExpressionImplementation syntaxComments implementation =
             )
 
 
+commentsBetweenDocumentationAndDeclaration : List String -> Print
+commentsBetweenDocumentationAndDeclaration syntaxComments =
+    case syntaxComments of
+        [] ->
+            Print.empty
+
+        comment0 :: comment1Up ->
+            Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy
+                    (moduleLevelComments (comment0 :: comment1Up))
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy Print.linebreak
+
+
 {-| Print an [`Elm.Syntax.Expression.Function`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Expression#Function) declaration
 -}
 declarationExpression :
@@ -3420,16 +3580,6 @@ declarationExpression :
     -> Print
 declarationExpression syntaxComments syntaxExpressionDeclaration =
     let
-        maybeDocumentationPrint : Print
-        maybeDocumentationPrint =
-            case syntaxExpressionDeclaration.documentation of
-                Nothing ->
-                    Print.empty
-
-                Just (Elm.Syntax.Node.Node _ documentation) ->
-                    Print.symbol documentation
-                        |> Print.followedBy Print.linebreak
-
         maybeSignaturePrint : Print
         maybeSignaturePrint =
             case syntaxExpressionDeclaration.signature of
@@ -3440,7 +3590,29 @@ declarationExpression syntaxComments syntaxExpressionDeclaration =
                     declarationSignature syntaxComments signature
                         |> Print.followedBy Print.linebreak
     in
-    maybeDocumentationPrint
+    (case syntaxExpressionDeclaration.documentation of
+        Nothing ->
+            Print.empty
+
+        Just (Elm.Syntax.Node.Node documentationRange documentation) ->
+            Print.symbol documentation
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy
+                    (commentsBetweenDocumentationAndDeclaration
+                        (commentsInRange
+                            { start = documentationRange.start
+                            , end =
+                                case syntaxExpressionDeclaration.signature of
+                                    Nothing ->
+                                        syntaxExpressionDeclaration.declaration |> Elm.Syntax.Node.range |> .start
+
+                                    Just (Elm.Syntax.Node.Node signatureRange _) ->
+                                        signatureRange.start
+                            }
+                            syntaxComments
+                        )
+                    )
+    )
         |> Print.followedBy maybeSignaturePrint
         |> Print.followedBy
             (declarationExpressionImplementation
@@ -3667,11 +3839,11 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                     expressionNotParenthesized syntaxComments inParens
 
                 [ part0, part1 ] ->
-                    expressionTuple2 syntaxComments
+                    expressionTuple syntaxComments
                         { fullRange = fullRange, part0 = part0, part1 = part1 }
 
                 [ part0, part1, part2 ] ->
-                    expressionTuple3 syntaxComments
+                    expressionTriple syntaxComments
                         { fullRange = fullRange
                         , part0 = part0
                         , part1 = part1
@@ -4036,7 +4208,7 @@ expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
         expressionNotParenthesized syntaxComments expressionNode
 
 
-expressionTuple3 :
+expressionTriple :
     List (Elm.Syntax.Node.Node String)
     ->
         { fullRange : Elm.Syntax.Range.Range
@@ -4045,18 +4217,18 @@ expressionTuple3 :
         , part2 : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
         }
     -> Print
-expressionTuple3 syntaxComments syntaxTuple2 =
+expressionTriple syntaxComments syntaxTuple =
     let
         lineOffset : Print.LineOffset
         lineOffset =
-            lineOffsetInRange syntaxTuple2.fullRange
+            lineOffsetInRange syntaxTuple.fullRange
     in
     Print.symbol "("
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.indented 2
                 (expressionNotParenthesized syntaxComments
-                    syntaxTuple2.part0
+                    syntaxTuple.part0
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -4065,7 +4237,7 @@ expressionTuple3 syntaxComments syntaxTuple2 =
         |> Print.followedBy
             (Print.indented 2
                 (expressionNotParenthesized syntaxComments
-                    syntaxTuple2.part1
+                    syntaxTuple.part1
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -4074,14 +4246,14 @@ expressionTuple3 syntaxComments syntaxTuple2 =
         |> Print.followedBy
             (Print.indented 2
                 (expressionNotParenthesized syntaxComments
-                    syntaxTuple2.part2
+                    syntaxTuple.part2
                 )
             )
         |> Print.followedBy (Print.layout lineOffset)
         |> Print.followedBy (Print.symbol ")")
 
 
-expressionTuple2 :
+expressionTuple :
     List (Elm.Syntax.Node.Node String)
     ->
         { fullRange : Elm.Syntax.Range.Range
@@ -4089,18 +4261,18 @@ expressionTuple2 :
         , part1 : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
         }
     -> Print
-expressionTuple2 syntaxComments syntaxTuple2 =
+expressionTuple syntaxComments syntaxTuple =
     let
         lineOffset : Print.LineOffset
         lineOffset =
-            lineOffsetInRange syntaxTuple2.fullRange
+            lineOffsetInRange syntaxTuple.fullRange
     in
     Print.symbol "("
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.indented 2
                 (expressionNotParenthesized syntaxComments
-                    syntaxTuple2.part0
+                    syntaxTuple.part0
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -4109,7 +4281,7 @@ expressionTuple2 syntaxComments syntaxTuple2 =
         |> Print.followedBy
             (Print.indented 2
                 (expressionNotParenthesized syntaxComments
-                    syntaxTuple2.part1
+                    syntaxTuple.part1
                 )
             )
         |> Print.followedBy (Print.layout lineOffset)

@@ -547,6 +547,133 @@ a =
 """
                 )
             ]
+        , Test.describe "module-level comments"
+            [ Test.test "before imports without module documentation"
+                (\() ->
+                    """module A exposing (..)
+-- A module about A.
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+-- A module about A.
+
+import Dummy
+
+
+
+"""
+                )
+            , Test.test "between module documentation and imports"
+                (\() ->
+                    """module A exposing (..)
+{-| The module about A.
+-}
+-- A module about A.
+import Dummy"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+{-| The module about A.
+-}
+
+-- A module about A.
+
+import Dummy
+
+
+
+"""
+                )
+            , Test.test "between module header and module documentation"
+                (\() ->
+                    """module A exposing (..)
+-- A module about A.
+{-| The module about A.
+-}
+import Dummy"""
+                        |> expectPrintedAs
+                            -- these comments are moved to _after_ the module documentation
+                            """module A exposing (..)
+
+{-| The module about A.
+-}
+
+-- A module about A.
+
+import Dummy
+
+
+
+"""
+                )
+            , Test.test "between imports and first declaration"
+                (\() ->
+                    """module A exposing (..)
+import Dummy
+-- A module about A.
+zero = 0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+import Dummy
+
+
+
+-- A module about A.
+
+
+zero =
+    0
+"""
+                )
+            , Test.test "between declaration documentation and declaration"
+                (\() ->
+                    """module A exposing (..)
+import Dummy
+{-| 0
+-}
+-- not one
+zero = 0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+import Dummy
+
+
+{-| 0
+-}
+
+
+
+-- not one
+
+
+zero =
+    0
+"""
+                )
+            , Test.test "between last declaration and end of file"
+                (\() ->
+                    """module A exposing (..)
+import Dummy
+zero = 0
+-- A module about A."""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+import Dummy
+
+
+zero =
+    0
+
+
+
+-- A module about A.
+"""
+                )
+            ]
         , Test.describe "type alias declaration"
             [ Test.test "multiple parameters"
                 (\() ->
