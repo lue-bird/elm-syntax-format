@@ -2334,19 +2334,21 @@ lineOffsetInNode (Elm.Syntax.Node.Node range _) =
 
 typeFunctionNotParenthesized :
     List (Elm.Syntax.Node.Node String)
-    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
-    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    ->
+        { inType : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+        , outType : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+        }
     -> Print
-typeFunctionNotParenthesized syntaxComments inType outType =
+typeFunctionNotParenthesized syntaxComments function =
     let
         fullLineOffset : Print.LineOffset
         fullLineOffset =
-            lineOffsetBetweenNodes inType outType
+            lineOffsetBetweenNodes function.inType function.outType
     in
-    typeParenthesizedIfFunction syntaxComments inType
+    typeParenthesizedIfFunction syntaxComments function.inType
         |> Print.followedBy
             (Print.inSequence
-                (typeFunctionExpand outType
+                (typeFunctionExpand function.outType
                     |> List.map
                         (\afterArrowTypeNode ->
                             Print.layout fullLineOffset
@@ -2355,7 +2357,7 @@ typeFunctionNotParenthesized syntaxComments inType outType =
                                     (Print.indentedByNextMultipleOf4
                                         (Print.layout (lineOffsetInNode afterArrowTypeNode)
                                             |> Print.followedBy
-                                                (typeParenthesizedIfFunction syntaxComments
+                                                (typeParenthesizedIfParenthesizedFunction syntaxComments
                                                     afterArrowTypeNode
                                                 )
                                         )
@@ -2365,26 +2367,99 @@ typeFunctionNotParenthesized syntaxComments inType outType =
             )
 
 
+typeParenthesizedIfParenthesizedFunction :
+    List (Elm.Syntax.Node.Node String)
+    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    -> Print
+typeParenthesizedIfParenthesizedFunction syntaxComments typeNode =
+    case typeNode |> Elm.Syntax.Node.value of
+        Elm.Syntax.TypeAnnotation.Tupled [ inParens ] ->
+            inParens |> typeParenthesizedIfFunction syntaxComments
+
+        _ ->
+            typeNotParenthesized syntaxComments typeNode
+
+
 typeParenthesizedIfFunction :
     List (Elm.Syntax.Node.Node String)
     -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
     -> Print
 typeParenthesizedIfFunction syntaxComments typeNode =
-    case typeNode |> Elm.Syntax.Node.value of
-        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
+    case typeNode |> typeToFunction of
+        Just function ->
             Print.symbol "("
                 |> Print.followedBy
                     (Print.indented 1
-                        (typeFunctionNotParenthesized syntaxComments inType outType)
+                        (typeFunctionNotParenthesized syntaxComments function)
                     )
                 |> Print.followedBy
                     (Print.emptiableLayout
-                        (lineOffsetBetweenNodes inType outType)
+                        (lineOffsetBetweenNodes function.inType function.outType)
                     )
                 |> Print.followedBy (Print.symbol ")")
 
-        _ ->
+        Nothing ->
             typeNotParenthesized syntaxComments typeNode
+
+
+typeToFunction :
+    Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    ->
+        Maybe
+            { inType : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+            , outType : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+            }
+typeToFunction typeNode =
+    case typeNode |> typeToNotParenthesized |> Elm.Syntax.Node.value of
+        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
+            Just { inType = inType, outType = outType }
+
+        _ ->
+            Nothing
+
+
+{-| Remove as many parens as possible
+-}
+typeToNotParenthesized :
+    Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+typeToNotParenthesized (Elm.Syntax.Node.Node typeRange syntaxType) =
+    case syntaxType of
+        Elm.Syntax.TypeAnnotation.GenericType name ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericType name)
+
+        Elm.Syntax.TypeAnnotation.Typed reference arguments ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Typed reference arguments)
+
+        Elm.Syntax.TypeAnnotation.Unit ->
+            Elm.Syntax.Node.Node typeRange Elm.Syntax.TypeAnnotation.Unit
+
+        Elm.Syntax.TypeAnnotation.Tupled parts ->
+            case parts of
+                [ inParens ] ->
+                    typeToNotParenthesized inParens
+
+                [] ->
+                    -- should be handled by Unit
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [])
+
+                [ part0, part1 ] ->
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ part0, part1 ])
+
+                [ part0, part1, part2 ] ->
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ part0, part1, part2 ])
+
+                part0 :: part1 :: part2 :: part3 :: part4Up ->
+                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled (part0 :: part1 :: part2 :: part3 :: part4Up))
+
+        Elm.Syntax.TypeAnnotation.Record fields ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Record fields)
+
+        Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFieldsNode ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFieldsNode)
+
+        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
+            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType)
 
 
 typeFunctionExpand :
@@ -2809,7 +2884,8 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                 |> Print.followedBy (Print.symbol "}")
 
         Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
-            typeFunctionNotParenthesized syntaxComments inType outType
+            { inType = inType, outType = outType }
+                |> typeFunctionNotParenthesized syntaxComments
 
 
 {-| Print a list of [`Elm.Syntax.Declaration.Declaration`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Declaration#Declaration)s

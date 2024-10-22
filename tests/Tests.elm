@@ -1049,6 +1049,18 @@ type alias T a =
     )
 """
                 )
+            , Test.test "function input function is parenthesized"
+                (\() ->
+                    """module A exposing (..)
+type alias T a =
+    (((Int -> Int))) -> a"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T a =
+    (Int -> Int) -> a
+"""
+                )
             ]
         , Test.describe "expression"
             [ Test.test "if-then-else with another if-then-else in the else branch"

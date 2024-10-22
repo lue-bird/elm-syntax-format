@@ -14,6 +14,7 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
 ## known deviations
   - ranges of `then`, `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
   - ranges of `=`, `,` and `|` (and the keywords) are needed to determine whether comments are before or after
+  - function types outputting a parenthesized function do not preserve the parens because parens are not stored in the syntax tree
   - `"""` and `"` aren't differentiated
   - some floats in exponent representation are formatted to without it and the other way around
   - handling int, float overflow
