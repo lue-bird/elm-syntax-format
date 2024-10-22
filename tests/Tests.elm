@@ -809,6 +809,24 @@ port sendMessage : String -> Cmd msg
 port messageReceiver : (String -> msg) -> Sub msg
 """
                 )
+            , Test.test "documentation comments"
+                (\() ->
+                    """port module A exposing (..)
+port sendMessage : String -> Cmd msg
+{-| :blushes:
+-}
+port messageReceiver : (String -> msg) -> Sub msg"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+port sendMessage : String -> Cmd msg
+
+
+{-| :blushes:
+-}
+port messageReceiver : (String -> msg) -> Sub msg
+"""
+                )
             , Test.test "type on next should be single-line"
                 (\() ->
                     """port module A exposing (..)
