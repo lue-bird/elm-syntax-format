@@ -1959,26 +1959,11 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
                                 }
                                 syntaxComments
 
-                part0 :: part1 :: part2 :: part3Up ->
+                part0 :: part1 :: part2 :: part3 :: part4Up ->
                     -- invalid syntax
-                    Print.symbol "("
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy
-                            (Print.inSequence
-                                ((part0 :: part1 :: part2 :: part3Up)
-                                    |> List.map
-                                        (\partPattern ->
-                                            patternNotParenthesized syntaxComments partPattern
-                                        )
-                                    |> List.intersperse
-                                        (Print.emptiableLayout Print.SameLine
-                                            |> Print.followedBy (Print.symbol ",")
-                                            |> Print.followedBy Print.space
-                                        )
-                                )
-                            )
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.symbol ")")
+                    invalidNTuple patternNotParenthesized
+                        syntaxComments
+                        { fullRange = fullRange, part0 = part0, part1 = part1, part2 = part2, part3 = part3, part4Up = part4Up }
 
         Elm.Syntax.Pattern.RecordPattern fields ->
             case fields of
@@ -2379,6 +2364,46 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
         |> Print.followedBy (Print.symbol ")")
 
 
+invalidNTuple :
+    (b -> a -> Print)
+    -> b
+    ->
+        { fullRange : Elm.Syntax.Range.Range
+        , part0 : a
+        , part1 : a
+        , part2 : a
+        , part3 : a
+        , part4Up : List a
+        }
+    -> Print
+invalidNTuple printPartNotParenthesized syntaxComments syntaxTuple =
+    -- low-effort (eating comments etc) bc this shouldn't parse in the first place
+    let
+        lineOffset : Print.LineOffset
+        lineOffset =
+            lineOffsetInRange syntaxTuple.fullRange
+    in
+    Print.symbol "("
+        |> Print.followedBy Print.space
+        |> Print.followedBy
+            (Print.inSequence
+                ((syntaxTuple.part0 :: syntaxTuple.part1 :: syntaxTuple.part2 :: syntaxTuple.part3 :: syntaxTuple.part4Up)
+                    |> List.map
+                        (\part ->
+                            Print.indented 2
+                                (printPartNotParenthesized syntaxComments part)
+                        )
+                    |> List.intersperse
+                        (Print.emptiableLayout lineOffset
+                            |> Print.followedBy (Print.symbol ",")
+                            |> Print.followedBy Print.space
+                        )
+                )
+            )
+        |> Print.followedBy (Print.layout lineOffset)
+        |> Print.followedBy (Print.symbol ")")
+
+
 record :
     { nameValueSeparator : String
     , printValueNotParenthesized : List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node fieldValue -> Print
@@ -2581,6 +2606,7 @@ typeToNotParenthesized (Elm.Syntax.Node.Node typeRange syntaxType) =
                     Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ part0, part1, part2 ])
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
+                    -- invalid syntax
                     Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled (part0 :: part1 :: part2 :: part3 :: part4Up))
 
         Elm.Syntax.TypeAnnotation.Record fields ->
@@ -2811,29 +2837,9 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
                     -- invalid syntax
-                    let
-                        lineOffset : Print.LineOffset
-                        lineOffset =
-                            lineOffsetInRange fullRange
-                    in
-                    Print.symbol "("
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy
-                            (Print.inSequence
-                                ((part0 :: part1 :: part2 :: part3 :: part4Up)
-                                    |> List.map
-                                        (\part ->
-                                            Print.indented 2 (typeNotParenthesized syntaxComments part)
-                                        )
-                                    |> List.intersperse
-                                        (Print.emptiableLayout lineOffset
-                                            |> Print.followedBy (Print.symbol ",")
-                                            |> Print.followedBy Print.space
-                                        )
-                                )
-                            )
-                        |> Print.followedBy (Print.layout lineOffset)
-                        |> Print.followedBy (Print.symbol ")")
+                    invalidNTuple typeNotParenthesized
+                        syntaxComments
+                        { fullRange = fullRange, part0 = part0, part1 = part1, part2 = part2, part3 = part3, part4Up = part4Up }
 
         Elm.Syntax.TypeAnnotation.Record fields ->
             record
@@ -3922,30 +3928,9 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
                     -- invalid syntax
-                    let
-                        lineOffset : Print.LineOffset
-                        lineOffset =
-                            lineOffsetInRange fullRange
-                    in
-                    Print.symbol "("
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy
-                            (Print.inSequence
-                                ((part0 :: part1 :: part2 :: part3 :: part4Up)
-                                    |> List.map
-                                        (\part ->
-                                            Print.indented 2
-                                                (expressionNotParenthesized syntaxComments part)
-                                        )
-                                    |> List.intersperse
-                                        (Print.emptiableLayout lineOffset
-                                            |> Print.followedBy (Print.symbol ",")
-                                            |> Print.followedBy Print.space
-                                        )
-                                )
-                            )
-                        |> Print.followedBy (Print.layout lineOffset)
-                        |> Print.followedBy (Print.symbol ")")
+                    invalidNTuple expressionNotParenthesized
+                        syntaxComments
+                        { fullRange = fullRange, part0 = part0, part1 = part1, part2 = part2, part3 = part3, part4Up = part4Up }
 
         Elm.Syntax.Expression.ParenthesizedExpression inParens ->
             let
@@ -4554,7 +4539,8 @@ expressionLetIn syntaxComments syntaxLetIn =
         |> Print.followedBy (Print.layout Print.NextLine)
         |> Print.followedBy (Print.symbol "in")
         |> Print.followedBy (Print.layout Print.NextLine)
-        |> Print.followedBy (expressionNotParenthesized syntaxComments syntaxLetIn.expression)
+        |> Print.followedBy
+            (expressionNotParenthesized syntaxComments syntaxLetIn.expression)
 
 
 expressionLetDeclaration :
@@ -4620,6 +4606,7 @@ expressionToNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
                     Elm.Syntax.Node.Node fullRange (Elm.Syntax.Expression.TupledExpression [ part0, part1, part2 ])
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
+                    -- invalid syntax
                     Elm.Syntax.Node.Node fullRange (Elm.Syntax.Expression.TupledExpression (part0 :: part1 :: part2 :: part3 :: part4Up))
 
         syntaxExpressionNotParenthesized ->
