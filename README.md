@@ -5,7 +5,6 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
 
 ## TODO
   - [ ] (!) integrate comments in all places elm-format allows
-      - [ ] variant declaration parameters
       - [ ] some patterns
       - [ ] some expressions
       - [ ] type

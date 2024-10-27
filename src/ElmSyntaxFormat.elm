@@ -2086,6 +2086,28 @@ referenceConstruct :
         }
     -> Print
 referenceConstruct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxReferenceConstruct =
+    construct printArgumentParenthesizedIfSpaceSeparated
+        syntaxComments
+        { start =
+            qualifiedReference
+                { qualification = syntaxReferenceConstruct.referenceQualification
+                , unqualified = syntaxReferenceConstruct.referenceUnqualified
+                }
+        , fullRange = syntaxReferenceConstruct.fullRange
+        , arguments = syntaxReferenceConstruct.arguments
+        }
+
+
+construct :
+    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node a -> Print)
+    -> List (Elm.Syntax.Node.Node String)
+    ->
+        { arguments : List (Elm.Syntax.Node.Node a)
+        , fullRange : Elm.Syntax.Range.Range
+        , start : Print.Print
+        }
+    -> Print
+construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxReferenceConstruct =
     let
         commentsBeforeArguments : List (List String)
         commentsBeforeArguments =
@@ -2122,28 +2144,27 @@ referenceConstruct printArgumentParenthesizedIfSpaceSeparated syntaxComments syn
             else
                 Print.NextLine
     in
-    qualifiedReference
-        { qualification = syntaxReferenceConstruct.referenceQualification
-        , unqualified = syntaxReferenceConstruct.referenceUnqualified
-        }
+    syntaxReferenceConstruct.start
         |> Print.followedBy
-            (Print.inSequence
-                (List.map2
-                    (\argumentPrint commentsBeforeArgument ->
-                        Print.layout lineOffset
-                            |> Print.followedBy
-                                (case commentsBeforeArgument of
-                                    [] ->
-                                        Print.empty
+            (Print.indentedByNextMultipleOf4
+                (Print.inSequence
+                    (List.map2
+                        (\argumentPrint commentsBeforeArgument ->
+                            Print.layout lineOffset
+                                |> Print.followedBy
+                                    (case commentsBeforeArgument of
+                                        [] ->
+                                            Print.empty
 
-                                    comment0 :: comment1Up ->
-                                        comments (comment0 :: comment1Up)
-                                            |> Print.followedBy (Print.layout lineOffset)
-                                )
-                            |> Print.followedBy argumentPrint
+                                        comment0 :: comment1Up ->
+                                            comments (comment0 :: comment1Up)
+                                                |> Print.followedBy (Print.layout lineOffset)
+                                    )
+                                |> Print.followedBy argumentPrint
+                        )
+                        argumentPrints
+                        commentsBeforeArguments
                     )
-                    argumentPrints
-                    commentsBeforeArguments
                 )
             )
 
@@ -3353,7 +3374,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
         variantPrints =
             syntaxChoiceTypeDeclaration.constructors
                 |> List.foldl
-                    (\(Elm.Syntax.Node.Node _ variant) soFar ->
+                    (\(Elm.Syntax.Node.Node variantRange variant) soFar ->
                         let
                             variantParameterPrints : List Print
                             variantParameterPrints =
@@ -3378,19 +3399,12 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                             |> Print.followedBy (Print.layout Print.NextLine)
                                 )
                                     |> Print.followedBy
-                                        (Print.symbol (variant.name |> Elm.Syntax.Node.value)
-                                            |> Print.followedBy
-                                                (Print.indentedByNextMultipleOf4
-                                                    (Print.inSequence
-                                                        (variantParameterPrints
-                                                            |> List.map
-                                                                (\parameterPrint ->
-                                                                    Print.layout variantParametersLineOffset
-                                                                        |> Print.followedBy parameterPrint
-                                                                )
-                                                        )
-                                                    )
-                                                )
+                                        (construct typeParenthesizedIfSpaceSeparated
+                                            syntaxComments
+                                            { start = Print.symbol (variant.name |> Elm.Syntax.Node.value)
+                                            , fullRange = variantRange
+                                            , arguments = variant.arguments
+                                            }
                                         )
                         in
                         { prints = variantPrint :: soFar.prints

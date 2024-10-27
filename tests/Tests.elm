@@ -844,7 +844,7 @@ type T
     | Y
 """
                 )
-            , Test.test "comments between parameters"
+            , Test.test "comments between type parameters"
                 (\() ->
                     """module A exposing (..)
 type A parameterA {--} parameterB
@@ -918,6 +918,35 @@ type A
     | {- 0 -}
       {- 1 -}
       B String
+"""
+                )
+            , Test.test "comments before first variant parameter"
+                (\() ->
+                    """module A exposing (..)
+type A
+    = A {- 0 -} Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A
+    = A
+        {- 0 -}
+        Int
+"""
+                )
+            , Test.test "comments between variant parameters"
+                (\() ->
+                    """module A exposing (..)
+type A
+    = A Int {- 0 -} Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A
+    = A
+        Int
+        {- 0 -}
+        Int
 """
                 )
             ]
