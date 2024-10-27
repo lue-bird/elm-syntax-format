@@ -2526,17 +2526,8 @@ typeParenthesizedIfFunction :
     -> Print
 typeParenthesizedIfFunction syntaxComments typeNode =
     case typeNode |> typeToFunction of
-        Just function ->
-            Print.symbol "("
-                |> Print.followedBy
-                    (Print.indented 1
-                        (typeFunctionNotParenthesized syntaxComments function)
-                    )
-                |> Print.followedBy
-                    (Print.emptiableLayout
-                        (lineOffsetBetweenNodes function.inType function.outType)
-                    )
-                |> Print.followedBy (Print.symbol ")")
+        Just _ ->
+            typeParenthesized syntaxComments typeNode
 
         Nothing ->
             typeNotParenthesized syntaxComments typeNode
@@ -2672,14 +2663,6 @@ parenthesized printNotParenthesized syntax syntaxComments =
         |> Print.followedBy
             (case commentsBeforeInner of
                 [] ->
-                    let
-                        _ =
-                            Debug.log "commentsBeforeInner empty"
-                                { start = syntax.fullRange.start
-                                , end = syntax.notParenthesized |> Elm.Syntax.Node.range |> .start
-                                , comments = syntaxComments
-                                }
-                    in
                     case commentsAfterInner of
                         [] ->
                             Print.indented 1 notParenthesizedPrint
@@ -3700,7 +3683,7 @@ expressionParenthesized :
 expressionParenthesized syntaxComments expressionNode =
     parenthesized expressionNotParenthesized
         { notParenthesized = expressionNode |> expressionToNotParenthesized
-        , fullRange = expressionNode |> Elm.Syntax.Node.range |> Debug.log "expressionNode"
+        , fullRange = expressionNode |> Elm.Syntax.Node.range
         }
         syntaxComments
 
