@@ -1482,6 +1482,52 @@ a =
     )
 """
                 )
+            , Test.test "comments before first list element"
+                (\() ->
+                    """module A exposing (..)
+a = [ -- zero
+    0 ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [ -- zero
+      0
+    ]
+"""
+                )
+            , Test.test "comments between list elements"
+                (\() ->
+                    """module A exposing (..)
+a = [ 0, -- zero
+    0 ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [ 0
+    , -- zero
+      0
+    ]
+"""
+                )
+            , Test.test "comments after list elements"
+                (\() ->
+                    """module A exposing (..)
+a = [ 0, 0
+    -- zero
+    ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [ 0
+    , 0
+
+    -- zero
+    ]
+"""
+                )
             , Test.test "comments between parameters"
                 (\() ->
                     """module A exposing (..)

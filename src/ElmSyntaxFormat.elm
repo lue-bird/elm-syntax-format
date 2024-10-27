@@ -4314,31 +4314,76 @@ listLiteral printElementNotParenthesized syntaxComments syntaxList =
             Print.symbol "[]"
 
         element0 :: element1Up ->
-            -- TODO comments
             let
+                commentsBeforeElements : { end : Elm.Syntax.Range.Location, reverse : List (List String) }
+                commentsBeforeElements =
+                    (element0 :: element1Up)
+                        |> List.foldl
+                            (\(Elm.Syntax.Node.Node elementRange _) soFar ->
+                                { end = elementRange.end
+                                , reverse =
+                                    commentsInRange { start = soFar.end, end = elementRange.start } syntaxComments
+                                        :: soFar.reverse
+                                }
+                            )
+                            { end = syntaxList.fullRange.start
+                            , reverse = []
+                            }
+
+                commentsAfterElements : List String
+                commentsAfterElements =
+                    commentsInRange { start = commentsBeforeElements.end, end = syntaxList.fullRange.end } syntaxComments
+
                 lineOffset : Print.LineOffset
                 lineOffset =
-                    -- TODO comments
-                    lineOffsetInRange syntaxList.fullRange
+                    if
+                        (commentsBeforeElements.reverse |> List.all List.isEmpty)
+                            || (commentsAfterElements |> List.isEmpty)
+                    then
+                        lineOffsetInRange syntaxList.fullRange
+
+                    else
+                        Print.NextLine
             in
             Print.symbol "["
                 |> Print.followedBy Print.space
                 |> Print.followedBy
                     (Print.inSequence
-                        ((element0 :: element1Up)
-                            |> List.map
-                                (\element ->
-                                    Print.indented 2
-                                        (printElementNotParenthesized syntaxComments
-                                            element
-                                        )
-                                )
+                        (List.map2
+                            (\element commentsBeforeElement ->
+                                Print.indented 2
+                                    ((case commentsBeforeElement of
+                                        [] ->
+                                            Print.empty
+
+                                        comment0 :: comment1Up ->
+                                            comments (comment0 :: comment1Up)
+                                                |> Print.followedBy (Print.layout Print.NextLine)
+                                     )
+                                        |> Print.followedBy
+                                            (printElementNotParenthesized syntaxComments
+                                                element
+                                            )
+                                    )
+                            )
+                            (element0 :: element1Up)
+                            (commentsBeforeElements.reverse |> List.reverse)
                             |> List.intersperse
                                 (Print.emptiableLayout lineOffset
                                     |> Print.followedBy (Print.symbol ",")
                                     |> Print.followedBy Print.space
                                 )
                         )
+                    )
+                |> Print.followedBy
+                    (case commentsAfterElements of
+                        [] ->
+                            Print.empty
+
+                        comment0 :: comment1Up ->
+                            Print.linebreak
+                                |> Print.followedBy (Print.layout lineOffset)
+                                |> Print.followedBy (comments (comment0 :: comment1Up))
                     )
                 |> Print.followedBy (Print.layout lineOffset)
                 |> Print.followedBy (Print.symbol "]")
