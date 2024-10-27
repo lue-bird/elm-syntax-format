@@ -1142,6 +1142,147 @@ type alias T a =
     (Int -> Int) -> a
 """
                 )
+            , Test.test "comments before first record field"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { -- zero
+    zero : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { -- zero
+      zero : Int
+    }
+"""
+                )
+            , Test.test "comments between record field name and value"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { zero : -- zero
+    Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { zero :
+        -- zero
+        Int
+    }
+"""
+                )
+            , Test.test "comments between record fields"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { zero : Int, -- zero
+    one : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { zero : Int
+    , -- zero
+      one : Int
+    }
+"""
+                )
+            , Test.test "comments after record fields"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { zero : Int, one : Int
+    -- zero
+    }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { zero : Int
+    , one : Int
+
+    -- zero
+    }
+"""
+                )
+            , Test.test "comments before record extension record variable"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { -- zero
+    r | zero : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { -- zero
+      r
+        | zero : Int
+    }
+"""
+                )
+            , Test.test "comments before first record extension field"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { r | -- zero
+    zero : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { r
+        | -- zero
+          zero : Int
+    }
+"""
+                )
+            , Test.test "comments between record extension field name and value"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { r | zero : -- zero
+    Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { r
+        | zero :
+            -- zero
+            Int
+    }
+"""
+                )
+            , Test.test "comments between record extension fields"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { r | zero : Int, -- zero
+    one : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { r
+        | zero : Int
+        , -- zero
+          one : Int
+    }
+"""
+                )
+            , Test.test "comments after record extension fields"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { r | zero : Int, one : Int
+    -- zero
+    }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { r
+        | zero : Int
+        , one : Int
+
+        -- zero
+    }
+"""
+                )
             ]
         , Test.describe "expression"
             [ Test.test "if-then-else with another if-then-else in the else branch"

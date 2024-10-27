@@ -2021,7 +2021,7 @@ typeRecordExtension :
     List (Elm.Syntax.Node.Node String)
     ->
         { fullRange : Elm.Syntax.Range.Range
-        , recordVariable : String
+        , recordVariable : Elm.Syntax.Node.Node String
         , fields :
             List
                 (Elm.Syntax.Node.Node
@@ -2032,42 +2032,147 @@ typeRecordExtension :
         }
     -> Print
 typeRecordExtension syntaxComments syntaxRecordExtension =
-    -- TODO comments
     let
+        commentsBeforeRecordVariable : List String
+        commentsBeforeRecordVariable =
+            commentsInRange
+                { start = syntaxRecordExtension.fullRange.start
+                , end = syntaxRecordExtension.recordVariable |> Elm.Syntax.Node.range |> .start
+                }
+                syntaxComments
+
+        commentsBeforeFields :
+            { end : Elm.Syntax.Range.Location
+            , reverse :
+                List
+                    { beforeName : List String
+                    , betweenNameAndValue : List String
+                    }
+            }
+        commentsBeforeFields =
+            syntaxRecordExtension.fields
+                |> List.foldl
+                    (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange _, Elm.Syntax.Node.Node fieldValueRange _ )) soFar ->
+                        { end = fieldValueRange.end
+                        , reverse =
+                            { beforeName =
+                                commentsInRange
+                                    { start = soFar.end, end = fieldNameRange.start }
+                                    syntaxComments
+                            , betweenNameAndValue =
+                                commentsInRange
+                                    { start = fieldNameRange.start, end = fieldValueRange.start }
+                                    syntaxComments
+                            }
+                                :: soFar.reverse
+                        }
+                    )
+                    { end = syntaxRecordExtension.recordVariable |> Elm.Syntax.Node.range |> .end
+                    , reverse = []
+                    }
+
+        commentsAfterFields : List String
+        commentsAfterFields =
+            commentsInRange
+                { start = commentsBeforeFields.end
+                , end = syntaxRecordExtension.fullRange.end
+                }
+                syntaxComments
+
         lineOffset : Print.LineOffset
         lineOffset =
-            -- TODO comments
-            lineOffsetInRange syntaxRecordExtension.fullRange
+            if
+                (commentsBeforeRecordVariable |> List.isEmpty)
+                    && (commentsBeforeFields.reverse
+                            |> List.all
+                                (\fieldComments ->
+                                    (fieldComments.beforeName |> List.isEmpty)
+                                        && (fieldComments.betweenNameAndValue |> List.isEmpty)
+                                )
+                       )
+                    && (commentsAfterFields |> List.isEmpty)
+            then
+                lineOffsetInRange syntaxRecordExtension.fullRange
+
+            else
+                Print.NextLine
     in
     Print.symbol "{"
         |> Print.followedBy Print.space
-        |> Print.followedBy (Print.symbol syntaxRecordExtension.recordVariable)
-        |> Print.followedBy (Print.layout lineOffset)
+        |> Print.followedBy
+            (case commentsBeforeRecordVariable of
+                [] ->
+                    Print.empty
+
+                comment0 :: comment1Up ->
+                    comments (comment0 :: comment1Up)
+                        |> Print.followedBy (Print.layout Print.NextLine)
+                        |> Print.followedBy Print.space
+                        |> Print.followedBy Print.space
+            )
+        |> Print.followedBy
+            (Print.symbol
+                (syntaxRecordExtension.recordVariable
+                    |> Elm.Syntax.Node.value
+                )
+            )
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
-                (Print.symbol "|"
+                (Print.layout lineOffset
+                    |> Print.followedBy (Print.symbol "|")
                     |> Print.followedBy Print.space
                     |> Print.followedBy
                         (Print.inSequence
-                            (syntaxRecordExtension.fields
-                                |> List.map
-                                    (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
-                                        Print.symbol fieldName
-                                            |> Print.followedBy Print.space
-                                            |> Print.followedBy (Print.symbol ":")
-                                            |> Print.followedBy
-                                                (Print.indentedByNextMultipleOf4
-                                                    (Print.layout (lineOffsetInNode fieldValue)
-                                                        |> Print.followedBy (typeNotParenthesized syntaxComments fieldValue)
-                                                    )
-                                                )
+                            (List.map2
+                                (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) fieldComments ->
+                                    (case fieldComments.beforeName of
+                                        [] ->
+                                            Print.empty
+
+                                        comment0 :: comment1Up ->
+                                            comments (comment0 :: comment1Up)
+                                                |> Print.followedBy (Print.layout Print.NextLine)
+                                                |> Print.followedBy Print.space
+                                                |> Print.followedBy Print.space
                                     )
+                                        |> Print.followedBy (Print.symbol fieldName)
+                                        |> Print.followedBy Print.space
+                                        |> Print.followedBy (Print.symbol ":")
+                                        |> Print.followedBy
+                                            (Print.indentedByNextMultipleOf4
+                                                ((case fieldComments.betweenNameAndValue of
+                                                    [] ->
+                                                        Print.layout (lineOffsetInNode fieldValue)
+
+                                                    comment0 :: comment1Up ->
+                                                        Print.layout Print.NextLine
+                                                            |> Print.followedBy (comments (comment0 :: comment1Up))
+                                                            |> Print.followedBy (Print.layout Print.NextLine)
+                                                 )
+                                                    |> Print.followedBy
+                                                        (typeNotParenthesized syntaxComments fieldValue)
+                                                )
+                                            )
+                                )
+                                syntaxRecordExtension.fields
+                                (commentsBeforeFields.reverse |> List.reverse)
                                 |> List.intersperse
                                     (Print.emptiableLayout lineOffset
                                         |> Print.followedBy (Print.symbol ",")
                                         |> Print.followedBy Print.space
                                     )
                             )
+                        )
+                    -- yes, elm-format indents trailing comments
+                    |> Print.followedBy
+                        (case commentsAfterFields of
+                            [] ->
+                                Print.empty
+
+                            comment0 :: comment1Up ->
+                                Print.linebreak
+                                    |> Print.followedBy (Print.layout lineOffset)
+                                    |> Print.followedBy (comments (comment0 :: comment1Up))
                         )
                 )
             )
@@ -2463,9 +2568,13 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                 { end = fieldValueRange.end
                                 , reverse =
                                     { beforeName =
-                                        commentsInRange { start = soFar.end, end = fieldNameRange.start } syntaxComments
+                                        commentsInRange
+                                            { start = soFar.end, end = fieldNameRange.start }
+                                            syntaxComments
                                     , betweenNameAndValue =
-                                        commentsInRange { start = fieldNameRange.start, end = fieldValueRange.start } syntaxComments
+                                        commentsInRange
+                                            { start = fieldNameRange.start, end = fieldValueRange.start }
+                                            syntaxComments
                                     }
                                         :: soFar.reverse
                                 }
@@ -2474,9 +2583,13 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                             , reverse = []
                             }
 
-                commentsAfterElements : List String
-                commentsAfterElements =
-                    commentsInRange { start = commentsBeforeFields.end, end = syntaxRecord.fullRange.end } syntaxComments
+                commentsAfterFields : List String
+                commentsAfterFields =
+                    commentsInRange
+                        { start = commentsBeforeFields.end
+                        , end = syntaxRecord.fullRange.end
+                        }
+                        syntaxComments
 
                 lineOffset : Print.LineOffset
                 lineOffset =
@@ -2488,7 +2601,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                         && (fieldComments.betweenNameAndValue |> List.isEmpty)
                                 )
                         )
-                            && (commentsAfterElements |> List.isEmpty)
+                            && (commentsAfterFields |> List.isEmpty)
                     then
                         lineOffsetInRange syntaxRecord.fullRange
 
@@ -2542,7 +2655,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                         )
                     )
                 |> Print.followedBy
-                    (case commentsAfterElements of
+                    (case commentsAfterFields of
                         [] ->
                             Print.empty
 
@@ -2942,7 +3055,7 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                 syntaxComments
                 { fullRange = fullRange, fields = fields }
 
-        Elm.Syntax.TypeAnnotation.GenericRecord (Elm.Syntax.Node.Node _ recordVariable) (Elm.Syntax.Node.Node _ fields) ->
+        Elm.Syntax.TypeAnnotation.GenericRecord recordVariable (Elm.Syntax.Node.Node _ fields) ->
             typeRecordExtension syntaxComments
                 { fullRange = fullRange
                 , recordVariable = recordVariable
