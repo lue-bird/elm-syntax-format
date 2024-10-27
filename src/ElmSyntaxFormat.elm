@@ -1966,27 +1966,8 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
                         { fullRange = fullRange, part0 = part0, part1 = part1, part2 = part2, part3 = part3, part4Up = part4Up }
 
         Elm.Syntax.Pattern.RecordPattern fields ->
-            case fields of
-                [] ->
-                    Print.symbol "{}"
-
-                field0 :: field1Up ->
-                    -- TODO comments
-                    Print.symbol "{"
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy
-                            (Print.inSequence
-                                ((field0 :: field1Up)
-                                    |> List.map (\(Elm.Syntax.Node.Node _ fieldName) -> Print.symbol fieldName)
-                                    |> List.intersperse
-                                        (Print.emptiableLayout Print.SameLine
-                                            |> Print.followedBy (Print.symbol ",")
-                                            |> Print.followedBy Print.space
-                                        )
-                                )
-                            )
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.symbol "}")
+            patternRecord syntaxComments
+                { fullRange = fullRange, fields = fields }
 
         Elm.Syntax.Pattern.UnConsPattern headPattern tailPattern ->
             patternParenthesizedIfSpaceSeparated syntaxComments headPattern
@@ -2015,6 +1996,95 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
                 |> Print.followedBy (Print.symbol "as")
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol aliasName)
+
+
+patternRecord :
+    List (Elm.Syntax.Node.Node String)
+    ->
+        { fields : List (Elm.Syntax.Node.Node String)
+        , fullRange : Elm.Syntax.Range.Range
+        }
+    -> Print
+patternRecord syntaxComments syntaxRecord =
+    case syntaxRecord.fields of
+        [] ->
+            Print.symbol "{}"
+
+        field0 :: field1Up ->
+            let
+                commentsBeforeFields : { end : Elm.Syntax.Range.Location, reverse : List (List String) }
+                commentsBeforeFields =
+                    (field0 :: field1Up)
+                        |> List.foldl
+                            (\(Elm.Syntax.Node.Node elementRange _) soFar ->
+                                { end = elementRange.end
+                                , reverse =
+                                    commentsInRange { start = soFar.end, end = elementRange.start } syntaxComments
+                                        :: soFar.reverse
+                                }
+                            )
+                            { end = syntaxRecord.fullRange.start
+                            , reverse = []
+                            }
+
+                commentsAfterFields : List String
+                commentsAfterFields =
+                    commentsInRange { start = commentsBeforeFields.end, end = syntaxRecord.fullRange.end } syntaxComments
+
+                lineOffset : Print.LineOffset
+                lineOffset =
+                    if
+                        (commentsBeforeFields.reverse |> List.all List.isEmpty)
+                            && (commentsAfterFields |> List.isEmpty)
+                    then
+                        Print.SameLine
+
+                    else
+                        Print.NextLine
+            in
+            Print.symbol "{"
+                |> Print.followedBy (Print.layout lineOffset)
+                |> Print.followedBy
+                    (Print.inSequence
+                        (List.map2
+                            (\(Elm.Syntax.Node.Node _ fieldName) commentsBeforeField ->
+                                Print.indented 2
+                                    ((case commentsBeforeField of
+                                        [] ->
+                                            Print.empty
+
+                                        comment0 :: comment1Up ->
+                                            comments (comment0 :: comment1Up)
+                                                |> Print.followedBy (Print.layout Print.NextLine)
+                                     )
+                                        |> Print.followedBy (Print.symbol fieldName)
+                                    )
+                            )
+                            (field0 :: field1Up)
+                            (commentsBeforeFields.reverse |> List.reverse)
+                            |> List.intersperse
+                                (Print.emptiableLayout lineOffset
+                                    |> Print.followedBy (Print.symbol ",")
+                                    |> Print.followedBy Print.space
+                                )
+                        )
+                    )
+                |> Print.followedBy
+                    (case commentsAfterFields of
+                        [] ->
+                            Print.empty
+
+                        comment0 :: comment1Up ->
+                            -- yes, in record patterns trailing comments
+                            -- are indented and not separated with an extra linebreak
+                            Print.indented 2
+                                (Print.layout lineOffset
+                                    |> Print.followedBy
+                                        (comments (comment0 :: comment1Up))
+                                )
+                    )
+                |> Print.followedBy (Print.layout lineOffset)
+                |> Print.followedBy (Print.symbol "}")
 
 
 typeRecordExtension :
