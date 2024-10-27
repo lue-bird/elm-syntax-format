@@ -2712,28 +2712,64 @@ typeFunctionNotParenthesized :
     -> Print
 typeFunctionNotParenthesized syntaxComments function =
     let
+        afterArrowTypes : List (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation)
+        afterArrowTypes =
+            typeFunctionExpand function.outType
+
+        afterArrowTypesComments : List (List String)
+        afterArrowTypesComments =
+            afterArrowTypes
+                |> List.foldl
+                    (\(Elm.Syntax.Node.Node afterArrowTypeRange _) soFar ->
+                        { end = afterArrowTypeRange.end
+                        , commentsReverse =
+                            commentsInRange
+                                { start = soFar.end, end = afterArrowTypeRange.start }
+                                syntaxComments
+                                :: soFar.commentsReverse
+                        }
+                    )
+                    { end = function.inType |> Elm.Syntax.Node.range |> .end
+                    , commentsReverse = []
+                    }
+                |> .commentsReverse
+                |> List.reverse
+
         fullLineOffset : Print.LineOffset
         fullLineOffset =
-            lineOffsetBetweenNodes function.inType function.outType
+            if afterArrowTypesComments |> List.all List.isEmpty then
+                lineOffsetBetweenNodes function.inType function.outType
+
+            else
+                Print.NextLine
     in
     typeParenthesizedIfFunction syntaxComments function.inType
         |> Print.followedBy
             (Print.inSequence
-                (typeFunctionExpand function.outType
-                    |> List.map
-                        (\afterArrowTypeNode ->
-                            Print.layout fullLineOffset
-                                |> Print.followedBy (Print.symbol "->")
-                                |> Print.followedBy
-                                    (Print.indentedByNextMultipleOf4
-                                        (Print.layout (lineOffsetInNode afterArrowTypeNode)
-                                            |> Print.followedBy
-                                                (typeParenthesizedIfParenthesizedFunction syntaxComments
-                                                    afterArrowTypeNode
-                                                )
-                                        )
+                (List.map2
+                    (\afterArrowTypeNode commentsBeforeAfterArrowType ->
+                        Print.layout fullLineOffset
+                            |> Print.followedBy (Print.symbol "->")
+                            |> Print.followedBy
+                                (Print.indentedByNextMultipleOf4
+                                    ((case commentsBeforeAfterArrowType of
+                                        [] ->
+                                            Print.layout (lineOffsetInNode afterArrowTypeNode)
+
+                                        comment0 :: comment1Up ->
+                                            Print.layout Print.NextLine
+                                                |> Print.followedBy (comments (comment0 :: comment1Up))
+                                                |> Print.followedBy (Print.layout Print.NextLine)
+                                     )
+                                        |> Print.followedBy
+                                            (typeParenthesizedIfParenthesizedFunction syntaxComments
+                                                afterArrowTypeNode
+                                            )
                                     )
-                        )
+                                )
+                    )
+                    afterArrowTypes
+                    afterArrowTypesComments
                 )
             )
 

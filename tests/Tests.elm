@@ -1142,6 +1142,22 @@ type alias T a =
     (Int -> Int) -> a
 """
                 )
+            , Test.test "function comments between types"
+                (\() ->
+                    """module A exposing (..)
+type alias T =
+    Int -> -- integer
+    Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T =
+    Int
+    ->
+        -- integer
+        Int
+"""
+                )
             , Test.test "comments before first record field"
                 (\() ->
                     """module A exposing (..)

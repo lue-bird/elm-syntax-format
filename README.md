@@ -7,11 +7,10 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
   - integrate comments in all places elm-format allows
       - some patterns
       - some expressions
-      - some types
 
 ## known deviations in printing
-  - ranges of `then`, `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
-  - ranges of `=`, `,` and `|` (and the keywords) are needed to determine whether comments are before or after
+  - ranges of `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
+  - ranges of `=`, `:`, `,`, `|`, `->` (and the keywords) are needed to determine whether comments are before or after
   - function types outputting a parenthesized function do not preserve the parens because type parens are not stored in the syntax tree
   - comments before/after parenthesized types will get eaten because type parens are not stored in the syntax tree
   - `"""` and `"` aren't differentiated
