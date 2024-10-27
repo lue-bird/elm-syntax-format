@@ -4,15 +4,16 @@ Pretty print an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-synta
 If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https://dark.elm.dmy.fr/packages/mdgriffith/elm-codegen/latest/) and [`the-sett/elm-syntax-dsl`](https://dark.elm.dmy.fr/packages/the-sett/elm-syntax-dsl/latest/).
 
 ## TODO
-  - [ ] (!) integrate comments in all places elm-format allows
-      - [ ] some patterns
-      - [ ] some expressions
-      - [ ] type
+  - integrate comments in all places elm-format allows
+      - some patterns
+      - some expressions
+      - some types
 
 ## known deviations in printing
   - ranges of `then`, `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
   - ranges of `=`, `,` and `|` (and the keywords) are needed to determine whether comments are before or after
-  - function types outputting a parenthesized function do not preserve the parens because parens are not stored in the syntax tree
+  - function types outputting a parenthesized function do not preserve the parens because type parens are not stored in the syntax tree
+  - comments before/after parenthesized types will get eaten because type parens are not stored in the syntax tree
   - `"""` and `"` aren't differentiated
   - some floats in exponent representation are formatted to without it and the other way around
   - handling int, float overflow
