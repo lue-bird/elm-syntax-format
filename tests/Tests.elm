@@ -1528,6 +1528,67 @@ a =
     ]
 """
                 )
+            , Test.test "comments before first record field"
+                (\() ->
+                    """module A exposing (..)
+a = { -- zero
+    zero = 0 }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { -- zero
+      zero = 0
+    }
+"""
+                )
+            , Test.test "comments between record field name and value"
+                (\() ->
+                    """module A exposing (..)
+a = { zero = -- zero
+    0 }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { zero =
+        -- zero
+        0
+    }
+"""
+                )
+            , Test.test "comments between record fields"
+                (\() ->
+                    """module A exposing (..)
+a = { zero = 0, -- zero
+    one = 1 }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { zero = 0
+    , -- zero
+      one = 1
+    }
+"""
+                )
+            , Test.test "comments after record fields"
+                (\() ->
+                    """module A exposing (..)
+a = { zero = 0, one = 1
+    -- zero
+    }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { zero = 0
+    , one = 1
+
+    -- zero
+    }
+"""
+                )
             , Test.test "comments between parameters"
                 (\() ->
                     """module A exposing (..)
