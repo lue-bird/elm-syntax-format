@@ -1917,7 +1917,11 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
                     patternNotParenthesized syntaxComments inParens
 
                 _ ->
-                    patternParenthesized syntaxComments inParens
+                    parenthesized patternNotParenthesized
+                        { notParenthesized = inParens |> patternToNotParenthesized
+                        , fullRange = fullRange
+                        }
+                        syntaxComments
 
         Elm.Syntax.Pattern.TuplePattern parts ->
             case parts of
@@ -1935,7 +1939,25 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
 
                 [ inParens ] ->
                     -- should be covered by ParenthesizedPattern
-                    patternNotParenthesized syntaxComments inParens
+                    let
+                        commentsBeforeInParens : List String
+                        commentsBeforeInParens =
+                            commentsInRange { start = fullRange.start, end = inParens |> Elm.Syntax.Node.range |> .start } syntaxComments
+
+                        commentsAfterInParens : List String
+                        commentsAfterInParens =
+                            commentsInRange { start = inParens |> Elm.Syntax.Node.range |> .end, end = fullRange.end } syntaxComments
+                    in
+                    case ( commentsBeforeInParens, commentsAfterInParens ) of
+                        ( [], [] ) ->
+                            patternNotParenthesized syntaxComments inParens
+
+                        _ ->
+                            parenthesized patternNotParenthesized
+                                { notParenthesized = inParens |> patternToNotParenthesized
+                                , fullRange = fullRange
+                                }
+                                syntaxComments
 
                 part0 :: part1 :: part2 :: part3Up ->
                     -- invalid syntax
@@ -2650,6 +2672,14 @@ parenthesized printNotParenthesized syntax syntaxComments =
         |> Print.followedBy
             (case commentsBeforeInner of
                 [] ->
+                    let
+                        _ =
+                            Debug.log "commentsBeforeInner empty"
+                                { start = syntax.fullRange.start
+                                , end = syntax.notParenthesized |> Elm.Syntax.Node.range |> .start
+                                , comments = syntaxComments
+                                }
+                    in
                     case commentsAfterInner of
                         [] ->
                             Print.indented 1 notParenthesizedPrint
@@ -2773,7 +2803,11 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                             typeNotParenthesized syntaxComments inParens
 
                         _ ->
-                            typeParenthesized syntaxComments inParens
+                            parenthesized typeNotParenthesized
+                                { notParenthesized = inParens |> typeToNotParenthesized
+                                , fullRange = fullRange
+                                }
+                                syntaxComments
 
                 [ part0, part1 ] ->
                     tuple typeNotParenthesized
@@ -3666,7 +3700,7 @@ expressionParenthesized :
 expressionParenthesized syntaxComments expressionNode =
     parenthesized expressionNotParenthesized
         { notParenthesized = expressionNode |> expressionToNotParenthesized
-        , fullRange = expressionNode |> Elm.Syntax.Node.range
+        , fullRange = expressionNode |> Elm.Syntax.Node.range |> Debug.log "expressionNode"
         }
         syntaxComments
 
@@ -3883,7 +3917,11 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                             expressionNotParenthesized syntaxComments inParens
 
                         _ ->
-                            expressionParenthesized syntaxComments inParens
+                            parenthesized expressionNotParenthesized
+                                { notParenthesized = inParens |> expressionToNotParenthesized
+                                , fullRange = fullRange
+                                }
+                                syntaxComments
 
                 [ part0, part1 ] ->
                     tuple expressionNotParenthesized
@@ -3941,7 +3979,11 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                     expressionNotParenthesized syntaxComments inParens
 
                 _ ->
-                    expressionParenthesized syntaxComments inParens
+                    parenthesized expressionNotParenthesized
+                        { notParenthesized = inParens |> expressionToNotParenthesized
+                        , fullRange = fullRange
+                        }
+                        syntaxComments
 
         Elm.Syntax.Expression.LetExpression syntaxLetIn ->
             expressionLetIn syntaxComments syntaxLetIn

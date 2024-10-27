@@ -1407,6 +1407,52 @@ a =
         |> identity
 """
                 )
+            , Test.test "parenthesized with comments before"
+                (\() ->
+                    """module A exposing (..)
+a = ((-- zero
+    (0)))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    (-- zero
+     0
+    )
+"""
+                )
+            , Test.test "parenthesized with comments after"
+                (\() ->
+                    """module A exposing (..)
+a = (((0)
+    -- zero
+   ))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    (0
+     -- zero
+    )
+"""
+                )
+            , Test.test "parenthesized with comments before and after"
+                (\() ->
+                    """module A exposing (..)
+a = (-- before
+  ((0)
+    -- after
+   ))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    (-- before
+     0
+     -- after
+    )
+"""
+                )
             , Test.test "comments between parameters"
                 (\() ->
                     """module A exposing (..)
