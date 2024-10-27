@@ -1051,8 +1051,8 @@ a =
             , Test.test "function, comment before multi-line annotation"
                 (\() ->
                     """module A exposing (..)
-a : ({- will always return 0 -} Int
- -> Int)
+a : {- will always return 0 -} Int
+ -> Int
 a _ =
     0"""
                         |> expectPrintedAs

@@ -1954,11 +1954,11 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
             case parts of
                 [ part0, part1 ] ->
                     { part0 = part0, part1 = part1, fullRange = patternRange }
-                        |> patternTuple syntaxComments
+                        |> tuple patternNotParenthesized syntaxComments
 
                 [ part0, part1, part2 ] ->
                     { part0 = part0, part1 = part1, part2 = part2, fullRange = patternRange }
-                        |> patternTriple syntaxComments
+                        |> triple patternNotParenthesized syntaxComments
 
                 [] ->
                     -- should be covered by UnitPattern
@@ -2060,45 +2060,38 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
                 |> Print.followedBy (Print.symbol aliasName)
 
 
-patternTuple :
-    List (Elm.Syntax.Node.Node String)
+tuple :
+    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node a -> Print)
+    -> List (Elm.Syntax.Node.Node String)
     ->
-        { part0 : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
-        , part1 : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
-        , fullRange : Elm.Syntax.Range.Range
+        { fullRange : Elm.Syntax.Range.Range
+        , part0 : Elm.Syntax.Node.Node a
+        , part1 : Elm.Syntax.Node.Node a
         }
     -> Print
-patternTuple syntaxComments tuple =
+tuple printPartNotParenthesized syntaxComments syntaxTuple =
     let
-        part0NormalParensRange : Elm.Syntax.Range.Range
-        part0NormalParensRange =
-            tuple.part0 |> patternToNotParenthesized |> Elm.Syntax.Node.range
-
-        part1NormalParensRange : Elm.Syntax.Range.Range
-        part1NormalParensRange =
-            tuple.part1 |> patternToNotParenthesized |> Elm.Syntax.Node.range
-
         beforePart0Comments : List String
         beforePart0Comments =
             commentsInRange
-                { start = tuple.fullRange.start
-                , end = part0NormalParensRange.start
+                { start = syntaxTuple.fullRange.start
+                , end = syntaxTuple.part0 |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
 
         beforePart1Comments : List String
         beforePart1Comments =
             commentsInRange
-                { start = part0NormalParensRange.end
-                , end = part1NormalParensRange.start
+                { start = syntaxTuple.part0 |> Elm.Syntax.Node.range |> .end
+                , end = syntaxTuple.part1 |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
 
         afterPart1Comments : List String
         afterPart1Comments =
             commentsInRange
-                { start = part1NormalParensRange.end
-                , end = tuple.fullRange.end
+                { start = syntaxTuple.part1 |> Elm.Syntax.Node.range |> .end
+                , end = syntaxTuple.fullRange.end
                 }
                 syntaxComments
 
@@ -2115,7 +2108,7 @@ patternTuple syntaxComments tuple =
                     Print.NextLine
 
                 ( [], ( [], [] ) ) ->
-                    Print.SameLine
+                    lineOffsetInRange syntaxTuple.fullRange
     in
     Print.symbol "("
         |> Print.followedBy Print.space
@@ -2129,7 +2122,7 @@ patternTuple syntaxComments tuple =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments tuple.part0)
+                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTuple.part0)
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -2145,7 +2138,7 @@ patternTuple syntaxComments tuple =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments tuple.part1)
+                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTuple.part1)
                     |> Print.followedBy
                         (case afterPart1Comments of
                             [] ->
@@ -2161,58 +2154,47 @@ patternTuple syntaxComments tuple =
         |> Print.followedBy (Print.symbol ")")
 
 
-patternTriple :
-    List (Elm.Syntax.Node.Node String)
+triple :
+    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node a -> Print)
+    -> List (Elm.Syntax.Node.Node String)
     ->
-        { part0 : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
-        , part1 : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
-        , part2 : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
-        , fullRange : Elm.Syntax.Range.Range
+        { fullRange : Elm.Syntax.Range.Range
+        , part0 : Elm.Syntax.Node.Node a
+        , part1 : Elm.Syntax.Node.Node a
+        , part2 : Elm.Syntax.Node.Node a
         }
     -> Print
-patternTriple syntaxComments triple =
+triple printPartNotParenthesized syntaxComments syntaxTriple =
     let
-        part0NormalParensRange : Elm.Syntax.Range.Range
-        part0NormalParensRange =
-            triple.part0 |> patternToNotParenthesized |> Elm.Syntax.Node.range
-
-        part1NormalParensRange : Elm.Syntax.Range.Range
-        part1NormalParensRange =
-            triple.part1 |> patternToNotParenthesized |> Elm.Syntax.Node.range
-
-        part2NormalParensRange : Elm.Syntax.Range.Range
-        part2NormalParensRange =
-            triple.part2 |> patternToNotParenthesized |> Elm.Syntax.Node.range
-
         beforePart0Comments : List String
         beforePart0Comments =
             commentsInRange
-                { start = triple.fullRange.start
-                , end = part0NormalParensRange.start
+                { start = syntaxTriple.fullRange.start
+                , end = syntaxTriple.part0 |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
 
         beforePart1Comments : List String
         beforePart1Comments =
             commentsInRange
-                { start = part0NormalParensRange.end
-                , end = part1NormalParensRange.start
+                { start = syntaxTriple.part0 |> Elm.Syntax.Node.range |> .end
+                , end = syntaxTriple.part1 |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
 
         beforePart2Comments : List String
         beforePart2Comments =
             commentsInRange
-                { start = part1NormalParensRange.end
-                , end = part2NormalParensRange.start
+                { start = syntaxTriple.part1 |> Elm.Syntax.Node.range |> .end
+                , end = syntaxTriple.part2 |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
 
         afterPart2Comments : List String
         afterPart2Comments =
             commentsInRange
-                { start = part2NormalParensRange.end
-                , end = triple.fullRange.end
+                { start = syntaxTriple.part2 |> Elm.Syntax.Node.range |> .end
+                , end = syntaxTriple.fullRange.end
                 }
                 syntaxComments
 
@@ -2232,7 +2214,7 @@ patternTriple syntaxComments triple =
                     Print.NextLine
 
                 ( [], ( [], ( [], [] ) ) ) ->
-                    Print.SameLine
+                    lineOffsetInRange syntaxTriple.fullRange
     in
     Print.symbol "("
         |> Print.followedBy Print.space
@@ -2246,7 +2228,7 @@ patternTriple syntaxComments triple =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments triple.part0)
+                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTriple.part0)
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -2262,7 +2244,7 @@ patternTriple syntaxComments triple =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments triple.part1)
+                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTriple.part1)
                 )
             )
         |> Print.followedBy (Print.emptiableLayout lineOffset)
@@ -2278,7 +2260,7 @@ patternTriple syntaxComments triple =
                         comments (comment0 :: comment1Up)
                             |> Print.followedBy (Print.layout Print.NextLine)
                  )
-                    |> Print.followedBy (patternNotParenthesized syntaxComments triple.part2)
+                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTriple.part2)
                     |> Print.followedBy
                         (case afterPart2Comments of
                             [] ->
@@ -2419,6 +2401,9 @@ typeToFunction typeNode =
 
 
 {-| Remove as many parens as possible
+
+TODO version of this that keeps parens if contains comments between paren tokens and inner type
+
 -}
 typeToNotParenthesized :
     Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
@@ -2480,19 +2465,86 @@ typeParenthesizedIfSpaceSeparated :
     -> Print
 typeParenthesizedIfSpaceSeparated syntaxComments typeNode =
     if typeIsSpaceSeparated (typeNode |> Elm.Syntax.Node.value) then
-        let
-            typePrint : Print
-            typePrint =
-                typeNotParenthesized syntaxComments typeNode
-        in
-        Print.symbol "("
-            |> Print.followedBy (Print.indented 1 typePrint)
-            |> Print.followedBy
-                (Print.emptiableLayout (Print.lineOffset typePrint))
-            |> Print.followedBy (Print.symbol ")")
+        typeParenthesized syntaxComments typeNode
 
     else
         typeNotParenthesized syntaxComments typeNode
+
+
+typeParenthesized :
+    List (Elm.Syntax.Node.Node String)
+    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    -> Print
+typeParenthesized syntaxComments typeNode =
+    parenthesized
+        { notParenthesizedRange = typeNode |> typeToNotParenthesized |> Elm.Syntax.Node.range
+        , parenthesizedRange = typeNode |> Elm.Syntax.Node.range
+        }
+        syntaxComments
+        (typeNotParenthesized syntaxComments typeNode)
+
+
+parenthesized :
+    { notParenthesizedRange : Elm.Syntax.Range.Range
+    , parenthesizedRange : Elm.Syntax.Range.Range
+    }
+    -> List (Elm.Syntax.Node.Node String)
+    -> Print
+    -> Print
+parenthesized parenthesizedRanges syntaxComments inParensPrint =
+    let
+        commentsBeforeInner : List String
+        commentsBeforeInner =
+            commentsInRange
+                { start = parenthesizedRanges.parenthesizedRange.start
+                , end = parenthesizedRanges.notParenthesizedRange.start
+                }
+                syntaxComments
+
+        commentsAfterInner : List String
+        commentsAfterInner =
+            commentsInRange
+                { start = parenthesizedRanges.notParenthesizedRange.end
+                , end = parenthesizedRanges.parenthesizedRange.end
+                }
+                syntaxComments
+    in
+    Print.symbol "("
+        |> Print.followedBy
+            (case commentsBeforeInner of
+                [] ->
+                    case commentsAfterInner of
+                        [] ->
+                            Print.indented 1 inParensPrint
+                                |> Print.followedBy
+                                    (Print.emptiableLayout (inParensPrint |> Print.lineOffset))
+
+                        comment0AfterInner :: comment1UpAfterInner ->
+                            Print.indented 1
+                                (inParensPrint
+                                    |> Print.followedBy (Print.layout Print.NextLine)
+                                    |> Print.followedBy (comments (comment0AfterInner :: comment1UpAfterInner))
+                                )
+                                |> Print.followedBy (Print.layout Print.NextLine)
+
+                comment0BeforeInner :: comment1UpBeforeInner ->
+                    Print.indented 1
+                        (comments (comment0BeforeInner :: comment1UpBeforeInner)
+                            |> Print.followedBy (Print.layout Print.NextLine)
+                            |> Print.followedBy inParensPrint
+                            |> Print.followedBy
+                                (case commentsAfterInner of
+                                    [] ->
+                                        Print.empty
+
+                                    comment0AfterInner :: comment1UpAfterInner ->
+                                        Print.layout Print.NextLine
+                                            |> Print.followedBy (comments (comment0AfterInner :: comment1UpAfterInner))
+                                )
+                        )
+                        |> Print.followedBy (Print.layout Print.NextLine)
+            )
+        |> Print.followedBy (Print.symbol ")")
 
 
 typeIsSpaceSeparated : Elm.Syntax.TypeAnnotation.TypeAnnotation -> Bool
@@ -2540,158 +2592,6 @@ typeIsSpaceSeparated syntaxType =
             True
 
 
-{-| Remove as many parens as possible
--}
-typeNormalizeParens :
-    Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
-    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
-typeNormalizeParens (Elm.Syntax.Node.Node typeRange syntaxType) =
-    case syntaxType of
-        Elm.Syntax.TypeAnnotation.GenericType name ->
-            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericType name)
-
-        Elm.Syntax.TypeAnnotation.Typed reference arguments ->
-            Elm.Syntax.Node.Node typeRange
-                (Elm.Syntax.TypeAnnotation.Typed reference
-                    (arguments
-                        |> List.map
-                            (\argument ->
-                                if argument |> Elm.Syntax.Node.value |> typeIsSpaceSeparated then
-                                    typeNormalizeParensButKeepOneOuter argument
-
-                                else
-                                    typeNormalizeParens argument
-                            )
-                    )
-                )
-
-        Elm.Syntax.TypeAnnotation.Unit ->
-            Elm.Syntax.Node.Node typeRange Elm.Syntax.TypeAnnotation.Unit
-
-        Elm.Syntax.TypeAnnotation.Tupled parts ->
-            case parts of
-                [ inParens ] ->
-                    typeNormalizeParens inParens
-
-                [] ->
-                    -- should be handled by Unit
-                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [])
-
-                [ part0, part1 ] ->
-                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ typeNormalizeParens part0, typeNormalizeParens part1 ])
-
-                [ part0, part1, part2 ] ->
-                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ typeNormalizeParens part0, typeNormalizeParens part1, typeNormalizeParens part2 ])
-
-                part0 :: part1 :: part2 :: part3 :: part4Up ->
-                    Elm.Syntax.Node.Node typeRange
-                        (Elm.Syntax.TypeAnnotation.Tupled
-                            ((part0 :: part1 :: part2 :: part3 :: part4Up)
-                                |> List.map typeNormalizeParens
-                            )
-                        )
-
-        Elm.Syntax.TypeAnnotation.Record fields ->
-            Elm.Syntax.Node.Node typeRange
-                (Elm.Syntax.TypeAnnotation.Record
-                    (fields
-                        |> List.map
-                            (\fieldNode ->
-                                fieldNode |> Elm.Syntax.Node.map typeFieldNormalizeParens
-                            )
-                    )
-                )
-
-        Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFieldsNode ->
-            Elm.Syntax.Node.Node typeRange
-                (Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName
-                    (additionalFieldsNode
-                        |> Elm.Syntax.Node.map
-                            (\additionalFields ->
-                                additionalFields
-                                    |> List.map
-                                        (\fieldNode ->
-                                            fieldNode |> Elm.Syntax.Node.map typeFieldNormalizeParens
-                                        )
-                            )
-                    )
-                )
-
-        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
-            typeFunctionExpand outType
-                |> List.foldl
-                    (\next soFar ->
-                        Elm.Syntax.Node.Node
-                            { start = soFar |> Elm.Syntax.Node.range |> .end
-                            , end = next |> Elm.Syntax.Node.range |> .start
-                            }
-                            (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation soFar next)
-                    )
-                    inType
-
-
-typeFieldNormalizeParens :
-    Elm.Syntax.TypeAnnotation.RecordField
-    -> Elm.Syntax.TypeAnnotation.RecordField
-typeFieldNormalizeParens ( typeFieldName, typeFieldValue ) =
-    ( typeFieldName, typeNormalizeParens typeFieldValue )
-
-
-{-| `typeNormalizeParens` but keep one layer of parens
--}
-typeNormalizeParensButKeepOneOuter :
-    Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
-    -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
-typeNormalizeParensButKeepOneOuter (Elm.Syntax.Node.Node typeRange syntaxType) =
-    case syntaxType of
-        Elm.Syntax.TypeAnnotation.Tupled parts ->
-            case parts of
-                [ inParens ] ->
-                    Elm.Syntax.Node.Node typeRange
-                        (Elm.Syntax.TypeAnnotation.Tupled [ typeNormalizeParens inParens ])
-
-                [] ->
-                    -- should be handled by Unit
-                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [])
-                        |> typeNormalizeParens
-
-                [ part0, part1 ] ->
-                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ part0, part1 ])
-                        |> typeNormalizeParens
-
-                [ part0, part1, part2 ] ->
-                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled [ part0, part1, part2 ])
-                        |> typeNormalizeParens
-
-                part0 :: part1 :: part2 :: part3 :: part4Up ->
-                    Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Tupled (part0 :: part1 :: part2 :: part3 :: part4Up))
-                        |> typeNormalizeParens
-
-        Elm.Syntax.TypeAnnotation.Unit ->
-            Elm.Syntax.Node.Node typeRange Elm.Syntax.TypeAnnotation.Unit
-                |> typeNormalizeParens
-
-        Elm.Syntax.TypeAnnotation.GenericType name ->
-            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericType name)
-                |> typeNormalizeParens
-
-        Elm.Syntax.TypeAnnotation.Typed reference arguments ->
-            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Typed reference arguments)
-                |> typeNormalizeParens
-
-        Elm.Syntax.TypeAnnotation.Record fields ->
-            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.Record fields)
-                |> typeNormalizeParens
-
-        Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFieldsNode ->
-            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.GenericRecord extendedRecordVariableName additionalFieldsNode)
-                |> typeNormalizeParens
-
-        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
-            Elm.Syntax.Node.Node typeRange (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType)
-                |> typeNormalizeParens
-
-
 {-| Print an [`Elm.Syntax.TypeAnnotation.TypeAnnotation`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-TypeAnnotation#TypeAnnotation)
 -}
 typeNotParenthesized :
@@ -2706,8 +2606,27 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
         Elm.Syntax.TypeAnnotation.GenericType name ->
             Print.symbol name
 
-        Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node _ syntaxQualifiedTuple) arguments ->
+        Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node referenceRange syntaxQualifiedTuple) arguments ->
             let
+                commentsBeforeArguments : List (List String)
+                commentsBeforeArguments =
+                    arguments
+                        |> List.foldl
+                            (\argument soFar ->
+                                { resultReverse =
+                                    commentsInRange
+                                        { start = soFar.previousEnd
+                                        , end = argument |> Elm.Syntax.Node.range |> .start
+                                        }
+                                        syntaxComments
+                                        :: soFar.resultReverse
+                                , previousEnd = argument |> Elm.Syntax.Node.range |> .end
+                                }
+                            )
+                            { resultReverse = [], previousEnd = referenceRange.end }
+                        |> .resultReverse
+                        |> List.reverse
+
                 argumentPrints : List Print
                 argumentPrints =
                     arguments
@@ -2716,19 +2635,33 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
 
                 lineOffset : Print.LineOffset
                 lineOffset =
-                    argumentPrints
-                        |> List.map Print.lineOffset
-                        |> Print.listCombineLineOffset
+                    if commentsBeforeArguments |> List.all List.isEmpty then
+                        argumentPrints
+                            |> List.map Print.lineOffset
+                            |> Print.listCombineLineOffset
+
+                    else
+                        Print.NextLine
             in
             qualifiedTuple syntaxQualifiedTuple
                 |> Print.followedBy
                     (Print.inSequence
-                        (argumentPrints
-                            |> List.map
-                                (\argumentPrint ->
-                                    Print.layout lineOffset
-                                        |> Print.followedBy argumentPrint
-                                )
+                        (List.map2
+                            (\argumentPrint commentsBeforeArgument ->
+                                Print.layout lineOffset
+                                    |> Print.followedBy
+                                        (case commentsBeforeArgument of
+                                            [] ->
+                                                Print.empty
+
+                                            comment0 :: comment1Up ->
+                                                comments (comment0 :: comment1Up)
+                                                    |> Print.followedBy (Print.layout lineOffset)
+                                        )
+                                    |> Print.followedBy argumentPrint
+                            )
+                            argumentPrints
+                            commentsBeforeArguments
                         )
                     )
 
@@ -2742,40 +2675,21 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                     typeNotParenthesized syntaxComments inParens
 
                 [ part0, part1 ] ->
-                    let
-                        lineOffset : Print.LineOffset
-                        lineOffset =
-                            lineOffsetInRange fullRange
-                    in
-                    Print.symbol "("
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized syntaxComments part0))
-                        |> Print.followedBy (Print.emptiableLayout lineOffset)
-                        |> Print.followedBy (Print.symbol ",")
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized syntaxComments part1))
-                        |> Print.followedBy (Print.layout lineOffset)
-                        |> Print.followedBy (Print.symbol ")")
+                    tuple typeNotParenthesized
+                        syntaxComments
+                        { part0 = part0
+                        , part1 = part1
+                        , fullRange = fullRange
+                        }
 
                 [ part0, part1, part2 ] ->
-                    let
-                        lineOffset : Print.LineOffset
-                        lineOffset =
-                            lineOffsetInRange fullRange
-                    in
-                    Print.symbol "("
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized syntaxComments part0))
-                        |> Print.followedBy (Print.emptiableLayout lineOffset)
-                        |> Print.followedBy (Print.symbol ",")
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized syntaxComments part1))
-                        |> Print.followedBy (Print.emptiableLayout lineOffset)
-                        |> Print.followedBy (Print.symbol ",")
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy (Print.indented 2 (typeNotParenthesized syntaxComments part2))
-                        |> Print.followedBy (Print.layout lineOffset)
-                        |> Print.followedBy (Print.symbol ")")
+                    triple typeNotParenthesized
+                        syntaxComments
+                        { part0 = part0
+                        , part1 = part1
+                        , part2 = part2
+                        , fullRange = fullRange
+                        }
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
                     -- invalid syntax
@@ -3120,14 +3034,10 @@ declarationSignature syntaxComments signature =
         typePrint =
             typeNotParenthesized syntaxComments signature.typeAnnotation
 
-        typeNormal : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
-        typeNormal =
-            signature.typeAnnotation |> typeNormalizeParens
-
         rangeBetweenNameAndType : Elm.Syntax.Range.Range
         rangeBetweenNameAndType =
             { start = signature.name |> Elm.Syntax.Node.range |> .end
-            , end = typeNormal |> Elm.Syntax.Node.range |> .start
+            , end = signature.typeAnnotation |> Elm.Syntax.Node.range |> .start
             }
     in
     Print.symbol (signature.name |> Elm.Syntax.Node.value)
@@ -3235,12 +3145,6 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
         parametersLineOffset =
             Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
 
-        typeNotParenthesizedRange : Elm.Syntax.Range.Range
-        typeNotParenthesizedRange =
-            syntaxTypeAliasDeclaration.typeAnnotation
-                |> typeNormalizeParens
-                |> Elm.Syntax.Node.range
-
         rangeBetweenParametersAndType : Elm.Syntax.Range.Range
         rangeBetweenParametersAndType =
             case syntaxTypeAliasDeclaration.generics of
@@ -3249,7 +3153,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                         syntaxTypeAliasDeclaration.name
                             |> Elm.Syntax.Node.range
                             |> .end
-                    , end = typeNotParenthesizedRange.start
+                    , end = syntaxTypeAliasDeclaration.typeAnnotation |> Elm.Syntax.Node.range |> .start
                     }
 
                 parameter0 :: parameter1Up ->
@@ -3257,7 +3161,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                         listFilledLast ( parameter0, parameter1Up )
                             |> Elm.Syntax.Node.range
                             |> .end
-                    , end = typeNotParenthesizedRange.start
+                    , end = syntaxTypeAliasDeclaration.typeAnnotation |> Elm.Syntax.Node.range |> .start
                     }
     in
     (case syntaxTypeAliasDeclaration.documentation of
@@ -3438,7 +3342,6 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
 
                                 variantParameter0 :: variantParameter1Up ->
                                     listFilledLast ( variantParameter0, variantParameter1Up )
-                                        |> typeNormalizeParens
                                         |> Elm.Syntax.Node.range
                                         |> .end
                         }
@@ -3725,16 +3628,12 @@ expressionParenthesized :
     -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
     -> Print
 expressionParenthesized syntaxComments expressionNode =
-    let
-        expressionPrint : Print
-        expressionPrint =
-            expressionNotParenthesized syntaxComments expressionNode
-    in
-    Print.symbol "("
-        |> Print.followedBy (Print.indented 1 expressionPrint)
-        |> Print.followedBy
-            (Print.emptiableLayout (Print.lineOffset expressionPrint))
-        |> Print.followedBy (Print.symbol ")")
+    parenthesized
+        { notParenthesizedRange = expressionNode |> expressionToNotParenthesized |> Elm.Syntax.Node.range
+        , parenthesizedRange = expressionNode |> Elm.Syntax.Node.range
+        }
+        syntaxComments
+        (expressionNotParenthesized syntaxComments expressionNode)
 
 
 expressionIsSpaceSeparated : Elm.Syntax.Expression.Expression -> Bool
@@ -3938,11 +3837,13 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                     expressionNotParenthesized syntaxComments inParens
 
                 [ part0, part1 ] ->
-                    expressionTuple syntaxComments
+                    tuple expressionNotParenthesized
+                        syntaxComments
                         { fullRange = fullRange, part0 = part0, part1 = part1 }
 
                 [ part0, part1, part2 ] ->
-                    expressionTriple syntaxComments
+                    triple expressionNotParenthesized
+                        syntaxComments
                         { fullRange = fullRange
                         , part0 = part0
                         , part1 = part1
@@ -4272,8 +4173,8 @@ expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments expressi
             expressionNode
     in
     if expressionIsSpaceSeparated syntaxExpression then
-        case syntaxExpression |> expressionToNotParenthesized of
-            Elm.Syntax.Expression.Application _ ->
+        case expressionNode |> expressionToNotParenthesized of
+            Elm.Syntax.Node.Node _ (Elm.Syntax.Expression.Application _) ->
                 expressionNotParenthesized syntaxComments expressionNode
 
             _ ->
@@ -4293,7 +4194,7 @@ expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
             expressionNode
     in
     if expressionIsSpaceSeparated syntaxExpression then
-        case syntaxExpression |> expressionToNotParenthesized of
+        case expressionNode |> expressionToNotParenthesized |> Elm.Syntax.Node.value of
             Elm.Syntax.Expression.Application _ ->
                 expressionNotParenthesized syntaxComments expressionNode
 
@@ -4307,86 +4208,6 @@ expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
         expressionNotParenthesized syntaxComments expressionNode
 
 
-expressionTriple :
-    List (Elm.Syntax.Node.Node String)
-    ->
-        { fullRange : Elm.Syntax.Range.Range
-        , part0 : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
-        , part1 : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
-        , part2 : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
-        }
-    -> Print
-expressionTriple syntaxComments syntaxTuple =
-    let
-        lineOffset : Print.LineOffset
-        lineOffset =
-            lineOffsetInRange syntaxTuple.fullRange
-    in
-    Print.symbol "("
-        |> Print.followedBy Print.space
-        |> Print.followedBy
-            (Print.indented 2
-                (expressionNotParenthesized syntaxComments
-                    syntaxTuple.part0
-                )
-            )
-        |> Print.followedBy (Print.emptiableLayout lineOffset)
-        |> Print.followedBy (Print.symbol ",")
-        |> Print.followedBy Print.space
-        |> Print.followedBy
-            (Print.indented 2
-                (expressionNotParenthesized syntaxComments
-                    syntaxTuple.part1
-                )
-            )
-        |> Print.followedBy (Print.emptiableLayout lineOffset)
-        |> Print.followedBy (Print.symbol ",")
-        |> Print.followedBy Print.space
-        |> Print.followedBy
-            (Print.indented 2
-                (expressionNotParenthesized syntaxComments
-                    syntaxTuple.part2
-                )
-            )
-        |> Print.followedBy (Print.layout lineOffset)
-        |> Print.followedBy (Print.symbol ")")
-
-
-expressionTuple :
-    List (Elm.Syntax.Node.Node String)
-    ->
-        { fullRange : Elm.Syntax.Range.Range
-        , part0 : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
-        , part1 : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
-        }
-    -> Print
-expressionTuple syntaxComments syntaxTuple =
-    let
-        lineOffset : Print.LineOffset
-        lineOffset =
-            lineOffsetInRange syntaxTuple.fullRange
-    in
-    Print.symbol "("
-        |> Print.followedBy Print.space
-        |> Print.followedBy
-            (Print.indented 2
-                (expressionNotParenthesized syntaxComments
-                    syntaxTuple.part0
-                )
-            )
-        |> Print.followedBy (Print.emptiableLayout lineOffset)
-        |> Print.followedBy (Print.symbol ",")
-        |> Print.followedBy Print.space
-        |> Print.followedBy
-            (Print.indented 2
-                (expressionNotParenthesized syntaxComments
-                    syntaxTuple.part1
-                )
-            )
-        |> Print.followedBy (Print.layout lineOffset)
-        |> Print.followedBy (Print.symbol ")")
-
-
 expressionList :
     List (Elm.Syntax.Node.Node String)
     ->
@@ -4395,6 +4216,7 @@ expressionList :
         }
     -> Print
 expressionList syntaxComments syntaxList =
+    -- TODO make generic for pattern and expression
     case syntaxList.elements of
         [] ->
             Print.symbol "[]"
@@ -4596,7 +4418,7 @@ expressionIfThenElse syntaxComments condition onTrue onFalse =
         |> Print.followedBy (Print.layout Print.NextLine)
         |> Print.followedBy (Print.symbol "else")
         |> Print.followedBy
-            (case expressionToNotParenthesized (onFalse |> Elm.Syntax.Node.value) of
+            (case expressionToNotParenthesized onFalse |> Elm.Syntax.Node.value of
                 Elm.Syntax.Expression.IfBlock onFalseCondition onFalseOnTrue onFalseOnFalse ->
                     Print.space
                         |> Print.followedBy
@@ -4728,32 +4550,34 @@ expressionLetDeclaration syntaxComments letDeclaration =
                     )
 
 
-expressionToNotParenthesized : Elm.Syntax.Expression.Expression -> Elm.Syntax.Expression.Expression
-expressionToNotParenthesized syntaxExpression =
+expressionToNotParenthesized :
+    Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+    -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+expressionToNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxExpression) =
     case syntaxExpression of
-        Elm.Syntax.Expression.ParenthesizedExpression (Elm.Syntax.Node.Node _ inParens) ->
-            inParens
+        Elm.Syntax.Expression.ParenthesizedExpression inParens ->
+            inParens |> expressionToNotParenthesized
 
         Elm.Syntax.Expression.TupledExpression parts ->
             case parts of
-                [ Elm.Syntax.Node.Node _ inParens ] ->
+                [ inParens ] ->
                     -- should be handled by ParenthesizedExpression
-                    inParens
+                    inParens |> expressionToNotParenthesized
 
                 [] ->
-                    Elm.Syntax.Expression.TupledExpression []
+                    Elm.Syntax.Node.Node fullRange (Elm.Syntax.Expression.TupledExpression [])
 
                 [ part0, part1 ] ->
-                    Elm.Syntax.Expression.TupledExpression [ part0, part1 ]
+                    Elm.Syntax.Node.Node fullRange (Elm.Syntax.Expression.TupledExpression [ part0, part1 ])
 
                 [ part0, part1, part2 ] ->
-                    Elm.Syntax.Expression.TupledExpression [ part0, part1, part2 ]
+                    Elm.Syntax.Node.Node fullRange (Elm.Syntax.Expression.TupledExpression [ part0, part1, part2 ])
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
-                    Elm.Syntax.Expression.TupledExpression (part0 :: part1 :: part2 :: part3 :: part4Up)
+                    Elm.Syntax.Node.Node fullRange (Elm.Syntax.Expression.TupledExpression (part0 :: part1 :: part2 :: part3 :: part4Up))
 
         syntaxExpressionNotParenthesized ->
-            syntaxExpressionNotParenthesized
+            Elm.Syntax.Node.Node fullRange syntaxExpressionNotParenthesized
 
 
 {-| Print a single [`Elm.Syntax.Expression.Case`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Expression#Case)
