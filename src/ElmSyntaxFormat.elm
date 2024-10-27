@@ -1505,8 +1505,8 @@ patternIsSpaceSeparated syntaxPattern =
             True
 
 
-quotedString : String -> Print
-quotedString stringContent =
+stringLiteral : String -> Print
+stringLiteral stringContent =
     Print.symbol "\""
         |> Print.followedBy
             (Print.symbol
@@ -1714,8 +1714,8 @@ characterIsPrint character =
                     False
 
 
-quotedChar : Char -> Print
-quotedChar charContent =
+charLiteral : Char -> Print
+charLiteral charContent =
     Print.symbol "'"
         |> Print.followedBy
             (Print.symbol
@@ -1750,13 +1750,13 @@ quotedCharToEscaped character =
                 String.fromChar otherCharacter
 
 
-cappedInt : Int -> Print
-cappedInt int =
+intLiteral : Int -> Print
+intLiteral int =
     Print.symbol (String.fromInt int)
 
 
-cappedHex : Int -> Print
-cappedHex int =
+hexLiteral : Int -> Print
+hexLiteral int =
     let
         maybeSignPrint : Print
         maybeSignPrint =
@@ -1887,16 +1887,16 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
             Print.symbol name
 
         Elm.Syntax.Pattern.CharPattern char ->
-            quotedChar char
+            charLiteral char
 
         Elm.Syntax.Pattern.StringPattern string ->
-            quotedString string
+            stringLiteral string
 
         Elm.Syntax.Pattern.IntPattern int ->
-            cappedInt int
+            intLiteral int
 
         Elm.Syntax.Pattern.HexPattern int ->
-            cappedHex int
+            hexLiteral int
 
         Elm.Syntax.Pattern.FloatPattern float ->
             -- invalid syntax
@@ -4098,10 +4098,10 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
             Print.symbol operatorSymbol
 
         Elm.Syntax.Expression.Integer int ->
-            cappedInt int
+            intLiteral int
 
         Elm.Syntax.Expression.Hex int ->
-            cappedHex int
+            hexLiteral int
 
         Elm.Syntax.Expression.Floatable float ->
             cappedFloat float
@@ -4114,10 +4114,10 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                     )
 
         Elm.Syntax.Expression.Literal string ->
-            quotedString string
+            stringLiteral string
 
         Elm.Syntax.Expression.CharLiteral char ->
-            quotedChar char
+            charLiteral char
 
         Elm.Syntax.Expression.TupledExpression parts ->
             case parts of
