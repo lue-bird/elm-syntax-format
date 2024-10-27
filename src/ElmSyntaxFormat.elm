@@ -3,6 +3,7 @@ module ElmSyntaxFormat exposing
     , module_, moduleName, moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
     , declarations, declaration, declarationChoiceType, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
     , expressionNotParenthesized, case_, patternNotParenthesized, typeNotParenthesized
+    , qualifiedReference
     )
 
 {-| Pretty printing an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/) tree
@@ -13,6 +14,7 @@ in a way consistent with [`elm-format`](https://github.com/avh4/elm-format).
 @docs module_, moduleName, moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
 @docs declarations, declaration, declarationChoiceType, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
 @docs expressionNotParenthesized, case_, patternNotParenthesized, typeNotParenthesized
+@docs qualifiedReference
 
 -}
 
@@ -1413,69 +1415,22 @@ patternParenthesizedIfSpaceSeparated :
     -> Print
 patternParenthesizedIfSpaceSeparated syntaxComments syntaxPattern =
     if patternIsSpaceSeparated (syntaxPattern |> Elm.Syntax.Node.value) then
-        let
-            (Elm.Syntax.Node.Node innerRange _) =
-                syntaxPattern |> patternToNotParenthesized
-
-            innerPrint : Print
-            innerPrint =
-                patternNotParenthesized syntaxComments syntaxPattern
-
-            commentsBeforeInner : List String
-            commentsBeforeInner =
-                commentsInRange
-                    { start = (syntaxPattern |> Elm.Syntax.Node.range).start
-                    , end = innerRange.start
-                    }
-                    syntaxComments
-
-            commentsAfterInner : List String
-            commentsAfterInner =
-                commentsInRange
-                    { start = innerRange.end
-                    , end = (syntaxPattern |> Elm.Syntax.Node.range).end
-                    }
-                    syntaxComments
-        in
-        Print.symbol "("
-            |> Print.followedBy
-                (case commentsBeforeInner of
-                    [] ->
-                        case commentsAfterInner of
-                            [] ->
-                                Print.indented 1 innerPrint
-                                    |> Print.followedBy
-                                        (Print.layout (innerPrint |> Print.lineOffset))
-
-                            comment0AfterInner :: comment1UpAfterInner ->
-                                Print.indented 1
-                                    (innerPrint
-                                        |> Print.followedBy (Print.layout Print.NextLine)
-                                        |> Print.followedBy (comments (comment0AfterInner :: comment1UpAfterInner))
-                                    )
-                                    |> Print.followedBy (Print.layout Print.NextLine)
-
-                    comment0BeforeInner :: comment1UpBeforeInner ->
-                        Print.indented 1
-                            (comments (comment0BeforeInner :: comment1UpBeforeInner)
-                                |> Print.followedBy (Print.layout Print.NextLine)
-                                |> Print.followedBy innerPrint
-                                |> Print.followedBy
-                                    (case commentsAfterInner of
-                                        [] ->
-                                            Print.empty
-
-                                        comment0AfterInner :: comment1UpAfterInner ->
-                                            Print.layout Print.NextLine
-                                                |> Print.followedBy (comments (comment0AfterInner :: comment1UpAfterInner))
-                                    )
-                            )
-                            |> Print.followedBy (Print.layout Print.NextLine)
-                )
-            |> Print.followedBy (Print.symbol ")")
+        patternParenthesized syntaxComments syntaxPattern
 
     else
         patternNotParenthesized syntaxComments syntaxPattern
+
+
+patternParenthesized :
+    List (Elm.Syntax.Node.Node String)
+    -> Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+    -> Print
+patternParenthesized syntaxComments patternNode =
+    parenthesized patternNotParenthesized
+        { fullRange = patternNode |> Elm.Syntax.Node.range
+        , notParenthesized = patternNode |> patternToNotParenthesized
+        }
+        syntaxComments
 
 
 patternIsSpaceSeparated : Elm.Syntax.Pattern.Pattern -> Bool
@@ -1848,7 +1803,7 @@ stringResizePadLeftWith0s length unpaddedString =
 patternToNotParenthesized :
     Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
     -> Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
-patternToNotParenthesized (Elm.Syntax.Node.Node patternRange syntaxPattern) =
+patternToNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxPattern) =
     case syntaxPattern of
         Elm.Syntax.Pattern.ParenthesizedPattern inParens ->
             inParens
@@ -1860,58 +1815,58 @@ patternToNotParenthesized (Elm.Syntax.Node.Node patternRange syntaxPattern) =
                     inParens
 
                 [ part0, part1 ] ->
-                    Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.TuplePattern [ part0, part1 ])
+                    Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.TuplePattern [ part0, part1 ])
 
                 [ part0, part1, part2 ] ->
-                    Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.TuplePattern [ part0, part1, part2 ])
+                    Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.TuplePattern [ part0, part1, part2 ])
 
                 [] ->
                     -- should be covered by UnitPattern
-                    Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.TuplePattern [])
+                    Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.TuplePattern [])
 
                 part0 :: part1 :: part2 :: part3 :: part4Up ->
                     -- invalid syntax
-                    Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.TuplePattern (part0 :: part1 :: part2 :: part3 :: part4Up))
+                    Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.TuplePattern (part0 :: part1 :: part2 :: part3 :: part4Up))
 
         Elm.Syntax.Pattern.AllPattern ->
-            Elm.Syntax.Node.Node patternRange Elm.Syntax.Pattern.AllPattern
+            Elm.Syntax.Node.Node fullRange Elm.Syntax.Pattern.AllPattern
 
         Elm.Syntax.Pattern.UnitPattern ->
-            Elm.Syntax.Node.Node patternRange Elm.Syntax.Pattern.UnitPattern
+            Elm.Syntax.Node.Node fullRange Elm.Syntax.Pattern.UnitPattern
 
         Elm.Syntax.Pattern.VarPattern name ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.VarPattern name)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.VarPattern name)
 
         Elm.Syntax.Pattern.CharPattern char ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.CharPattern char)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.CharPattern char)
 
         Elm.Syntax.Pattern.StringPattern string ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.StringPattern string)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.StringPattern string)
 
         Elm.Syntax.Pattern.IntPattern int ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.IntPattern int)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.IntPattern int)
 
         Elm.Syntax.Pattern.HexPattern int ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.HexPattern int)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.HexPattern int)
 
         Elm.Syntax.Pattern.FloatPattern float ->
             -- invalid syntax
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.FloatPattern float)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.FloatPattern float)
 
         Elm.Syntax.Pattern.RecordPattern fields ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.RecordPattern fields)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.RecordPattern fields)
 
         Elm.Syntax.Pattern.UnConsPattern headPattern tailPattern ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.UnConsPattern headPattern tailPattern)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.UnConsPattern headPattern tailPattern)
 
         Elm.Syntax.Pattern.ListPattern elementPatterns ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.ListPattern elementPatterns)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.ListPattern elementPatterns)
 
         Elm.Syntax.Pattern.NamedPattern syntaxQualifiedNameRef argumentPatterns ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.NamedPattern syntaxQualifiedNameRef argumentPatterns)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.NamedPattern syntaxQualifiedNameRef argumentPatterns)
 
         Elm.Syntax.Pattern.AsPattern aliasedPattern aliasNameNode ->
-            Elm.Syntax.Node.Node patternRange (Elm.Syntax.Pattern.AsPattern aliasedPattern aliasNameNode)
+            Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.AsPattern aliasedPattern aliasNameNode)
 
 
 {-| Print an [`Elm.Syntax.Pattern.Pattern`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Pattern#Pattern)
@@ -1920,7 +1875,7 @@ patternNotParenthesized :
     List (Elm.Syntax.Node.Node String)
     -> Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
     -> Print
-patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntaxPattern) =
+patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPattern) =
     case syntaxPattern of
         Elm.Syntax.Pattern.AllPattern ->
             Print.symbol "_"
@@ -1948,16 +1903,30 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
             Print.symbol (String.fromFloat float)
 
         Elm.Syntax.Pattern.ParenthesizedPattern inParens ->
-            patternNotParenthesized syntaxComments inParens
+            let
+                commentsBeforeInParens : List String
+                commentsBeforeInParens =
+                    commentsInRange { start = fullRange.start, end = inParens |> Elm.Syntax.Node.range |> .start } syntaxComments
+
+                commentsAfterInParens : List String
+                commentsAfterInParens =
+                    commentsInRange { start = inParens |> Elm.Syntax.Node.range |> .end, end = fullRange.end } syntaxComments
+            in
+            case ( commentsBeforeInParens, commentsAfterInParens ) of
+                ( [], [] ) ->
+                    patternNotParenthesized syntaxComments inParens
+
+                _ ->
+                    patternParenthesized syntaxComments inParens
 
         Elm.Syntax.Pattern.TuplePattern parts ->
             case parts of
                 [ part0, part1 ] ->
-                    { part0 = part0, part1 = part1, fullRange = patternRange }
+                    { part0 = part0, part1 = part1, fullRange = fullRange }
                         |> tuple patternNotParenthesized syntaxComments
 
                 [ part0, part1, part2 ] ->
-                    { part0 = part0, part1 = part1, part2 = part2, fullRange = patternRange }
+                    { part0 = part0, part1 = part1, part2 = part2, fullRange = fullRange }
                         |> triple patternNotParenthesized syntaxComments
 
                 [] ->
@@ -1995,6 +1964,7 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
                     Print.symbol "{}"
 
                 field0 :: field1Up ->
+                    -- TODO comments
                     Print.symbol "{"
                         |> Print.followedBy Print.space
                         |> Print.followedBy
@@ -2019,38 +1989,18 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
                 |> Print.followedBy (patternParenthesizedIfSpaceSeparated syntaxComments tailPattern)
 
         Elm.Syntax.Pattern.ListPattern elementPatterns ->
-            Print.symbol "["
-                |> Print.followedBy Print.space
-                |> Print.followedBy
-                    (Print.inSequence
-                        (elementPatterns
-                            |> List.map
-                                (\elementPattern ->
-                                    patternNotParenthesized syntaxComments elementPattern
-                                )
-                            |> List.intersperse
-                                (Print.emptiableLayout Print.SameLine
-                                    |> Print.followedBy (Print.symbol ",")
-                                    |> Print.followedBy Print.space
-                                )
-                        )
-                    )
-                |> Print.followedBy Print.space
-                |> Print.followedBy (Print.symbol "]")
+            listLiteral patternNotParenthesized
+                syntaxComments
+                { fullRange = fullRange, elements = elementPatterns }
 
         Elm.Syntax.Pattern.NamedPattern syntaxQualifiedNameRef argumentPatterns ->
-            qualifiedNameRef syntaxQualifiedNameRef
-                |> Print.followedBy
-                    (Print.inSequence
-                        (argumentPatterns
-                            |> List.map
-                                (\argumentPattern ->
-                                    Print.space
-                                        |> Print.followedBy
-                                            (patternParenthesizedIfSpaceSeparated syntaxComments argumentPattern)
-                                )
-                        )
-                    )
+            referenceConstruct patternParenthesizedIfSpaceSeparated
+                syntaxComments
+                { fullRange = fullRange
+                , referenceQualification = syntaxQualifiedNameRef.moduleName
+                , referenceUnqualified = syntaxQualifiedNameRef.name
+                , arguments = argumentPatterns
+                }
 
         Elm.Syntax.Pattern.AsPattern aliasedPattern (Elm.Syntax.Node.Node _ aliasName) ->
             patternParenthesizedIfSpaceSeparated syntaxComments aliasedPattern
@@ -2060,13 +2010,144 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node patternRange syntax
                 |> Print.followedBy (Print.symbol aliasName)
 
 
-tuple :
-    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node a -> Print)
+typeRecordExtension :
+    List (Elm.Syntax.Node.Node String)
+    ->
+        { fullRange : Elm.Syntax.Range.Range
+        , recordVariable : String
+        , fields :
+            List
+                (Elm.Syntax.Node.Node
+                    ( Elm.Syntax.Node.Node String
+                    , Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+                    )
+                )
+        }
+    -> Print
+typeRecordExtension syntaxComments syntaxRecordExtension =
+    -- TODO comments
+    let
+        lineOffset : Print.LineOffset
+        lineOffset =
+            -- TODO comments
+            lineOffsetInRange syntaxRecordExtension.fullRange
+    in
+    Print.symbol "{"
+        |> Print.followedBy Print.space
+        |> Print.followedBy (Print.symbol syntaxRecordExtension.recordVariable)
+        |> Print.followedBy (Print.layout lineOffset)
+        |> Print.followedBy
+            (Print.indentedByNextMultipleOf4
+                (Print.symbol "|"
+                    |> Print.followedBy Print.space
+                    |> Print.followedBy
+                        (Print.inSequence
+                            (syntaxRecordExtension.fields
+                                |> List.map
+                                    (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
+                                        Print.symbol fieldName
+                                            |> Print.followedBy Print.space
+                                            |> Print.followedBy (Print.symbol ":")
+                                            |> Print.followedBy
+                                                (Print.indentedByNextMultipleOf4
+                                                    (Print.layout (lineOffsetInNode fieldValue)
+                                                        |> Print.followedBy (typeNotParenthesized syntaxComments fieldValue)
+                                                    )
+                                                )
+                                    )
+                                |> List.intersperse
+                                    (Print.emptiableLayout lineOffset
+                                        |> Print.followedBy (Print.symbol ",")
+                                        |> Print.followedBy Print.space
+                                    )
+                            )
+                        )
+                )
+            )
+        |> Print.followedBy (Print.layout lineOffset)
+        |> Print.followedBy (Print.symbol "}")
+
+
+referenceConstruct :
+    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node argument -> Print)
     -> List (Elm.Syntax.Node.Node String)
     ->
         { fullRange : Elm.Syntax.Range.Range
-        , part0 : Elm.Syntax.Node.Node a
-        , part1 : Elm.Syntax.Node.Node a
+        , referenceQualification : List String
+        , referenceUnqualified : String
+        , arguments : List (Elm.Syntax.Node.Node argument)
+        }
+    -> Print
+referenceConstruct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxReferenceConstruct =
+    let
+        commentsBeforeArguments : List (List String)
+        commentsBeforeArguments =
+            syntaxReferenceConstruct.arguments
+                |> List.foldl
+                    (\argument soFar ->
+                        { resultReverse =
+                            commentsInRange
+                                { start = soFar.previousEnd
+                                , end = argument |> Elm.Syntax.Node.range |> .start
+                                }
+                                syntaxComments
+                                :: soFar.resultReverse
+                        , previousEnd = argument |> Elm.Syntax.Node.range |> .end
+                        }
+                    )
+                    { resultReverse = [], previousEnd = syntaxReferenceConstruct.fullRange.start }
+                |> .resultReverse
+                |> List.reverse
+
+        argumentPrints : List Print
+        argumentPrints =
+            syntaxReferenceConstruct.arguments
+                |> List.map
+                    (\argument -> printArgumentParenthesizedIfSpaceSeparated syntaxComments argument)
+
+        lineOffset : Print.LineOffset
+        lineOffset =
+            if commentsBeforeArguments |> List.all List.isEmpty then
+                argumentPrints
+                    |> List.map Print.lineOffset
+                    |> Print.listCombineLineOffset
+
+            else
+                Print.NextLine
+    in
+    qualifiedReference
+        { qualification = syntaxReferenceConstruct.referenceQualification
+        , unqualified = syntaxReferenceConstruct.referenceUnqualified
+        }
+        |> Print.followedBy
+            (Print.inSequence
+                (List.map2
+                    (\argumentPrint commentsBeforeArgument ->
+                        Print.layout lineOffset
+                            |> Print.followedBy
+                                (case commentsBeforeArgument of
+                                    [] ->
+                                        Print.empty
+
+                                    comment0 :: comment1Up ->
+                                        comments (comment0 :: comment1Up)
+                                            |> Print.followedBy (Print.layout lineOffset)
+                                )
+                            |> Print.followedBy argumentPrint
+                    )
+                    argumentPrints
+                    commentsBeforeArguments
+                )
+            )
+
+
+tuple :
+    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node part -> Print)
+    -> List (Elm.Syntax.Node.Node String)
+    ->
+        { fullRange : Elm.Syntax.Range.Range
+        , part0 : Elm.Syntax.Node.Node part
+        , part1 : Elm.Syntax.Node.Node part
         }
     -> Print
 tuple printPartNotParenthesized syntaxComments syntaxTuple =
@@ -2155,13 +2236,13 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
 
 
 triple :
-    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node a -> Print)
+    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node part -> Print)
     -> List (Elm.Syntax.Node.Node String)
     ->
         { fullRange : Elm.Syntax.Range.Range
-        , part0 : Elm.Syntax.Node.Node a
-        , part1 : Elm.Syntax.Node.Node a
-        , part2 : Elm.Syntax.Node.Node a
+        , part0 : Elm.Syntax.Node.Node part
+        , part1 : Elm.Syntax.Node.Node part
+        , part2 : Elm.Syntax.Node.Node part
         }
     -> Print
 triple printPartNotParenthesized syntaxComments syntaxTriple =
@@ -2276,16 +2357,71 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
         |> Print.followedBy (Print.symbol ")")
 
 
-qualifiedNameRef : Elm.Syntax.Pattern.QualifiedNameRef -> Print
-qualifiedNameRef syntaxQualifiedNameRef =
-    qualifiedTuple ( syntaxQualifiedNameRef.moduleName, syntaxQualifiedNameRef.name )
-
-
-qualifiedTuple : ( Elm.Syntax.ModuleName.ModuleName, String ) -> Print
-qualifiedTuple ( qualification, unqualified ) =
-    case qualification of
+record :
+    { nameValueSeparator : String
+    , printValueNotParenthesized : List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node fieldValue -> Print
+    }
+    -> List (Elm.Syntax.Node.Node String)
+    ->
+        { fields :
+            List
+                (Elm.Syntax.Node.Node
+                    ( Elm.Syntax.Node.Node String
+                    , Elm.Syntax.Node.Node fieldValue
+                    )
+                )
+        , fullRange : Elm.Syntax.Range.Range
+        }
+    -> Print
+record fieldSpecific syntaxComments syntaxRecord =
+    case syntaxRecord.fields of
         [] ->
-            Print.symbol unqualified
+            Print.symbol "{}"
+
+        field0 :: field1Up ->
+            -- TODO comments
+            let
+                lineOffset : Print.LineOffset
+                lineOffset =
+                    -- TODO comments
+                    lineOffsetInRange syntaxRecord.fullRange
+            in
+            Print.symbol "{"
+                |> Print.followedBy Print.space
+                |> Print.followedBy
+                    (Print.inSequence
+                        ((field0 :: field1Up)
+                            |> List.map
+                                (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
+                                    Print.symbol fieldName
+                                        |> Print.followedBy Print.space
+                                        |> Print.followedBy (Print.symbol fieldSpecific.nameValueSeparator)
+                                        |> Print.followedBy
+                                            (Print.indentedByNextMultipleOf4
+                                                (Print.layout (lineOffsetInNode fieldValue)
+                                                    |> Print.followedBy
+                                                        (fieldSpecific.printValueNotParenthesized syntaxComments fieldValue)
+                                                )
+                                            )
+                                )
+                            |> List.intersperse
+                                (Print.emptiableLayout lineOffset
+                                    |> Print.followedBy (Print.symbol ",")
+                                    |> Print.followedBy Print.space
+                                )
+                        )
+                    )
+                |> Print.followedBy (Print.layout lineOffset)
+                |> Print.followedBy (Print.symbol "}")
+
+
+{-| Print a name with its qualification (`[]` for no qualification)
+-}
+qualifiedReference : { qualification : List String, unqualified : String } -> Print
+qualifiedReference syntaxReference =
+    case syntaxReference.qualification of
+        [] ->
+            Print.symbol syntaxReference.unqualified
 
         modulePartHead :: modulePartTail ->
             Print.symbol modulePartHead
@@ -2297,7 +2433,7 @@ qualifiedTuple ( qualification, unqualified ) =
                             |> List.intersperse (Print.symbol ".")
                         )
                     )
-                |> Print.followedBy (Print.symbol unqualified)
+                |> Print.followedBy (Print.symbol syntaxReference.unqualified)
 
 
 lineOffsetBetweenNodes : Elm.Syntax.Node.Node a_ -> Elm.Syntax.Node.Node b_ -> Print.LineOffset
@@ -2401,9 +2537,6 @@ typeToFunction typeNode =
 
 
 {-| Remove as many parens as possible
-
-TODO version of this that keeps parens if contains comments between paren tokens and inner type
-
 -}
 typeToNotParenthesized :
     Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
@@ -2476,38 +2609,42 @@ typeParenthesized :
     -> Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
     -> Print
 typeParenthesized syntaxComments typeNode =
-    parenthesized
-        { notParenthesizedRange = typeNode |> typeToNotParenthesized |> Elm.Syntax.Node.range
-        , parenthesizedRange = typeNode |> Elm.Syntax.Node.range
+    parenthesized typeNotParenthesized
+        { notParenthesized = typeNode |> typeToNotParenthesized
+        , fullRange = typeNode |> Elm.Syntax.Node.range
         }
         syntaxComments
-        (typeNotParenthesized syntaxComments typeNode)
 
 
 parenthesized :
-    { notParenthesizedRange : Elm.Syntax.Range.Range
-    , parenthesizedRange : Elm.Syntax.Range.Range
-    }
+    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node a -> Print)
+    ->
+        { notParenthesized : Elm.Syntax.Node.Node a
+        , fullRange : Elm.Syntax.Range.Range
+        }
     -> List (Elm.Syntax.Node.Node String)
     -> Print
-    -> Print
-parenthesized parenthesizedRanges syntaxComments inParensPrint =
+parenthesized printNotParenthesized syntax syntaxComments =
     let
         commentsBeforeInner : List String
         commentsBeforeInner =
             commentsInRange
-                { start = parenthesizedRanges.parenthesizedRange.start
-                , end = parenthesizedRanges.notParenthesizedRange.start
+                { start = syntax.fullRange.start
+                , end = syntax.notParenthesized |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
 
         commentsAfterInner : List String
         commentsAfterInner =
             commentsInRange
-                { start = parenthesizedRanges.notParenthesizedRange.end
-                , end = parenthesizedRanges.parenthesizedRange.end
+                { start = syntax.notParenthesized |> Elm.Syntax.Node.range |> .end
+                , end = syntax.fullRange.end
                 }
                 syntaxComments
+
+        notParenthesizedPrint : Print
+        notParenthesizedPrint =
+            printNotParenthesized syntaxComments syntax.notParenthesized
     in
     Print.symbol "("
         |> Print.followedBy
@@ -2515,13 +2652,13 @@ parenthesized parenthesizedRanges syntaxComments inParensPrint =
                 [] ->
                     case commentsAfterInner of
                         [] ->
-                            Print.indented 1 inParensPrint
+                            Print.indented 1 notParenthesizedPrint
                                 |> Print.followedBy
-                                    (Print.emptiableLayout (inParensPrint |> Print.lineOffset))
+                                    (Print.emptiableLayout (notParenthesizedPrint |> Print.lineOffset))
 
                         comment0AfterInner :: comment1UpAfterInner ->
                             Print.indented 1
-                                (inParensPrint
+                                (notParenthesizedPrint
                                     |> Print.followedBy (Print.layout Print.NextLine)
                                     |> Print.followedBy (comments (comment0AfterInner :: comment1UpAfterInner))
                                 )
@@ -2531,7 +2668,7 @@ parenthesized parenthesizedRanges syntaxComments inParensPrint =
                     Print.indented 1
                         (comments (comment0BeforeInner :: comment1UpBeforeInner)
                             |> Print.followedBy (Print.layout Print.NextLine)
-                            |> Print.followedBy inParensPrint
+                            |> Print.followedBy notParenthesizedPrint
                             |> Print.followedBy
                                 (case commentsAfterInner of
                                     [] ->
@@ -2606,64 +2743,14 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
         Elm.Syntax.TypeAnnotation.GenericType name ->
             Print.symbol name
 
-        Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node referenceRange syntaxQualifiedTuple) arguments ->
-            let
-                commentsBeforeArguments : List (List String)
-                commentsBeforeArguments =
-                    arguments
-                        |> List.foldl
-                            (\argument soFar ->
-                                { resultReverse =
-                                    commentsInRange
-                                        { start = soFar.previousEnd
-                                        , end = argument |> Elm.Syntax.Node.range |> .start
-                                        }
-                                        syntaxComments
-                                        :: soFar.resultReverse
-                                , previousEnd = argument |> Elm.Syntax.Node.range |> .end
-                                }
-                            )
-                            { resultReverse = [], previousEnd = referenceRange.end }
-                        |> .resultReverse
-                        |> List.reverse
-
-                argumentPrints : List Print
-                argumentPrints =
-                    arguments
-                        |> List.map
-                            (\argument -> typeParenthesizedIfSpaceSeparated syntaxComments argument)
-
-                lineOffset : Print.LineOffset
-                lineOffset =
-                    if commentsBeforeArguments |> List.all List.isEmpty then
-                        argumentPrints
-                            |> List.map Print.lineOffset
-                            |> Print.listCombineLineOffset
-
-                    else
-                        Print.NextLine
-            in
-            qualifiedTuple syntaxQualifiedTuple
-                |> Print.followedBy
-                    (Print.inSequence
-                        (List.map2
-                            (\argumentPrint commentsBeforeArgument ->
-                                Print.layout lineOffset
-                                    |> Print.followedBy
-                                        (case commentsBeforeArgument of
-                                            [] ->
-                                                Print.empty
-
-                                            comment0 :: comment1Up ->
-                                                comments (comment0 :: comment1Up)
-                                                    |> Print.followedBy (Print.layout lineOffset)
-                                        )
-                                    |> Print.followedBy argumentPrint
-                            )
-                            argumentPrints
-                            commentsBeforeArguments
-                        )
-                    )
+        Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node _ ( referenceQualification, referenceUnqualified )) arguments ->
+            referenceConstruct typeParenthesizedIfSpaceSeparated
+                syntaxComments
+                { fullRange = fullRange
+                , referenceQualification = referenceQualification
+                , referenceUnqualified = referenceUnqualified
+                , arguments = arguments
+                }
 
         Elm.Syntax.TypeAnnotation.Tupled parts ->
             case parts of
@@ -2672,7 +2759,21 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                     Print.symbol "()"
 
                 [ inParens ] ->
-                    typeNotParenthesized syntaxComments inParens
+                    let
+                        commentsBeforeInParens : List String
+                        commentsBeforeInParens =
+                            commentsInRange { start = fullRange.start, end = inParens |> Elm.Syntax.Node.range |> .start } syntaxComments
+
+                        commentsAfterInParens : List String
+                        commentsAfterInParens =
+                            commentsInRange { start = inParens |> Elm.Syntax.Node.range |> .end, end = fullRange.end } syntaxComments
+                    in
+                    case ( commentsBeforeInParens, commentsAfterInParens ) of
+                        ( [], [] ) ->
+                            typeNotParenthesized syntaxComments inParens
+
+                        _ ->
+                            typeParenthesized syntaxComments inParens
 
                 [ part0, part1 ] ->
                     tuple typeNotParenthesized
@@ -2718,84 +2819,19 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                         |> Print.followedBy (Print.symbol ")")
 
         Elm.Syntax.TypeAnnotation.Record fields ->
-            case fields of
-                [] ->
-                    Print.symbol "{}"
-
-                field0 :: field1Up ->
-                    let
-                        lineOffset : Print.LineOffset
-                        lineOffset =
-                            lineOffsetInRange fullRange
-                    in
-                    Print.symbol "{"
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy
-                            (Print.inSequence
-                                ((field0 :: field1Up)
-                                    |> List.map
-                                        (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
-                                            Print.symbol fieldName
-                                                |> Print.followedBy Print.space
-                                                |> Print.followedBy (Print.symbol ":")
-                                                |> Print.followedBy
-                                                    (Print.indentedByNextMultipleOf4
-                                                        (Print.layout (lineOffsetInNode fieldValue)
-                                                            |> Print.followedBy
-                                                                (typeNotParenthesized syntaxComments fieldValue)
-                                                        )
-                                                    )
-                                        )
-                                    |> List.intersperse
-                                        (Print.emptiableLayout lineOffset
-                                            |> Print.followedBy (Print.symbol ",")
-                                            |> Print.followedBy Print.space
-                                        )
-                                )
-                            )
-                        |> Print.followedBy (Print.layout lineOffset)
-                        |> Print.followedBy (Print.symbol "}")
+            record
+                { printValueNotParenthesized = typeNotParenthesized
+                , nameValueSeparator = ":"
+                }
+                syntaxComments
+                { fullRange = fullRange, fields = fields }
 
         Elm.Syntax.TypeAnnotation.GenericRecord (Elm.Syntax.Node.Node _ recordVariable) (Elm.Syntax.Node.Node _ fields) ->
-            let
-                lineOffset : Print.LineOffset
-                lineOffset =
-                    lineOffsetInRange fullRange
-            in
-            Print.symbol "{"
-                |> Print.followedBy Print.space
-                |> Print.followedBy (Print.symbol recordVariable)
-                |> Print.followedBy (Print.layout lineOffset)
-                |> Print.followedBy
-                    (Print.indentedByNextMultipleOf4
-                        (Print.symbol "|"
-                            |> Print.followedBy Print.space
-                            |> Print.followedBy
-                                (Print.inSequence
-                                    (fields
-                                        |> List.map
-                                            (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
-                                                Print.symbol fieldName
-                                                    |> Print.followedBy Print.space
-                                                    |> Print.followedBy (Print.symbol ":")
-                                                    |> Print.followedBy
-                                                        (Print.indentedByNextMultipleOf4
-                                                            (Print.layout (lineOffsetInNode fieldValue)
-                                                                |> Print.followedBy (typeNotParenthesized syntaxComments fieldValue)
-                                                            )
-                                                        )
-                                            )
-                                        |> List.intersperse
-                                            (Print.emptiableLayout lineOffset
-                                                |> Print.followedBy (Print.symbol ",")
-                                                |> Print.followedBy Print.space
-                                            )
-                                    )
-                                )
-                        )
-                    )
-                |> Print.followedBy (Print.layout lineOffset)
-                |> Print.followedBy (Print.symbol "}")
+            typeRecordExtension syntaxComments
+                { fullRange = fullRange
+                , recordVariable = recordVariable
+                , fields = fields
+                }
 
         Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
             { inType = inType, outType = outType }
@@ -3628,12 +3664,11 @@ expressionParenthesized :
     -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
     -> Print
 expressionParenthesized syntaxComments expressionNode =
-    parenthesized
-        { notParenthesizedRange = expressionNode |> expressionToNotParenthesized |> Elm.Syntax.Node.range
-        , parenthesizedRange = expressionNode |> Elm.Syntax.Node.range
+    parenthesized expressionNotParenthesized
+        { notParenthesized = expressionNode |> expressionToNotParenthesized
+        , fullRange = expressionNode |> Elm.Syntax.Node.range
         }
         syntaxComments
-        (expressionNotParenthesized syntaxComments expressionNode)
 
 
 expressionIsSpaceSeparated : Elm.Syntax.Expression.Expression -> Bool
@@ -3790,7 +3825,7 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                 }
 
         Elm.Syntax.Expression.FunctionOrValue qualification unqualified ->
-            qualifiedTuple ( qualification, unqualified )
+            qualifiedReference { qualification = qualification, unqualified = unqualified }
 
         Elm.Syntax.Expression.IfBlock condition onTrue onFalse ->
             expressionIfThenElse syntaxComments condition onTrue onFalse
@@ -3834,7 +3869,21 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
 
                 [ inParens ] ->
                     -- should be handled by ParenthesizedExpression
-                    expressionNotParenthesized syntaxComments inParens
+                    let
+                        commentsBeforeInParens : List String
+                        commentsBeforeInParens =
+                            commentsInRange { start = fullRange.start, end = inParens |> Elm.Syntax.Node.range |> .start } syntaxComments
+
+                        commentsAfterInParens : List String
+                        commentsAfterInParens =
+                            commentsInRange { start = inParens |> Elm.Syntax.Node.range |> .end, end = fullRange.end } syntaxComments
+                    in
+                    case ( commentsBeforeInParens, commentsAfterInParens ) of
+                        ( [], [] ) ->
+                            expressionNotParenthesized syntaxComments inParens
+
+                        _ ->
+                            expressionParenthesized syntaxComments inParens
 
                 [ part0, part1 ] ->
                     tuple expressionNotParenthesized
@@ -3878,7 +3927,21 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                         |> Print.followedBy (Print.symbol ")")
 
         Elm.Syntax.Expression.ParenthesizedExpression inParens ->
-            expressionNotParenthesized syntaxComments inParens
+            let
+                commentsBeforeInParens : List String
+                commentsBeforeInParens =
+                    commentsInRange { start = fullRange.start, end = inParens |> Elm.Syntax.Node.range |> .start } syntaxComments
+
+                commentsAfterInParens : List String
+                commentsAfterInParens =
+                    commentsInRange { start = inParens |> Elm.Syntax.Node.range |> .end, end = fullRange.end } syntaxComments
+            in
+            case ( commentsBeforeInParens, commentsAfterInParens ) of
+                ( [], [] ) ->
+                    expressionNotParenthesized syntaxComments inParens
+
+                _ ->
+                    expressionParenthesized syntaxComments inParens
 
         Elm.Syntax.Expression.LetExpression syntaxLetIn ->
             expressionLetIn syntaxComments syntaxLetIn
@@ -3890,13 +3953,18 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
             expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda)
 
         Elm.Syntax.Expression.RecordExpr fields ->
-            expressionRecord syntaxComments { fullRange = fullRange, fields = fields }
+            record
+                { printValueNotParenthesized = expressionNotParenthesized
+                , nameValueSeparator = "="
+                }
+                syntaxComments
+                { fullRange = fullRange, fields = fields }
 
         Elm.Syntax.Expression.ListExpr elements ->
-            expressionList syntaxComments { fullRange = fullRange, elements = elements }
+            listLiteral expressionNotParenthesized syntaxComments { fullRange = fullRange, elements = elements }
 
-        Elm.Syntax.Expression.RecordAccess record (Elm.Syntax.Node.Node _ accessedFieldName) ->
-            expressionParenthesizedIfSpaceSeparated syntaxComments record
+        Elm.Syntax.Expression.RecordAccess syntaxRecord (Elm.Syntax.Node.Node _ accessedFieldName) ->
+            expressionParenthesizedIfSpaceSeparated syntaxComments syntaxRecord
                 |> Print.followedBy (Print.symbol ".")
                 |> Print.followedBy (Print.symbol accessedFieldName)
 
@@ -4208,23 +4276,25 @@ expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
         expressionNotParenthesized syntaxComments expressionNode
 
 
-expressionList :
-    List (Elm.Syntax.Node.Node String)
+listLiteral :
+    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node element -> Print)
+    -> List (Elm.Syntax.Node.Node String)
     ->
-        { elements : List (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression)
+        { elements : List (Elm.Syntax.Node.Node element)
         , fullRange : Elm.Syntax.Range.Range
         }
     -> Print
-expressionList syntaxComments syntaxList =
-    -- TODO make generic for pattern and expression
+listLiteral printElementNotParenthesized syntaxComments syntaxList =
     case syntaxList.elements of
         [] ->
             Print.symbol "[]"
 
         element0 :: element1Up ->
+            -- TODO comments
             let
                 lineOffset : Print.LineOffset
                 lineOffset =
+                    -- TODO comments
                     lineOffsetInRange syntaxList.fullRange
             in
             Print.symbol "["
@@ -4235,7 +4305,7 @@ expressionList syntaxComments syntaxList =
                             |> List.map
                                 (\element ->
                                     Print.indented 2
-                                        (expressionNotParenthesized syntaxComments
+                                        (printElementNotParenthesized syntaxComments
                                             element
                                         )
                                 )
@@ -4248,55 +4318,6 @@ expressionList syntaxComments syntaxList =
                     )
                 |> Print.followedBy (Print.layout lineOffset)
                 |> Print.followedBy (Print.symbol "]")
-
-
-expressionRecord :
-    List (Elm.Syntax.Node.Node String)
-    ->
-        { fields : List (Elm.Syntax.Node.Node ( Elm.Syntax.Node.Node String, Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression ))
-        , fullRange : Elm.Syntax.Range.Range
-        }
-    -> Print
-expressionRecord syntaxComments syntaxRecord =
-    case syntaxRecord.fields of
-        [] ->
-            Print.symbol "{}"
-
-        field0 :: field1Up ->
-            let
-                lineOffset : Print.LineOffset
-                lineOffset =
-                    lineOffsetInRange syntaxRecord.fullRange
-            in
-            Print.symbol "{"
-                |> Print.followedBy Print.space
-                |> Print.followedBy
-                    (Print.inSequence
-                        ((field0 :: field1Up)
-                            |> List.map
-                                (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) ->
-                                    Print.symbol fieldName
-                                        |> Print.followedBy Print.space
-                                        |> Print.followedBy (Print.symbol "=")
-                                        |> Print.followedBy
-                                            (Print.indentedByNextMultipleOf4
-                                                (Print.layout (lineOffsetInNode fieldValue)
-                                                    |> Print.followedBy
-                                                        (expressionNotParenthesized syntaxComments
-                                                            fieldValue
-                                                        )
-                                                )
-                                            )
-                                )
-                            |> List.intersperse
-                                (Print.emptiableLayout lineOffset
-                                    |> Print.followedBy (Print.symbol ",")
-                                    |> Print.followedBy Print.space
-                                )
-                        )
-                    )
-                |> Print.followedBy (Print.layout lineOffset)
-                |> Print.followedBy (Print.symbol "}")
 
 
 expressionRecordUpdate :
