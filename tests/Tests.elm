@@ -1158,6 +1158,24 @@ type alias T =
         Int
 """
                 )
+            , Test.test "consecutive function comments between types"
+                (\() ->
+                    """module A exposing (..)
+type alias T =
+    Int -> -- 0
+    -- 1
+    Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T =
+    Int
+    ->
+        -- 0
+        -- 1
+        Int
+"""
+                )
             , Test.test "comments before first record field"
                 (\() ->
                     """module A exposing (..)
@@ -1168,6 +1186,22 @@ type alias A = { -- zero
 
 type alias A =
     { -- zero
+      zero : Int
+    }
+"""
+                )
+            , Test.test "consecutive comments before first record field"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { -- 0
+    -- 1
+    zero : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { -- 0
+      -- 1
       zero : Int
     }
 """
@@ -1187,6 +1221,23 @@ type alias A =
     }
 """
                 )
+            , Test.test "consecutive comments between record field name and value"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { zero : -- 0
+    -- 1
+    Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { zero :
+        -- 0
+        -- 1
+        Int
+    }
+"""
+                )
             , Test.test "comments between record fields"
                 (\() ->
                     """module A exposing (..)
@@ -1198,6 +1249,23 @@ type alias A = { zero : Int, -- zero
 type alias A =
     { zero : Int
     , -- zero
+      one : Int
+    }
+"""
+                )
+            , Test.test "consecutive comments between record fields"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { zero : Int, -- 0
+    -- 1
+    one : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { zero : Int
+    , -- 0
+      -- 1
       one : Int
     }
 """
@@ -1219,6 +1287,25 @@ type alias A =
     }
 """
                 )
+            , Test.test "consecutive comments after record fields"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { zero : Int, one : Int
+    -- 0
+    -- 1
+    }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { zero : Int
+    , one : Int
+
+    -- 0
+    -- 1
+    }
+"""
+                )
             , Test.test "comments before record extension record variable"
                 (\() ->
                     """module A exposing (..)
@@ -1229,6 +1316,23 @@ type alias A r = { -- zero
 
 type alias A r =
     { -- zero
+      r
+        | zero : Int
+    }
+"""
+                )
+            , Test.test "consecutive comments before record extension record variable"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { -- 0
+    -- 1
+    r | zero : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { -- 0
+      -- 1
       r
         | zero : Int
     }
@@ -1245,6 +1349,23 @@ type alias A r = { r | -- zero
 type alias A r =
     { r
         | -- zero
+          zero : Int
+    }
+"""
+                )
+            , Test.test "consecutive comments before first record extension field"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { r | -- 0
+    -- 1
+    zero : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { r
+        | -- 0
+          -- 1
           zero : Int
     }
 """
@@ -1607,6 +1728,22 @@ a =
     )
 """
                 )
+            , Test.test "parenthesized with consecutive comments before"
+                (\() ->
+                    """module A exposing (..)
+a = ((-- 0
+    -- 1
+    (0)))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    (-- 0
+     -- 1
+     0
+    )
+"""
+                )
             , Test.test "parenthesized with comments after"
                 (\() ->
                     """module A exposing (..)
@@ -1619,6 +1756,23 @@ a = (((0)
 a =
     (0
      -- zero
+    )
+"""
+                )
+            , Test.test "parenthesized with consecutive comments after"
+                (\() ->
+                    """module A exposing (..)
+a = (((0)
+    -- 0
+    -- 1
+   ))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    (0
+     -- 0
+     -- 1
     )
 """
                 )
@@ -1653,6 +1807,22 @@ a =
     ]
 """
                 )
+            , Test.test "consecutive comments before first list element"
+                (\() ->
+                    """module A exposing (..)
+a = [ -- 0
+    -- 1
+    0 ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [ -- 0
+      -- 1
+      0
+    ]
+"""
+                )
             , Test.test "comments between list elements"
                 (\() ->
                     """module A exposing (..)
@@ -1664,6 +1834,23 @@ a = [ 0, -- zero
 a =
     [ 0
     , -- zero
+      0
+    ]
+"""
+                )
+            , Test.test "consecutive comments between list elements"
+                (\() ->
+                    """module A exposing (..)
+a = [ 0, -- 0
+    -- 1
+    0 ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [ 0
+    , -- 0
+      -- 1
       0
     ]
 """
@@ -1682,6 +1869,25 @@ a =
     , 0
 
     -- zero
+    ]
+"""
+                )
+            , Test.test "consecutive comments after list elements"
+                (\() ->
+                    """module A exposing (..)
+a = [ 0, 0
+    -- 0
+    -- 1
+    ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [ 0
+    , 0
+
+    -- 0
+    -- 1
     ]
 """
                 )
@@ -1876,6 +2082,66 @@ a
      _ as argument
      {--}
     )
+    =
+    0
+"""
+                )
+            , Test.test "record with comments before first field"
+                (\() ->
+                    """module A exposing (..)
+a { -- 0
+  -- 1
+  zero } =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    { -- 0
+      -- 1
+      zero
+    }
+    =
+    0
+"""
+                )
+            , Test.test "record with comments between fields"
+                (\() ->
+                    """module A exposing (..)
+a { zero, -- 0
+  -- 1
+  one } =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    { zero
+    , -- 0
+      -- 1
+      one
+    }
+    =
+    0
+"""
+                )
+            , Test.test "record with comments after fields"
+                (\() ->
+                    """module A exposing (..)
+a { zero,
+  one -- 0
+  -- 1
+  } =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    { zero
+    , one
+      -- 0
+      -- 1
+    }
     =
     0
 """

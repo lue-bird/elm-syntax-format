@@ -2043,7 +2043,7 @@ patternRecord syntaxComments syntaxRecord =
                         Print.NextLine
             in
             Print.symbol "{"
-                |> Print.followedBy (Print.layout lineOffset)
+                |> Print.followedBy Print.space
                 |> Print.followedBy
                     (Print.inSequence
                         (List.map2
@@ -2170,21 +2170,21 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
     Print.symbol "{"
         |> Print.followedBy Print.space
         |> Print.followedBy
-            (case commentsBeforeRecordVariable of
-                [] ->
-                    Print.empty
+            (Print.indented 2
+                (case commentsBeforeRecordVariable of
+                    [] ->
+                        Print.empty
 
-                comment0 :: comment1Up ->
-                    comments (comment0 :: comment1Up)
-                        |> Print.followedBy (Print.layout Print.NextLine)
-                        |> Print.followedBy Print.space
-                        |> Print.followedBy Print.space
-            )
-        |> Print.followedBy
-            (Print.symbol
-                (syntaxRecordExtension.recordVariable
-                    |> Elm.Syntax.Node.value
+                    comment0 :: comment1Up ->
+                        comments (comment0 :: comment1Up)
+                            |> Print.followedBy (Print.layout Print.NextLine)
                 )
+                |> Print.followedBy
+                    (Print.symbol
+                        (syntaxRecordExtension.recordVariable
+                            |> Elm.Syntax.Node.value
+                        )
+                    )
             )
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
@@ -2195,19 +2195,19 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                         (Print.inSequence
                             (List.map2
                                 (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) fieldComments ->
-                                    (case fieldComments.beforeName of
-                                        [] ->
-                                            Print.empty
+                                    (Print.indented 2
+                                        (case fieldComments.beforeName of
+                                            [] ->
+                                                Print.empty
 
-                                        comment0 :: comment1Up ->
-                                            comments (comment0 :: comment1Up)
-                                                |> Print.followedBy (Print.layout Print.NextLine)
-                                                |> Print.followedBy Print.space
-                                                |> Print.followedBy Print.space
-                                    )
+                                            comment0 :: comment1Up ->
+                                                comments (comment0 :: comment1Up)
+                                                    |> Print.followedBy (Print.layout Print.NextLine)
+                                        )
                                         |> Print.followedBy (Print.symbol fieldName)
                                         |> Print.followedBy Print.space
                                         |> Print.followedBy (Print.symbol ":")
+                                    )
                                         |> Print.followedBy
                                             (Print.indentedByNextMultipleOf4
                                                 ((case fieldComments.betweenNameAndValue of
@@ -2684,21 +2684,21 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                     (Print.inSequence
                         (List.map2
                             (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) fieldComments ->
-                                (case fieldComments.beforeName of
-                                    [] ->
-                                        Print.empty
+                                (Print.indented 2
+                                    (case fieldComments.beforeName of
+                                        [] ->
+                                            Print.empty
 
-                                    comment0 :: comment1Up ->
-                                        comments (comment0 :: comment1Up)
-                                            |> Print.followedBy (Print.layout Print.NextLine)
-                                            |> Print.followedBy Print.space
-                                            |> Print.followedBy Print.space
-                                )
+                                        comment0 :: comment1Up ->
+                                            comments (comment0 :: comment1Up)
+                                                |> Print.followedBy (Print.layout Print.NextLine)
+                                    )
                                     |> Print.followedBy
                                         (Print.symbol fieldName)
                                     |> Print.followedBy Print.space
                                     |> Print.followedBy
                                         (Print.symbol fieldSpecific.nameValueSeparator)
+                                )
                                     |> Print.followedBy
                                         (Print.indentedByNextMultipleOf4
                                             ((case fieldComments.betweenNameAndValue of
