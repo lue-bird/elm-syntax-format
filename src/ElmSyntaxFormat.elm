@@ -3667,18 +3667,6 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                 |> List.foldl
                     (\(Elm.Syntax.Node.Node variantRange variant) soFar ->
                         let
-                            variantParameterPrints : List Print
-                            variantParameterPrints =
-                                variant.arguments
-                                    |> List.map
-                                        (\parameter ->
-                                            typeParenthesizedIfSpaceSeparated syntaxComments parameter
-                                        )
-
-                            variantParametersLineOffset : Print.LineOffset
-                            variantParametersLineOffset =
-                                Print.listCombineLineOffset (variantParameterPrints |> List.map Print.lineOffset)
-
                             variantPrint : Print
                             variantPrint =
                                 (case commentsInRange { start = soFar.end, end = variant.name |> Elm.Syntax.Node.range |> .start } syntaxComments of
@@ -3699,15 +3687,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                         )
                         in
                         { prints = variantPrint :: soFar.prints
-                        , end =
-                            case variant.arguments of
-                                [] ->
-                                    variant.name |> Elm.Syntax.Node.range |> .end
-
-                                variantParameter0 :: variantParameter1Up ->
-                                    listFilledLast ( variantParameter0, variantParameter1Up )
-                                        |> Elm.Syntax.Node.range
-                                        |> .end
+                        , end = variantRange.end
                         }
                     )
                     { prints = []
