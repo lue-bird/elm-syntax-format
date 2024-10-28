@@ -4,7 +4,7 @@ module Print exposing
     , empty, space, linebreak
     , followedBy, inSequence
     , indentedByNextMultipleOf4, indented, layout, emptiableLayout
-    , LineOffset(..), lineOffsetMerge, listCombineLineOffset, lineOffset
+    , LineOffset(..), listCombineLineOffset, lineOffset
     )
 
 {-| simple pretty printing
@@ -29,7 +29,7 @@ For convenience, these common symbols are exposed as well
 ### indent
 
 @docs indentedByNextMultipleOf4, indented, layout, emptiableLayout
-@docs LineOffset, lineOffsetMerge, listCombineLineOffset, lineOffset
+@docs LineOffset, listCombineLineOffset, lineOffset
 
 -}
 
