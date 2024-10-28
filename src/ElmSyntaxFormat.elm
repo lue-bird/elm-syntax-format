@@ -4263,7 +4263,12 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
             qualifiedReference { qualification = qualification, unqualified = unqualified }
 
         Elm.Syntax.Expression.IfBlock condition onTrue onFalse ->
-            expressionIfThenElse syntaxComments condition onTrue onFalse
+            expressionIfThenElse syntaxComments
+                { fullRange = fullRange
+                , condition = condition
+                , onTrue = onTrue
+                , onFalse = onFalse
+                }
 
         Elm.Syntax.Expression.PrefixOperator operatorSymbol ->
             Print.symbol "("
@@ -4869,28 +4874,73 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node lambdaRange syntaxLambda) 
 
 expressionIfThenElse :
     List (Elm.Syntax.Node.Node String)
-    -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
-    -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
-    -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+    ->
+        { fullRange : Elm.Syntax.Range.Range
+        , condition : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+        , onTrue : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+        , onFalse : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+        }
     -> Print
-expressionIfThenElse syntaxComments condition onTrue onFalse =
+expressionIfThenElse syntaxComments syntaxIfThenElse =
     let
+        commentsBeforeCondition : List String
+        commentsBeforeCondition =
+            commentsInRange
+                { start = syntaxIfThenElse.fullRange.start
+                , end = syntaxIfThenElse.condition |> Elm.Syntax.Node.range |> .start
+                }
+                syntaxComments
+
+        commentsBeforeOnTrue : List String
+        commentsBeforeOnTrue =
+            commentsInRange
+                { start = syntaxIfThenElse.condition |> Elm.Syntax.Node.range |> .end
+                , end = syntaxIfThenElse.onTrue |> Elm.Syntax.Node.range |> .start
+                }
+                syntaxComments
+
+        onFalseNotParenthesized : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+        onFalseNotParenthesized =
+            syntaxIfThenElse.onFalse |> expressionToNotParenthesized
+
+        commentsBeforeOnFalseNotParenthesized : List String
+        commentsBeforeOnFalseNotParenthesized =
+            commentsInRange
+                { start = syntaxIfThenElse.onTrue |> Elm.Syntax.Node.range |> .end
+                , end = onFalseNotParenthesized |> Elm.Syntax.Node.range |> .start
+                }
+                syntaxComments
+
         conditionPrint : Print
         conditionPrint =
-            expressionNotParenthesized syntaxComments condition
+            expressionNotParenthesized syntaxComments syntaxIfThenElse.condition
 
         conditionLineOffset : Print.LineOffset
         conditionLineOffset =
-            Print.lineOffset conditionPrint
+            case commentsBeforeCondition of
+                _ :: _ ->
+                    Print.NextLine
+
+                [] ->
+                    Print.lineOffset conditionPrint
 
         onTruePrint : Print
         onTruePrint =
-            expressionNotParenthesized syntaxComments onTrue
+            expressionNotParenthesized syntaxComments syntaxIfThenElse.onTrue
     in
     Print.symbol "if"
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
                 (Print.layout conditionLineOffset
+                    |> Print.followedBy
+                        (case commentsBeforeCondition of
+                            [] ->
+                                Print.empty
+
+                            comment0 :: comment1Up ->
+                                comments (comment0 :: comment1Up)
+                                    |> Print.followedBy (Print.layout Print.NextLine)
+                        )
                     |> Print.followedBy conditionPrint
                 )
             )
@@ -4899,6 +4949,15 @@ expressionIfThenElse syntaxComments condition onTrue onFalse =
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
                 (Print.layout Print.NextLine
+                    |> Print.followedBy
+                        (case commentsBeforeOnTrue of
+                            [] ->
+                                Print.empty
+
+                            comment0 :: comment1Up ->
+                                comments (comment0 :: comment1Up)
+                                    |> Print.followedBy (Print.layout Print.NextLine)
+                        )
                     |> Print.followedBy onTruePrint
                     |> Print.followedBy Print.linebreak
                 )
@@ -4906,25 +4965,41 @@ expressionIfThenElse syntaxComments condition onTrue onFalse =
         |> Print.followedBy (Print.layout Print.NextLine)
         |> Print.followedBy (Print.symbol "else")
         |> Print.followedBy
-            (case expressionToNotParenthesized onFalse |> Elm.Syntax.Node.value of
-                Elm.Syntax.Expression.IfBlock onFalseCondition onFalseOnTrue onFalseOnFalse ->
+            (case ( commentsBeforeOnFalseNotParenthesized, onFalseNotParenthesized ) of
+                ( [], Elm.Syntax.Node.Node onFalseNotParenthesizedRange (Elm.Syntax.Expression.IfBlock onFalseCondition onFalseOnTrue onFalseOnFalse) ) ->
                     Print.space
                         |> Print.followedBy
                             (expressionIfThenElse syntaxComments
-                                onFalseCondition
-                                onFalseOnTrue
-                                onFalseOnFalse
+                                { fullRange = onFalseNotParenthesizedRange
+                                , condition = onFalseCondition
+                                , onTrue = onFalseOnTrue
+                                , onFalse = onFalseOnFalse
+                                }
                             )
 
                 _ ->
                     let
-                        onFalsePrint : Print
-                        onFalsePrint =
-                            expressionNotParenthesized syntaxComments onFalse
+                        commentsBeforeOnFalse : List String
+                        commentsBeforeOnFalse =
+                            commentsInRange
+                                { start = syntaxIfThenElse.onTrue |> Elm.Syntax.Node.range |> .end
+                                , end = syntaxIfThenElse.onFalse |> Elm.Syntax.Node.range |> .start
+                                }
+                                syntaxComments
                     in
                     Print.indentedByNextMultipleOf4
                         (Print.layout Print.NextLine
-                            |> Print.followedBy onFalsePrint
+                            |> Print.followedBy
+                                (case commentsBeforeOnFalse of
+                                    [] ->
+                                        Print.empty
+
+                                    comment0 :: comment1Up ->
+                                        comments (comment0 :: comment1Up)
+                                            |> Print.followedBy (Print.layout Print.NextLine)
+                                )
+                            |> Print.followedBy
+                                (expressionNotParenthesized syntaxComments syntaxIfThenElse.onFalse)
                         )
             )
 

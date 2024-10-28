@@ -1422,7 +1422,104 @@ type alias A r =
                 )
             ]
         , Test.describe "expression"
-            [ Test.test "if-then-else with another if-then-else in the else branch"
+            [ Test.test "if-then-else with single-line condition"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if
+        (True
+        )
+    then 0 else 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    if True then
+        0
+
+    else
+        1
+"""
+                )
+            , Test.test "if-then-else with multi-line condition"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if
+        Basics.not
+            True
+    then 0 else 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    if
+        Basics.not
+            True
+    then
+        0
+
+    else
+        1
+"""
+                )
+            , Test.test "if-then-else with comments before condition"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if -- condition
+        True then 0 else 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    if
+        -- condition
+        True
+    then
+        0
+
+    else
+        1
+"""
+                )
+            , Test.test "if-then-else with comments before on True branch"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if True then -- 0
+        0 else 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    if True then
+        -- 0
+        0
+
+    else
+        1
+"""
+                )
+            , Test.test "if-then-else with comments before on False branch"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if True then 0 else -- 1
+        1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    if True then
+        0
+
+    else
+        -- 1
+        1
+"""
+                )
+            , Test.test "if-then-else with another if-then-else in the else branch"
                 (\() ->
                     """module A exposing (..)
 a =
@@ -1448,6 +1545,38 @@ a =
 
     else
         2
+"""
+                )
+            , Test.test "if-then-else with another parenthesized if-then-else in the else branch with comments"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if True then
+        0
+
+    else
+        (-- on False
+         if False then
+            1
+
+         else
+            2
+        )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    if True then
+        0
+
+    else
+        (-- on False
+         if False then
+            1
+
+         else
+            2
+        )
 """
                 )
             , Test.test "case-of with one case"
