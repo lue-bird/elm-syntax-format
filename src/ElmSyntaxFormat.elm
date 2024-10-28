@@ -2882,7 +2882,22 @@ typeToFunction typeNode =
         Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
             Just { inType = inType, outType = outType }
 
-        _ ->
+        Elm.Syntax.TypeAnnotation.GenericType _ ->
+            Nothing
+
+        Elm.Syntax.TypeAnnotation.Typed _ _ ->
+            Nothing
+
+        Elm.Syntax.TypeAnnotation.Unit ->
+            Nothing
+
+        Elm.Syntax.TypeAnnotation.Tupled _ ->
+            Nothing
+
+        Elm.Syntax.TypeAnnotation.Record _ ->
+            Nothing
+
+        Elm.Syntax.TypeAnnotation.GenericRecord _ _ ->
             Nothing
 
 
@@ -3197,7 +3212,19 @@ declarations context syntaxDeclarations =
                         Elm.Syntax.Declaration.PortDeclaration _ ->
                             firstCommentInRange { start = context.previousEnd, end = declaration0Range.start } context.portDocumentationComments
 
-                        _ ->
+                        Elm.Syntax.Declaration.FunctionDeclaration _ ->
+                            Nothing
+
+                        Elm.Syntax.Declaration.AliasDeclaration _ ->
+                            Nothing
+
+                        Elm.Syntax.Declaration.CustomTypeDeclaration _ ->
+                            Nothing
+
+                        Elm.Syntax.Declaration.InfixDeclaration _ ->
+                            Nothing
+
+                        Elm.Syntax.Declaration.Destructuring _ _ ->
                             Nothing
                 }
                 declaration0
@@ -3212,7 +3239,19 @@ declarations context syntaxDeclarations =
                                             Elm.Syntax.Declaration.PortDeclaration _ ->
                                                 firstCommentInRange { start = soFar.previousRange.end, end = declarationRange.start } context.portDocumentationComments
 
-                                            _ ->
+                                            Elm.Syntax.Declaration.FunctionDeclaration _ ->
+                                                Nothing
+
+                                            Elm.Syntax.Declaration.AliasDeclaration _ ->
+                                                Nothing
+
+                                            Elm.Syntax.Declaration.CustomTypeDeclaration _ ->
+                                                Nothing
+
+                                            Elm.Syntax.Declaration.InfixDeclaration _ ->
+                                                Nothing
+
+                                            Elm.Syntax.Declaration.Destructuring _ _ ->
                                                 Nothing
                                 in
                                 { print =
