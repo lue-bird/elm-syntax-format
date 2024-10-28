@@ -1661,6 +1661,63 @@ a =
     b
 """
                 )
+            , Test.test "let-in with one value declaration, comments before result"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let b = 0 in {- 0 -} b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        b =
+            0
+    in
+    {- 0 -}
+    b
+"""
+                )
+            , Test.test "let-in with one value declaration, comments before first let declaration"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let -- 0
+        b = 0 in b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        -- 0
+        b =
+            0
+    in
+    b
+"""
+                )
+            , Test.test "let-in with one value declaration, comments between let declarations"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let b = 0
+        -- 0
+        c = 1 in b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        b =
+            0
+
+        -- 0
+        c =
+            1
+    in
+    b
+"""
+                )
             , Test.test "let-in with one value declaration with type"
                 (\() ->
                     """module A exposing (..)

@@ -4371,7 +4371,18 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                         syntaxComments
 
         Elm.Syntax.Expression.LetExpression syntaxLetIn ->
-            expressionLetIn syntaxComments syntaxLetIn
+            case syntaxLetIn.declarations of
+                [] ->
+                    -- invalid syntax
+                    expressionNotParenthesized syntaxComments syntaxLetIn.expression
+
+                letDeclaration0 :: letDeclaration1Up ->
+                    expressionLetIn syntaxComments
+                        { fullRange = fullRange
+                        , letDeclaration0 = letDeclaration0
+                        , letDeclaration1Up = letDeclaration1Up
+                        , result = syntaxLetIn.expression
+                        }
 
         Elm.Syntax.Expression.CaseExpression syntaxCaseOf ->
             expressionCaseOf syntaxComments syntaxCaseOf
@@ -5160,20 +5171,70 @@ expressionCaseOf syntaxComments syntaxCaseOf =
 
 expressionLetIn :
     List (Elm.Syntax.Node.Node String)
-    -> Elm.Syntax.Expression.LetBlock
+    ->
+        { fullRange : Elm.Syntax.Range.Range
+        , letDeclaration0 : Elm.Syntax.Node.Node Elm.Syntax.Expression.LetDeclaration
+        , letDeclaration1Up : List (Elm.Syntax.Node.Node Elm.Syntax.Expression.LetDeclaration)
+        , result : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+        }
     -> Print
 expressionLetIn syntaxComments syntaxLetIn =
+    let
+        letDeclarationPrints : { end : Elm.Syntax.Range.Location, printsReverse : List Print }
+        letDeclarationPrints =
+            (syntaxLetIn.letDeclaration0 :: syntaxLetIn.letDeclaration1Up)
+                |> List.foldl
+                    (\(Elm.Syntax.Node.Node letDeclarationRange letDeclaration) soFar ->
+                        let
+                            commentsBefore : List String
+                            commentsBefore =
+                                commentsInRange
+                                    { start = soFar.end
+                                    , end = letDeclarationRange.start
+                                    }
+                                    syntaxComments
+
+                            letDeclarationPrint : Print
+                            letDeclarationPrint =
+                                (case commentsBefore of
+                                    [] ->
+                                        Print.empty
+
+                                    comment0 :: comment1Up ->
+                                        comments (comment0 :: comment1Up)
+                                            |> Print.followedBy (Print.layout Print.NextLine)
+                                )
+                                    |> Print.followedBy
+                                        (expressionLetDeclaration syntaxComments letDeclaration)
+                        in
+                        { end = letDeclarationRange.end
+                        , printsReverse =
+                            letDeclarationPrint :: soFar.printsReverse
+                        }
+                    )
+                    { end = syntaxLetIn.fullRange.start
+                    , printsReverse = []
+                    }
+
+        commentsBeforeResult : List String
+        commentsBeforeResult =
+            commentsInRange
+                { start = letDeclarationPrints.end
+                , end =
+                    syntaxLetIn.result
+                        |> Elm.Syntax.Node.range
+                        |> .start
+                }
+                syntaxComments
+    in
     Print.symbol "let"
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
                 (Print.layout Print.NextLine
                     |> Print.followedBy
                         (Print.inSequence
-                            (syntaxLetIn.declarations
-                                |> List.map
-                                    (\(Elm.Syntax.Node.Node _ letDeclaration) ->
-                                        expressionLetDeclaration syntaxComments letDeclaration
-                                    )
+                            (letDeclarationPrints.printsReverse
+                                |> List.reverse
                                 |> List.intersperse
                                     (Print.linebreak
                                         |> Print.followedBy (Print.layout Print.NextLine)
@@ -5186,7 +5247,16 @@ expressionLetIn syntaxComments syntaxLetIn =
         |> Print.followedBy (Print.symbol "in")
         |> Print.followedBy (Print.layout Print.NextLine)
         |> Print.followedBy
-            (expressionNotParenthesized syntaxComments syntaxLetIn.expression)
+            (case commentsBeforeResult of
+                [] ->
+                    Print.empty
+
+                comment0 :: comment1Up ->
+                    comments (comment0 :: comment1Up)
+                        |> Print.followedBy (Print.layout Print.NextLine)
+            )
+        |> Print.followedBy
+            (expressionNotParenthesized syntaxComments syntaxLetIn.result)
 
 
 expressionLetDeclaration :
