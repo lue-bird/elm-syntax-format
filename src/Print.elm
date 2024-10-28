@@ -53,6 +53,8 @@ lineOffset print =
         SameLine
 
 
+{-| Do not include linebreaks here and instead use [`linebreak`](#linebreak)
+-}
 symbol : String -> Print
 symbol exactNextString =
     \_ -> exactNextString
