@@ -3922,7 +3922,7 @@ declarationExpressionImplementation :
     -> Print
 declarationExpressionImplementation syntaxComments implementation =
     let
-        parameterPrints : List Print
+        parameterPrints : { end : Elm.Syntax.Range.Location, printsReverse : List Print }
         parameterPrints =
             implementation.arguments
                 |> List.foldl
@@ -3936,7 +3936,7 @@ declarationExpressionImplementation syntaxComments implementation =
                                 else
                                     parameterPattern |> patternToNotParenthesized |> Elm.Syntax.Node.range
                         in
-                        { prints =
+                        { printsReverse =
                             ((case
                                 commentsInRange
                                     { start = soFar.end, end = parameterPrintedRange.start }
@@ -3952,47 +3952,32 @@ declarationExpressionImplementation syntaxComments implementation =
                                 |> Print.followedBy
                                     (patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern)
                             )
-                                :: soFar.prints
+                                :: soFar.printsReverse
                         , end = parameterPrintedRange.end
                         }
                     )
-                    { prints = []
+                    { printsReverse = []
                     , end =
                         implementation.name
                             |> Elm.Syntax.Node.range
                             |> .end
                     }
-                |> .prints
-                |> List.reverse
 
         parametersLineOffset : Print.LineOffset
         parametersLineOffset =
-            Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
+            Print.listCombineLineOffset
+                (parameterPrints.printsReverse |> List.map Print.lineOffset)
 
-        rangeBetweenParametersAndResult : Elm.Syntax.Range.Range
-        rangeBetweenParametersAndResult =
-            case implementation.arguments of
-                [] ->
-                    { start =
-                        implementation.name
-                            |> Elm.Syntax.Node.range
-                            |> .end
-                    , end =
-                        implementation.expression
-                            |> Elm.Syntax.Node.range
-                            |> .start
-                    }
-
-                parameter0 :: parameter1Up ->
-                    { start =
-                        listFilledLast ( parameter0, parameter1Up )
-                            |> Elm.Syntax.Node.range
-                            |> .end
-                    , end =
-                        implementation.expression
-                            |> Elm.Syntax.Node.range
-                            |> .start
-                    }
+        commentsBetweenParametersAndResult : List String
+        commentsBetweenParametersAndResult =
+            commentsInRange
+                { start = parameterPrints.end
+                , end =
+                    implementation.expression
+                        |> Elm.Syntax.Node.range
+                        |> .start
+                }
+                syntaxComments
     in
     Print.symbol (implementation.name |> Elm.Syntax.Node.value)
         |> Print.followedBy
@@ -4000,7 +3985,8 @@ declarationExpressionImplementation syntaxComments implementation =
                 (Print.layout parametersLineOffset
                     |> Print.followedBy
                         (Print.inSequence
-                            (parameterPrints
+                            (parameterPrints.printsReverse
+                                |> List.reverse
                                 |> List.map
                                     (\parameterPrint ->
                                         parameterPrint
@@ -4012,7 +3998,7 @@ declarationExpressionImplementation syntaxComments implementation =
                     |> Print.followedBy
                         (Print.layout Print.NextLine
                             |> Print.followedBy
-                                (case commentsInRange rangeBetweenParametersAndResult syntaxComments of
+                                (case commentsBetweenParametersAndResult of
                                     [] ->
                                         Print.empty
 
