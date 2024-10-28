@@ -4467,14 +4467,9 @@ expressionOperation :
         , operator : String
         , right : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
         }
-    -> { indent : Int }
-    -> String
+    -> Print
 expressionOperation syntaxComments syntaxOperation =
     let
-        lineOffset : Print.LineOffset
-        lineOffset =
-            lineOffsetInRange syntaxOperation.fullRange
-
         operationExpanded :
             { leftest : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
             , beforeRightestOperatorExpressionChain :
@@ -4486,33 +4481,179 @@ expressionOperation syntaxComments syntaxOperation =
             , rightestExpression : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
             }
         operationExpanded =
-            expressionOperationExpand syntaxOperation.left syntaxOperation.operator syntaxOperation.right
+            expressionOperationExpand syntaxOperation.left
+                syntaxOperation.operator
+                syntaxOperation.right
+
+        beforeRightestComments :
+            { commentsReverse : List (List String)
+            , end : Elm.Syntax.Range.Location
+            }
+        beforeRightestComments =
+            operationExpanded.beforeRightestOperatorExpressionChain
+                |> List.foldl
+                    (\operatorAndExpressionBeforeRightest soFar ->
+                        let
+                            expressionRange : Elm.Syntax.Range.Range
+                            expressionRange =
+                                operatorAndExpressionBeforeRightest.expression
+                                    |> Elm.Syntax.Node.range
+                        in
+                        { end = expressionRange.end
+                        , commentsReverse =
+                            commentsInRange
+                                { start = soFar.end, end = expressionRange.start }
+                                syntaxComments
+                                :: soFar.commentsReverse
+                        }
+                    )
+                    { end = operationExpanded.leftest |> Elm.Syntax.Node.range |> .end
+                    , commentsReverse = []
+                    }
+
+        commentsBeforeRightestExpression : List String
+        commentsBeforeRightestExpression =
+            commentsInRange
+                { start = beforeRightestComments.end
+                , end =
+                    operationExpanded.rightestExpression
+                        |> Elm.Syntax.Node.range
+                        |> .start
+                }
+                syntaxComments
 
         leftestPrint : Print
         leftestPrint =
             expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
                 operationExpanded.leftest
-    in
-    leftestPrint
-        |> Print.followedBy
-            (List.foldr
-                (\operatorExpression chainRightPrint ->
-                    \previousLineOffset ->
+
+        lineOffset : Print.LineOffset
+        lineOffset =
+            if
+                (beforeRightestComments.commentsReverse |> List.all List.isEmpty)
+                    && (commentsBeforeRightestExpression |> List.isEmpty)
+            then
+                lineOffsetInRange syntaxOperation.fullRange
+
+            else
+                Print.NextLine
+
+        beforeRightestOperatorExpressionChainWithPreviousLineOffset :
+            { previousLineOffset : Print.LineOffset
+            , rightToLeft :
+                List
+                    { operator : String
+                    , expression : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+                    , expressionPrint : Print
+                    , commentsBeforeExpression : List String
+                    , previousLineOffset : Print.LineOffset
+                    }
+            }
+        beforeRightestOperatorExpressionChainWithPreviousLineOffset =
+            List.map2
+                (\operatorExpression commentsBeforeExpression ->
+                    { operator = operatorExpression.operator
+                    , expression = operatorExpression.expression
+                    , commentsBeforeExpression = commentsBeforeExpression
+                    }
+                )
+                operationExpanded.beforeRightestOperatorExpressionChain
+                (beforeRightestComments.commentsReverse |> List.reverse)
+                |> List.foldl
+                    (\operatorExpression soFar ->
                         let
                             expressionPrint : Print
                             expressionPrint =
                                 expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
                                     operatorExpression.expression
                         in
+                        { previousLineOffset = Print.lineOffset expressionPrint
+                        , rightToLeft =
+                            { operator = operatorExpression.operator
+                            , expression = operatorExpression.expression
+                            , expressionPrint = expressionPrint
+                            , commentsBeforeExpression = operatorExpression.commentsBeforeExpression
+                            , previousLineOffset = soFar.previousLineOffset
+                            }
+                                :: soFar.rightToLeft
+                        }
+                    )
+                    { previousLineOffset = Print.lineOffset leftestPrint
+                    , rightToLeft = []
+                    }
+
+        rightestOperatorExpressionPrint : Print
+        rightestOperatorExpressionPrint =
+            case operationExpanded.rightestOperator of
+                "<|" ->
+                    Print.layout beforeRightestOperatorExpressionChainWithPreviousLineOffset.previousLineOffset
+                        |> Print.followedBy (Print.symbol "<|")
+                        |> Print.followedBy
+                            (Print.indentedByNextMultipleOf4
+                                (Print.layout lineOffset
+                                    |> Print.followedBy
+                                        (case commentsBeforeRightestExpression of
+                                            [] ->
+                                                Print.empty
+
+                                            comment0 :: comment1Up ->
+                                                comments (comment0 :: comment1Up)
+                                                    |> Print.followedBy (Print.layout Print.NextLine)
+                                        )
+                                    |> Print.followedBy
+                                        (expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
+                                            operationExpanded.rightestExpression
+                                        )
+                                )
+                            )
+
+                nonApLOperator ->
+                    Print.indentedByNextMultipleOf4
+                        (Print.layout lineOffset
+                            |> Print.followedBy (Print.symbol nonApLOperator)
+                            |> Print.followedBy Print.space
+                            |> Print.followedBy
+                                (case commentsBeforeRightestExpression of
+                                    [] ->
+                                        Print.empty
+
+                                    comment0 :: comment1Up ->
+                                        Print.indented (String.length nonApLOperator + 1)
+                                            (comments (comment0 :: comment1Up)
+                                                |> Print.followedBy (Print.layout Print.NextLine)
+                                            )
+                                )
+                            |> Print.followedBy
+                                (Print.indentedByNextMultipleOf4
+                                    (expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
+                                        operationExpanded.rightestExpression
+                                    )
+                                )
+                        )
+    in
+    leftestPrint
+        |> Print.followedBy
+            (beforeRightestOperatorExpressionChainWithPreviousLineOffset.rightToLeft
+                |> List.foldl
+                    (\operatorExpression chainRightPrint ->
                         case operatorExpression.operator of
                             "<|" ->
-                                Print.layout previousLineOffset
+                                Print.layout operatorExpression.previousLineOffset
                                     |> Print.followedBy (Print.symbol "<|")
                                     |> Print.followedBy
                                         (Print.indentedByNextMultipleOf4
                                             (Print.layout lineOffset
-                                                |> Print.followedBy expressionPrint
-                                                |> Print.followedBy (chainRightPrint (Print.lineOffset expressionPrint))
+                                                |> Print.followedBy
+                                                    (case operatorExpression.commentsBeforeExpression of
+                                                        [] ->
+                                                            Print.empty
+
+                                                        comment0 :: comment1Up ->
+                                                            comments (comment0 :: comment1Up)
+                                                                |> Print.followedBy (Print.layout Print.NextLine)
+                                                    )
+                                                |> Print.followedBy operatorExpression.expressionPrint
+                                                |> Print.followedBy chainRightPrint
                                             )
                                         )
 
@@ -4520,53 +4661,26 @@ expressionOperation syntaxComments syntaxOperation =
                                 Print.indentedByNextMultipleOf4
                                     (Print.layout lineOffset
                                         |> Print.followedBy (Print.symbol nonApLOperator)
+                                        |> Print.followedBy Print.space
+                                        |> Print.followedBy
+                                            (case operatorExpression.commentsBeforeExpression of
+                                                [] ->
+                                                    Print.empty
+
+                                                comment0 :: comment1Up ->
+                                                    Print.indented (String.length nonApLOperator + 1)
+                                                        (comments (comment0 :: comment1Up)
+                                                            |> Print.followedBy (Print.layout Print.NextLine)
+                                                        )
+                                            )
                                         |> Print.followedBy
                                             (Print.indentedByNextMultipleOf4
-                                                (Print.space
-                                                    |> Print.followedBy expressionPrint
-                                                )
+                                                operatorExpression.expressionPrint
                                             )
                                     )
-                                    |> Print.followedBy (chainRightPrint (Print.lineOffset expressionPrint))
-                )
-                (\previousLineOffset ->
-                    case operationExpanded.rightestOperator of
-                        "<|" ->
-                            let
-                                expressionPrint : Print
-                                expressionPrint =
-                                    expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
-                                        operationExpanded.rightestExpression
-                            in
-                            Print.layout previousLineOffset
-                                |> Print.followedBy (Print.symbol "<|")
-                                |> Print.followedBy
-                                    (Print.indentedByNextMultipleOf4
-                                        (Print.layout lineOffset
-                                            |> Print.followedBy expressionPrint
-                                        )
-                                    )
-
-                        nonApLOperator ->
-                            let
-                                expressionPrint : Print
-                                expressionPrint =
-                                    expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
-                                        operationExpanded.rightestExpression
-                            in
-                            Print.indentedByNextMultipleOf4
-                                (Print.layout lineOffset
-                                    |> Print.followedBy (Print.symbol nonApLOperator)
-                                    |> Print.followedBy
-                                        (Print.indentedByNextMultipleOf4
-                                            (Print.space
-                                                |> Print.followedBy expressionPrint
-                                            )
-                                        )
-                                )
-                )
-                operationExpanded.beforeRightestOperatorExpressionChain
-                (Print.lineOffset leftestPrint)
+                                    |> Print.followedBy chainRightPrint
+                    )
+                    rightestOperatorExpressionPrint
             )
 
 

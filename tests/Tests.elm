@@ -1728,6 +1728,38 @@ a =
     identity |> identity identity |> identity
 """
                 )
+            , Test.test "|> pipeline, written as single-line with consecutive comments before rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity |> identity identity |> {- 0 -} {- 1 -} identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        |> identity identity
+        |> {- 0 -}
+           {- 1 -}
+           identity
+"""
+                )
+            , Test.test "|> pipeline, written as single-line with consecutive comments before not rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity |> {- 0 -} {- 1 -} identity identity |> identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        |> {- 0 -}
+           {- 1 -}
+           identity identity
+        |> identity
+"""
+                )
             , Test.test "<| pipeline, multi-line"
                 (\() ->
                     """module A exposing (..)
@@ -1739,6 +1771,42 @@ a =
 
 a =
     identity <|
+        identity identity <|
+            identity
+"""
+                )
+            , Test.test "<| pipeline, multi-line, consecutive comments before rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity identity <| -- 0
+    -- 1
+    identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <|
+        identity identity <|
+            -- 0
+            -- 1
+            identity
+"""
+                )
+            , Test.test "<| pipeline, multi-line, consecutive comments before non-rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| -- 0
+    -- 1
+    identity identity <| identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <|
+        -- 0
+        -- 1
         identity identity <|
             identity
 """
