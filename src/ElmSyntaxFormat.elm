@@ -3921,56 +3921,51 @@ declarationExpressionImplementation :
     -> Print
 declarationExpressionImplementation syntaxComments implementation =
     let
-        parameterPrints : { end : Elm.Syntax.Range.Location, printsReverse : List Print }
-        parameterPrints =
+        parameterCommentsBefore : { end : Elm.Syntax.Range.Location, reverse : List (List String) }
+        parameterCommentsBefore =
             implementation.arguments
                 |> List.foldl
                     (\parameterPattern soFar ->
                         let
-                            parameterPrintedRange : Elm.Syntax.Range.Range
-                            parameterPrintedRange =
-                                if parameterPattern |> Elm.Syntax.Node.value |> patternIsSpaceSeparated then
-                                    parameterPattern |> Elm.Syntax.Node.range
-
-                                else
-                                    parameterPattern |> patternToNotParenthesized |> Elm.Syntax.Node.range
+                            parameterRange : Elm.Syntax.Range.Range
+                            parameterRange =
+                                parameterPattern |> Elm.Syntax.Node.range
                         in
-                        { printsReverse =
-                            ((case
-                                commentsInRange
-                                    { start = soFar.end, end = parameterPrintedRange.start }
-                                    syntaxComments
-                              of
-                                [] ->
-                                    Print.empty
-
-                                comment0 :: comment1Up ->
-                                    comments (comment0 :: comment1Up)
-                                        |> Print.followedBy (Print.layout Print.NextLine)
-                             )
-                                |> Print.followedBy
-                                    (patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern)
-                            )
-                                :: soFar.printsReverse
-                        , end = parameterPrintedRange.end
+                        { reverse =
+                            commentsInRange
+                                { start = soFar.end, end = parameterRange.start }
+                                syntaxComments
+                                :: soFar.reverse
+                        , end = parameterRange.end
                         }
                     )
-                    { printsReverse = []
+                    { reverse = []
                     , end =
                         implementation.name
                             |> Elm.Syntax.Node.range
                             |> .end
                     }
 
+        parameterPrints : List Print
+        parameterPrints =
+            implementation.arguments
+                |> List.map
+                    (\parameterPattern ->
+                        patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
+                    )
+
         parametersLineOffset : Print.LineOffset
         parametersLineOffset =
-            Print.listCombineLineOffset
-                (parameterPrints.printsReverse |> List.map Print.lineOffset)
+            if parameterCommentsBefore.reverse |> List.all List.isEmpty then
+                Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
+
+            else
+                Print.NextLine
 
         commentsBetweenParametersAndResult : List String
         commentsBetweenParametersAndResult =
             commentsInRange
-                { start = parameterPrints.end
+                { start = parameterCommentsBefore.end
                 , end =
                     implementation.expression
                         |> Elm.Syntax.Node.range
@@ -3981,18 +3976,25 @@ declarationExpressionImplementation syntaxComments implementation =
     Print.symbol (implementation.name |> Elm.Syntax.Node.value)
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
-                (Print.layout parametersLineOffset
-                    |> Print.followedBy
-                        (Print.inSequence
-                            (parameterPrints.printsReverse
-                                |> List.reverse
-                                |> List.map
-                                    (\parameterPrint ->
-                                        parameterPrint
-                                            |> Print.followedBy (Print.layout parametersLineOffset)
+                (Print.inSequence
+                    (List.map2
+                        (\parameterPrint commentsBefore ->
+                            Print.layout parametersLineOffset
+                                |> Print.followedBy
+                                    (case commentsBefore of
+                                        [] ->
+                                            Print.empty
+
+                                        comment0 :: comment1Up ->
+                                            comments (comment0 :: comment1Up)
+                                                |> Print.followedBy (Print.layout Print.NextLine)
                                     )
-                            )
+                                |> Print.followedBy parameterPrint
                         )
+                        parameterPrints
+                        (parameterCommentsBefore.reverse |> List.reverse)
+                    )
+                    |> Print.followedBy (Print.layout parametersLineOffset)
                     |> Print.followedBy (Print.symbol "=")
                     |> Print.followedBy
                         (Print.layout Print.NextLine
@@ -4370,11 +4372,9 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                         }
 
         Elm.Syntax.Expression.CaseExpression syntaxCaseOf ->
-            -- TODO comments
             expressionCaseOf syntaxComments syntaxCaseOf
 
         Elm.Syntax.Expression.LambdaExpression syntaxLambda ->
-            -- TODO comments
             expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda)
 
         Elm.Syntax.Expression.RecordExpr fields ->
@@ -5073,26 +5073,94 @@ expressionLambda :
     List (Elm.Syntax.Node.Node String)
     -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Lambda
     -> Print
-expressionLambda syntaxComments (Elm.Syntax.Node.Node lambdaRange syntaxLambda) =
+expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
+    let
+        parameterCommentsBefore : { end : Elm.Syntax.Range.Location, reverse : List (List String) }
+        parameterCommentsBefore =
+            syntaxLambda.args
+                |> List.foldl
+                    (\(Elm.Syntax.Node.Node parameterPatternRange _) soFar ->
+                        { reverse =
+                            commentsInRange
+                                { start = soFar.end
+                                , end = parameterPatternRange.start
+                                }
+                                syntaxComments
+                                :: soFar.reverse
+                        , end = parameterPatternRange.end
+                        }
+                    )
+                    { reverse = []
+                    , end = fullRange.start
+                    }
+
+        commentsBeforeResult : List String
+        commentsBeforeResult =
+            commentsInRange
+                { start = parameterCommentsBefore.end
+                , end = syntaxLambda.expression |> Elm.Syntax.Node.range |> .start
+                }
+                syntaxComments
+
+        parameterPrints : List Print
+        parameterPrints =
+            List.map
+                (\parameterPattern ->
+                    patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
+                )
+                syntaxLambda.args
+
+        parametersLineOffset : Print.LineOffset
+        parametersLineOffset =
+            if parameterCommentsBefore.reverse |> List.all List.isEmpty then
+                Print.listCombineLineOffset (parameterPrints |> List.map Print.lineOffset)
+
+            else
+                Print.NextLine
+    in
     Print.symbol "\\"
         |> Print.followedBy
-            (Print.inSequence
-                (syntaxLambda.args
-                    |> List.map
-                        (\parameterPattern ->
-                            patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
-                                |> Print.followedBy Print.space
+            (Print.indented 1
+                (Print.emptiableLayout parametersLineOffset
+                    |> Print.followedBy
+                        (Print.inSequence
+                            (List.map2
+                                (\parameterPrint commentsBefore ->
+                                    (case commentsBefore of
+                                        [] ->
+                                            Print.empty
+
+                                        comment0 :: comment1Up ->
+                                            comments (comment0 :: comment1Up)
+                                                |> Print.followedBy (Print.layout Print.NextLine)
+                                    )
+                                        |> Print.followedBy parameterPrint
+                                )
+                                parameterPrints
+                                (parameterCommentsBefore.reverse |> List.reverse)
+                                |> List.intersperse (Print.layout parametersLineOffset)
+                            )
                         )
                 )
-            )
-        |> Print.followedBy (Print.symbol "->")
-        |> Print.followedBy
-            (Print.indentedByNextMultipleOf4
-                (Print.layout (lineOffsetInRange lambdaRange))
-            )
-        |> Print.followedBy
-            (expressionNotParenthesized syntaxComments
-                syntaxLambda.expression
+                |> Print.followedBy (Print.layout parametersLineOffset)
+                |> Print.followedBy (Print.symbol "->")
+                |> Print.followedBy
+                    (Print.indentedByNextMultipleOf4
+                        ((case commentsBeforeResult of
+                            [] ->
+                                Print.layout (lineOffsetInRange fullRange)
+
+                            comment0 :: comment1Up ->
+                                Print.layout Print.NextLine
+                                    |> Print.followedBy (comments (comment0 :: comment1Up))
+                                    |> Print.followedBy (Print.layout Print.NextLine)
+                         )
+                            |> Print.followedBy
+                                (expressionNotParenthesized syntaxComments
+                                    syntaxLambda.expression
+                                )
+                        )
+                    )
             )
 
 
@@ -5233,6 +5301,7 @@ expressionCaseOf :
     -> Elm.Syntax.Expression.CaseBlock
     -> Print
 expressionCaseOf syntaxComments syntaxCaseOf =
+    -- TODO comments
     let
         casedExpressionLineOffset : Print.LineOffset
         casedExpressionLineOffset =

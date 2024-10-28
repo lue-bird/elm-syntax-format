@@ -1613,6 +1613,62 @@ a =
             1
 """
                 )
+            , Test.test "lambda, consecutive comments before result"
+                (\() ->
+                    """module A exposing (..)
+a =
+    \\b -> -- 0
+    -- 1
+    b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \\b ->
+        -- 0
+        -- 1
+        b
+"""
+                )
+            , Test.test "lambda, consecutive comments before first parameter"
+                (\() ->
+                    """module A exposing (..)
+a =
+    \\ -- 0
+    -- 1
+    b -> b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \\
+     -- 0
+     -- 1
+     b
+    ->
+        b
+"""
+                )
+            , Test.test "lambda, consecutive comments between parameters"
+                (\() ->
+                    """module A exposing (..)
+a =
+    \\b -- 0
+    -- 1
+    c -> b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \\
+     b
+     -- 0
+     -- 1
+     c
+    ->
+        b
+"""
+                )
             , Test.test "let-in with one destructuring declaration"
                 (\() ->
                     """module A exposing (..)
