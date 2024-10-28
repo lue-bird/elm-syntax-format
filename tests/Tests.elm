@@ -1952,6 +1952,109 @@ a =
     }
 """
                 )
+            , Test.test "char without escapes"
+                (\() ->
+                    """module A exposing (..)
+a = 'n' """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    'n'
+"""
+                )
+            , Test.test "char with escape"
+                (\() ->
+                    """module A exposing (..)
+a = '\\u{000D}' """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    '\\u{000D}'
+"""
+                )
+            , Test.test "single double quote string without escapes"
+                (\() ->
+                    """module A exposing (..)
+a = "normal text" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    "normal text"
+"""
+                )
+            , Test.test "single double quote string with escapes"
+                (\() ->
+                    """module A exposing (..)
+a = "\\"\\\\\\t\\u{000D}" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    "\\"\\\\\\t\\u{000D}"
+"""
+                )
+            , Test.test "triple double quote string single-line without escapes"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"normal text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \"\"\"normal text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string multi-line without escapes"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"first line
+second line
+    \"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \"\"\"first line
+second line
+    \"\"\"
+"""
+                )
+            , Test.test "triple double quote string un-escapes double quote after first before last char"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"normal \\" text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \"\"\"normal " text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string escapes double quote as first char"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"\\"normal text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \"\"\"\\"normal text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string escapes double quote as last char"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"normal text\\\"\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \"\"\"normal text\\\"\"\"\"
+"""
+                )
             , Test.test "comments between parameters"
                 (\() ->
                     """module A exposing (..)

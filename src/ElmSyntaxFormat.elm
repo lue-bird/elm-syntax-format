@@ -1505,27 +1505,65 @@ patternIsSpaceSeparated syntaxPattern =
             True
 
 
-stringLiteral : String -> Print
-stringLiteral stringContent =
-    Print.symbol "\""
-        |> Print.followedBy
-            (Print.symbol
-                (stringContent
-                    |> String.foldl
-                        (\contentChar soFar ->
-                            soFar ++ quotedStringCharToEscaped contentChar
-                        )
-                        ""
+stringLiteral : Elm.Syntax.Node.Node String -> Print
+stringLiteral (Elm.Syntax.Node.Node range stringContent) =
+    let
+        stringContentEscaped : String
+        stringContentEscaped =
+            stringContent
+                |> String.foldl
+                    (\contentChar soFar ->
+                        soFar ++ quotedStringCharToEscaped contentChar
+                    )
+                    ""
+
+        wasProbablyTripleDoubleQuoteOriginally : Bool
+        wasProbablyTripleDoubleQuoteOriginally =
+            (range.start.row /= range.end.row)
+                || ((range.end.column - range.start.column)
+                        - (stringContentEscaped |> String.length)
+                        /= 2
+                   )
+    in
+    if wasProbablyTripleDoubleQuoteOriginally then
+        Print.symbol "\"\"\""
+            |> Print.followedBy
+                (Print.inSequence
+                    (stringContentEscaped
+                        |> String.replace "\\n" "\n"
+                        |> String.replace "\\r" "\u{000D}"
+                        |> String.replace "\\u{000D}" "\u{000D}"
+                        |> stringAlterAfterFirstBeforeLastChar
+                            (String.replace "\\\"" "\"")
+                        |> String.lines
+                        |> List.map Print.symbol
+                        |> List.intersperse Print.linebreak
+                    )
                 )
-            )
-        |> Print.followedBy (Print.symbol "\"")
+            |> Print.followedBy (Print.symbol "\"\"\"")
+
+    else
+        Print.symbol "\""
+            |> Print.followedBy
+                (Print.symbol stringContentEscaped)
+            |> Print.followedBy (Print.symbol "\"")
+
+
+stringAlterAfterFirstBeforeLastChar : (String -> String) -> (String -> String)
+stringAlterAfterFirstBeforeLastChar alterAfterFirstBeforeLastChar string =
+    (string |> String.slice 0 1)
+        ++ (string
+                |> String.slice 1 ((string |> String.length) - 1)
+                |> alterAfterFirstBeforeLastChar
+           )
+        ++ (string |> String.slice ((string |> String.length) - 1) (string |> String.length))
 
 
 quotedStringCharToEscaped : Char -> String
 quotedStringCharToEscaped character =
     case character of
         '"' ->
-            "\""
+            "\\\""
 
         '\\' ->
             "\\\\"
@@ -1728,7 +1766,7 @@ quotedCharToEscaped : Char -> String
 quotedCharToEscaped character =
     case character of
         '\'' ->
-            "'"
+            "\\'"
 
         '\\' ->
             "\\\\"
@@ -1890,7 +1928,7 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
             charLiteral char
 
         Elm.Syntax.Pattern.StringPattern string ->
-            stringLiteral string
+            stringLiteral (Elm.Syntax.Node.Node fullRange string)
 
         Elm.Syntax.Pattern.IntPattern int ->
             intLiteral int
@@ -4253,7 +4291,7 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                     )
 
         Elm.Syntax.Expression.Literal string ->
-            stringLiteral string
+            stringLiteral (Elm.Syntax.Node.Node fullRange string)
 
         Elm.Syntax.Expression.CharLiteral char ->
             charLiteral char

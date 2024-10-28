@@ -11,9 +11,9 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
   - ranges of `=`, `:`, `,`, `|`, `->` (and the keywords) are needed to determine whether comments are before or after
   - function types outputting a parenthesized function do not preserve the parens because type parens are not stored in the syntax tree
   - comments before/after parenthesized types will get eaten because type parens are not stored in the syntax tree
-  - `"""` and `"` aren't differentiated
+  - `"""` and `"` are in some very rare cases not differentiated correctly
   - some floats in exponent representation are formatted to without it and the other way around
-  - handling int, float overflow
+  - handling int (and float?) overflow (elm-format itself seems to have issues here, too https://github.com/avh4/elm-format/issues/635)
   - formatting documentation markdown
 
 I'm 100% sure there are other deviations I've missed. Please [report](https://github.com/lue-bird/elm-syntax-format/issues/new) if you notice some <3
