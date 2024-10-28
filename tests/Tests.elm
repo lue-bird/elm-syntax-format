@@ -2086,6 +2086,46 @@ a
     0
 """
                 )
+            , Test.test "as with comments before name"
+                (\() ->
+                    """module A exposing (..)
+a (_ as -- argument
+  argument) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    (_
+     as
+        -- argument
+        argument
+    )
+    =
+    0
+"""
+                )
+            , Test.test "as with multi-line pattern"
+                (\() ->
+                    """module A exposing (..)
+a ([-- in list
+    _ 
+   ] as argument) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    ([ -- in list
+       _
+     ]
+     as
+        argument
+    )
+    =
+    0
+"""
+                )
             , Test.test "record with comments before first field"
                 (\() ->
                     """module A exposing (..)

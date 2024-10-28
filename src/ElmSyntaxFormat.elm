@@ -1990,12 +1990,62 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
                 , arguments = argumentPatterns
                 }
 
-        Elm.Syntax.Pattern.AsPattern aliasedPattern (Elm.Syntax.Node.Node _ aliasName) ->
-            patternParenthesizedIfSpaceSeparated syntaxComments aliasedPattern
-                |> Print.followedBy Print.space
-                |> Print.followedBy (Print.symbol "as")
-                |> Print.followedBy Print.space
-                |> Print.followedBy (Print.symbol aliasName)
+        Elm.Syntax.Pattern.AsPattern aliasedPattern aliasNameNode ->
+            patternAs syntaxComments
+                { aliasedPattern = aliasedPattern, aliasNameNode = aliasNameNode }
+
+
+patternAs :
+    List (Elm.Syntax.Node.Node String)
+    ->
+        { aliasNameNode : Elm.Syntax.Node.Node String
+        , aliasedPattern : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+        }
+    -> Print
+patternAs syntaxComments syntaxAs =
+    let
+        (Elm.Syntax.Node.Node aliasNameRange aliasName) =
+            syntaxAs.aliasNameNode
+
+        aliasedPatternPrint : Print
+        aliasedPatternPrint =
+            patternParenthesizedIfSpaceSeparated syntaxComments syntaxAs.aliasedPattern
+
+        commentsBeforeAliasName : List String
+        commentsBeforeAliasName =
+            commentsInRange
+                { start = syntaxAs.aliasedPattern |> Elm.Syntax.Node.range |> .end
+                , end = aliasNameRange.start
+                }
+                syntaxComments
+
+        lineOffset : Print.LineOffset
+        lineOffset =
+            case commentsBeforeAliasName of
+                _ :: _ ->
+                    Print.NextLine
+
+                [] ->
+                    aliasedPatternPrint |> Print.lineOffset
+    in
+    aliasedPatternPrint
+        |> Print.followedBy (Print.layout lineOffset)
+        |> Print.followedBy (Print.symbol "as")
+        |> Print.followedBy
+            (Print.indentedByNextMultipleOf4
+                (Print.layout lineOffset
+                    |> Print.followedBy
+                        (case commentsBeforeAliasName of
+                            [] ->
+                                Print.empty
+
+                            moduleNameComment0 :: moduleNameComment1Up ->
+                                comments (moduleNameComment0 :: moduleNameComment1Up)
+                                    |> Print.followedBy (Print.layout Print.NextLine)
+                        )
+                    |> Print.followedBy (Print.symbol aliasName)
+                )
+            )
 
 
 patternRecord :
