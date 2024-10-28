@@ -1718,6 +1718,24 @@ a =
     b
 """
                 )
+            , Test.test "let-in with one destructuring, consecutive comments before destructured expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let b = -- 0
+            0 in b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        b =
+            -- 0
+            0
+    in
+    b
+"""
+                )
             , Test.test "let-in with one value declaration with type"
                 (\() ->
                     """module A exposing (..)

@@ -5284,12 +5284,31 @@ expressionLetDeclaration syntaxComments letDeclaration =
                     )
 
         Elm.Syntax.Expression.LetDestructuring destructuringPattern destructuredExpression ->
+            let
+                commentsBeforeDestructuredExpression : List String
+                commentsBeforeDestructuredExpression =
+                    commentsInRange
+                        { start = destructuringPattern |> Elm.Syntax.Node.range |> .end
+                        , end = destructuredExpression |> Elm.Syntax.Node.range |> .start
+                        }
+                        syntaxComments
+            in
             patternParenthesizedIfSpaceSeparated syntaxComments destructuringPattern
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.symbol "=")
                 |> Print.followedBy
                     (Print.indentedByNextMultipleOf4
                         (Print.layout Print.NextLine
+                            |> Print.followedBy
+                                (case commentsBeforeDestructuredExpression of
+                                    [] ->
+                                        Print.empty
+
+                                    comment0 :: comment1Up ->
+                                        comments (comment0 :: comment1Up)
+                                            |> Print.followedBy
+                                                (Print.layout Print.NextLine)
+                                )
                             |> Print.followedBy
                                 (expressionNotParenthesized syntaxComments
                                     destructuredExpression
