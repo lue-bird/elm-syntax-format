@@ -8,7 +8,7 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
 
 ## known deviations in printing
   - ranges of `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
-  - ranges of `=`, `:`, `,`, `|`, `->` (and the keywords) are needed to determine whether comments are before or after
+  - ranges of `=`, `:`, `,`, `|`, `->`, the operators and the keywords are needed to determine whether comments are before or after
   - function types outputting a parenthesized function do not preserve the parens because type parens are not stored in the syntax tree
   - comments before/after parenthesized types will get eaten because type parens are not stored in the syntax tree
   - some floats in exponent representation are formatted to without it and the other way around
