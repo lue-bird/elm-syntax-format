@@ -2339,35 +2339,40 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                     |> Print.followedBy
                         (Print.sequence
                             (List.map2
-                                (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) fieldComments ->
-                                    (Print.withIndentIncreasedBy 2
-                                        (case fieldComments.beforeName of
+                                (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) fieldComments ->
+                                    Print.withIndentIncreasedBy 2
+                                        ((case fieldComments.beforeName of
                                             [] ->
                                                 Print.empty
 
                                             comment0 :: comment1Up ->
                                                 comments (comment0 :: comment1Up)
                                                     |> Print.followedBy Print.linebreakIndented
-                                        )
-                                        |> Print.followedBy (Print.exactly fieldName)
-                                        |> Print.followedBy Print.space
-                                        |> Print.followedBy (Print.exactly ":")
-                                    )
-                                        |> Print.followedBy
-                                            (Print.withIndentAtNextMultipleOf4
-                                                ((case fieldComments.betweenNameAndValue of
-                                                    [] ->
-                                                        Print.spaceOrLinebreakIndented (lineSpreadInNode fieldValue)
+                                         )
+                                            |> Print.followedBy (Print.exactly fieldName)
+                                            |> Print.followedBy Print.space
+                                            |> Print.followedBy (Print.exactly ":")
+                                            |> Print.followedBy
+                                                (Print.withIndentAtNextMultipleOf4
+                                                    ((case fieldComments.betweenNameAndValue of
+                                                        [] ->
+                                                            Print.spaceOrLinebreakIndented
+                                                                (lineSpreadInRange
+                                                                    { start = fieldNameRange.start
+                                                                    , end = fieldValue |> Elm.Syntax.Node.range |> .end
+                                                                    }
+                                                                )
 
-                                                    comment0 :: comment1Up ->
-                                                        Print.linebreakIndented
-                                                            |> Print.followedBy (comments (comment0 :: comment1Up))
-                                                            |> Print.followedBy Print.linebreakIndented
-                                                 )
-                                                    |> Print.followedBy
-                                                        (typeNotParenthesized syntaxComments fieldValue)
+                                                        comment0 :: comment1Up ->
+                                                            Print.linebreakIndented
+                                                                |> Print.followedBy (comments (comment0 :: comment1Up))
+                                                                |> Print.followedBy Print.linebreakIndented
+                                                     )
+                                                        |> Print.followedBy
+                                                            (typeNotParenthesized syntaxComments fieldValue)
+                                                    )
                                                 )
-                                            )
+                                        )
                                 )
                                 syntaxRecordExtension.fields
                                 (commentsBeforeFields.reverse |> List.reverse)
@@ -2828,7 +2833,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                 |> Print.followedBy
                     (Print.sequence
                         (List.map2
-                            (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) fieldComments ->
+                            (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) fieldComments ->
                                 Print.withIndentIncreasedBy 2
                                     (case fieldComments.beforeName of
                                         [] ->
@@ -2842,20 +2847,28 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                         (Print.exactly fieldName)
                                     |> Print.followedBy Print.space
                                     |> Print.followedBy
-                                        (Print.exactly fieldSpecific.nameValueSeparator)
-                                    |> Print.followedBy
-                                        (Print.withIndentAtNextMultipleOf4
-                                            ((case fieldComments.betweenNameAndValue of
-                                                [] ->
-                                                    Print.spaceOrLinebreakIndented (lineSpreadInNode fieldValue)
-
-                                                comment0 :: comment1Up ->
-                                                    Print.linebreakIndented
-                                                        |> Print.followedBy (comments (comment0 :: comment1Up))
-                                                        |> Print.followedBy Print.linebreakIndented
-                                             )
+                                        (Print.withIndentIncreasedBy 2
+                                            (Print.exactly fieldSpecific.nameValueSeparator
                                                 |> Print.followedBy
-                                                    (fieldSpecific.printValueNotParenthesized syntaxComments fieldValue)
+                                                    (Print.withIndentAtNextMultipleOf4
+                                                        ((case fieldComments.betweenNameAndValue of
+                                                            [] ->
+                                                                Print.spaceOrLinebreakIndented
+                                                                    (lineSpreadInRange
+                                                                        { start = fieldNameRange.start
+                                                                        , end = fieldValue |> Elm.Syntax.Node.range |> .end
+                                                                        }
+                                                                    )
+
+                                                            comment0 :: comment1Up ->
+                                                                Print.linebreakIndented
+                                                                    |> Print.followedBy (comments (comment0 :: comment1Up))
+                                                                    |> Print.followedBy Print.linebreakIndented
+                                                         )
+                                                            |> Print.followedBy
+                                                                (fieldSpecific.printValueNotParenthesized syntaxComments fieldValue)
+                                                        )
+                                                    )
                                             )
                                         )
                             )
@@ -5075,8 +5088,8 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                     |> Print.followedBy
                         (Print.sequence
                             (List.map2
-                                (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node _ fieldName, fieldValue )) fieldComments ->
-                                    (Print.withIndentIncreasedBy 2
+                                (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) fieldComments ->
+                                    Print.withIndentIncreasedBy 2
                                         (case fieldComments.beforeName of
                                             [] ->
                                                 Print.empty
@@ -5087,13 +5100,17 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                                         )
                                         |> Print.followedBy (Print.exactly fieldName)
                                         |> Print.followedBy Print.space
-                                        |> Print.followedBy (Print.exactly ":")
-                                    )
+                                        |> Print.followedBy (Print.exactly "=")
                                         |> Print.followedBy
                                             (Print.withIndentAtNextMultipleOf4
                                                 ((case fieldComments.betweenNameAndValue of
                                                     [] ->
-                                                        Print.spaceOrLinebreakIndented (lineSpreadInNode fieldValue)
+                                                        Print.spaceOrLinebreakIndented
+                                                            (lineSpreadInRange
+                                                                { start = fieldNameRange.start
+                                                                , end = fieldValue |> Elm.Syntax.Node.range |> .end
+                                                                }
+                                                            )
 
                                                     comment0 :: comment1Up ->
                                                         Print.linebreakIndented
