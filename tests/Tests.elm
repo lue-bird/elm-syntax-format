@@ -5134,6 +5134,2245 @@ nameOfExpose topLevelExpose =
             typeExpose.name
 """
                 )
+            , Test.test "Simplify"
+                (\() ->
+                    expectPrintedAsSame
+                        """module Simplify exposing
+    ( rule
+    , Configuration, defaults, expectNaN, ignoreCaseOfForTypes
+    )
+
+{-| Reports when an expression can be simplified.
+
+🔧 Running with `--fix` will automatically remove all the reported errors.
+
+    config =
+        [ Simplify.rule Simplify.defaults
+        ]
+
+@docs rule
+@docs Configuration, defaults, expectNaN, ignoreCaseOfForTypes
+
+
+## Try it out
+
+You can try this rule out by running the following command:
+
+```bash
+elm-review --template jfmengels/elm-review-simplify/example --rules Simplify
+```
+
+
+## Simplifications
+
+Below is the list of all kinds of simplifications this rule applies.
+
+
+### Booleans
+
+    x || True
+    --> True
+
+    x || False
+    --> x
+
+    x && True
+    --> x
+
+    x && False
+    --> False
+
+    not True
+    --> False
+
+    not (not x)
+    --> x
+
+    -- for `<`, `>`, `<=`, `>=`, `==` and `/=`
+    not (a < b)
+    --> a >= b
+
+
+### Comparisons
+
+    x == True
+    --> x
+
+    x /= False
+    --> x
+
+    not x == not y
+    --> x == y
+
+    anything == anything
+    --> True
+
+    anything /= anything
+    --> False
+
+    { r | a = 1 } == { r | a = 2 }
+    --> False
+
+
+### If expressions
+
+    if True then x else y
+    --> x
+
+    if False then x else y
+    --> y
+
+    if condition then x else x
+    --> x
+
+    if condition then True else False
+    --> condition
+
+    if condition then False else True
+    --> not condition
+
+    a =
+        if condition then
+            if not condition then
+                1
+            else
+                2
+        else
+            3
+    --> if condition then 2 else 3
+
+
+### Case expressions
+
+    case condition of
+        True -> x
+        False -> y
+    --> if condition then x else y
+
+    case condition of
+        False -> y
+        True -> x
+    --> if not condition then x else y
+
+    -- only when no variables are introduced in the pattern
+    -- and no custom types defined in the project are referenced
+    case value of
+        Just _ -> x
+        Nothing -> x
+    --> x
+
+    -- same with any variant, list or tuple containing either
+    case Just value of
+        Nothing -> a
+        Just (Ok b) -> c
+        Just (Err d) -> e
+    --> case value of
+    -->     Ok b -> c
+    -->     Err d -> e
+
+### Arrays
+
+    Array.fromList []
+    --> Array.empty
+
+    Array.fromList (Array.toList array)
+    --> array
+
+    Array.toList (Array.fromList list)
+    --> list
+
+    Array.toList Array.empty
+    --> []
+
+    Array.toList (Array.repeat n a)
+    --> List.repeat n a
+
+    Array.map f Array.empty -- same for Array.filter
+    --> Array.empty
+
+    Array.map identity array
+    --> array
+
+    Array.indexedMap (\\_ value -> f value) array
+    --> Array.map (\\value -> f value) array
+
+    Array.isEmpty Array.empty
+    --> True
+
+    Array.repeat 0 x
+    --> Array.empty
+
+    Array.initialize 0 f
+    --> Array.empty
+
+    Array.length Array.empty
+    --> 0
+
+    Array.length (Array.fromList [ a, b, c ])
+    --> 3
+
+    Array.length (Array.repeat 3 x)
+    --> 3
+
+    Array.length (Array.initialize 3 f)
+    --> 3
+
+    Array.length (Array.repeat n x)
+    --> max 0 n
+
+    Array.length (Array.initialize n f)
+    --> max 0 n
+
+    Array.append Array.empty array
+    --> array
+
+    Array.append (Array.fromList [ a, b ]) (Array.fromList [ c, d ])
+    --> Array.fromList [ a, b, c, d ]
+
+    Array.slice n n array
+    --> Array.empty
+
+    Array.slice n 0 array
+    --> Array.empty
+
+    Array.slice a z Array.empty
+    --> Array.empty
+
+    Array.slice 2 1 array
+    --> Array.empty
+
+    Array.slice -1 -2 array
+    --> Array.empty
+
+    Array.get n Array.empty
+    --> Nothing
+
+    Array.get 1 (Array.fromList [ a, b, c ])
+    --> Just b
+
+    Array.get 100 (Array.fromList [ a, b, c ])
+    --> Nothing
+
+    Array.get -1 array
+    --> Nothing
+
+    Array.get 2 (Array.repeat 10 x)
+    --> Just x
+
+    Array.get 100 (Array.repeat 10 x)
+    --> Nothing
+
+    Array.get 2 (Array.initialize 10 f)
+    --> Just (f 2)
+
+    Array.get 100 (Array.initialize 10 f)
+    --> Nothing
+
+    Array.set n x Array.empty
+    --> Array.empty
+
+    Array.set -1 x array
+    --> array
+
+    Array.set 1 x (Array.fromList [ a, b, c ])
+    --> Array.fromList [ a, x, c ]
+
+    Array.set 100 x (Array.fromList [ a, b, c ])
+    --> Array.fromList [ a, b, c ]
+
+    -- The following simplifications for Array.foldl also work for Array.foldr
+    Array.foldl f initial Array.empty
+    --> initial
+
+    Array.foldl (\\_ soFar -> soFar) initial array
+    --> initial
+
+    Array.toIndexedList Array.empty
+    --> []
+
+    List.map Tuple.second (Array.toIndexedList array)
+    --> Array.toList array
+
+    Array.length (Array.fromList list)
+    --> List.length list
+
+    -- The following simplification also works for Array.toIndexedList
+    List.length (Array.toList array)
+    --> Array.length array
+
+    -- The following simplification also works for Array.toIndexedList
+    List.isEmpty (Array.toList array)
+    --> Array.isEmpty array
+
+
+### Sets
+
+    Set.fromList []
+    --> Set.empty
+
+    Set.fromList [ a ]
+    --> Set.singleton a
+
+    Set.fromList (Set.toList set)
+    --> set
+
+    Set.map f Set.empty -- same for Set.filter, Set.remove...
+    --> Set.empty
+
+    Set.map identity set
+    --> set
+
+    Set.isEmpty Set.empty
+    --> True
+
+    Set.isEmpty (Set.fromList ([a] ++ list)
+    --> False
+
+    Set.member x Set.empty
+    --> False
+
+    Set.toList Set.empty
+    --> []
+
+    Set.length Set.empty
+    --> 0
+
+    Set.intersect Set.empty set
+    --> Set.empty
+
+    Set.intersect set set
+    --> set
+
+    Set.diff Set.empty set
+    --> Set.empty
+
+    Set.diff set Set.empty
+    --> set
+
+    Set.union set Set.empty
+    --> set
+
+    Set.union set set
+    --> set
+
+    Set.union (Set.fromList [ a, b ]) (Set.fromList [ c, d ])
+    --> Set.fromList [ a, b, c, d]
+
+    Set.insert x Set.empty
+    --> Set.singleton x
+
+    -- same for foldr
+    List.foldl f x (Set.toList set)
+    --> Set.foldl f x set
+
+    Set.filter (\\_ -> True) set
+    --> set
+
+    Set.filter (\\_ -> False) set
+    --> Set.empty
+
+    Set.partition f Set.empty
+    --> ( Set.empty, Set.empty )
+
+    Set.partition (always True) set
+    --> ( set, Set.empty )
+
+    Tuple.first (Set.partition f set)
+    --> Set.filter f set
+
+    -- The following simplifications for Set.foldl also work for Set.foldr
+    Set.foldl f initial Set.empty
+    --> initial
+
+    Set.foldl (\\_ soFar -> soFar) initial set
+    --> initial
+
+    List.length (Set.toList set)
+    --> Set.size set
+
+    List.isEmpty (Set.toList set)
+    --> Set.isEmpty set
+
+
+### Dict
+
+    Dict.fromList []
+    --> Dict.empty
+
+    Dict.fromList (Dict.toList dict)
+    --> dict
+
+    Dict.isEmpty Dict.empty
+    --> True
+
+    Dict.toList Dict.empty
+    --> []
+
+    Dict.size Dict.empty
+    --> 0
+
+    Dict.member x Dict.empty
+    --> False
+
+    Dict.remove k Dict.empty
+    --> Dict.empty
+
+    Dict.filter f Dict.empty
+    --> Dict.empty
+
+    Dict.filter (\\_ _ -> True) dict
+    --> dict
+
+    Dict.filter (\\_ _ -> False) dict
+    --> Dict.empty
+
+    Dict.map f Dict.empty
+    --> Dict.empty
+
+    Dict.map (\\_ value -> value) dict
+    --> dict
+
+    Dict.intersect Dict.empty dict
+    --> Dict.empty
+
+    Dict.intersect dict dict
+    --> dict
+
+    Dict.diff Dict.empty dict
+    --> Dict.empty
+
+    Dict.diff dict Dict.empty
+    --> dict
+
+    Dict.union dict Dict.empty
+    --> dict
+
+    Dict.union dict dict
+    --> dict
+
+    Dict.union (Dict.fromList [ a, b ]) (Dict.fromList [ c, d ])
+    --> Dict.fromList [ c, d, a, b ]
+
+    Dict.partition f Dict.empty
+    --> ( Dict.empty, Dict.empty )
+
+    Dict.partition (\\_ _ -> True) dict
+    --> ( dict, Dict.empty )
+
+    Dict.partition (\\_ _ -> False) dict
+    --> ( Dict.empty, dict )
+
+    Tuple.first (Dict.partition f dict)
+    --> Dict.filter f dict
+
+    List.map Tuple.first (Dict.toList dict)
+    --> Dict.keys dict
+
+    List.map Tuple.second (Dict.toList dict)
+    --> Dict.values dict
+
+    -- same for foldr
+    Dict.foldl f initial Dict.empty
+    --> initial
+
+    Dict.foldl (\\_ soFar -> soFar) initial dict
+    --> initial
+
+    -- The following simplification also works for Dict.keys, Dict.values
+    List.length (Dict.toList dict)
+    --> Dict.size dict
+
+    -- The following simplification also works for Dict.keys, Dict.values
+    List.isEmpty (Dict.toList dict)
+    --> Dict.isEmpty dict
+
+
+### Cmd / Sub
+
+All of these also apply for `Sub`.
+
+    Cmd.batch []
+    --> Cmd.none
+
+    Cmd.batch [ a ]
+    --> a
+
+    Cmd.batch [ a, Cmd.none, b ]
+    --> Cmd.batch [ a, b ]
+
+    Cmd.batch [ a, Cmd.batch [ b, c ], d ]
+    --> Cmd.batch [ a, b, c, d ]
+
+    Cmd.map identity cmd
+    --> cmd
+
+    Cmd.map f Cmd.none
+    --> Cmd.none
+
+
+### Task
+
+    Task.map identity task
+    --> task
+
+    Task.map f (Task.fail x)
+    --> Task.fail x
+
+    Task.map f (Task.succeed a)
+    --> Task.succeed (f a)
+
+    -- the following simplifications for map3 work for all Task.mapN
+    Task.map3 f (Task.succeed a) (Task.succeed b) (Task.succeed c)
+    --> Task.succeed (f a b c)
+
+    Task.map3 f (Task.succeed a) (Task.fail x) thirdTask
+    --> Task.fail x
+
+    Task.map3 f firstTask (Task.fail x) thirdTask
+    --> Task.map2 f firstTask (Task.fail x)
+
+    Task.andThen f (Task.fail x)
+    --> Task.fail x
+
+    Task.andThen f (Task.succeed a)
+    --> f a
+
+    Task.andThen Task.succeed task
+    --> task
+
+    Task.andThen (\\a -> Task.succeed b) task
+    --> Task.map (\\a -> b) task
+
+    Task.mapError identity task
+    --> task
+
+    Task.mapError f (Task.succeed a)
+    --> Task.succeed a
+
+    Task.mapError f (Task.fail x)
+    --> Task.fail (f x)
+
+    Task.onError f (Task.succeed a)
+    --> Task.succeed a
+
+    Task.onError f (Task.fail x)
+    --> f x
+
+    Task.onError Task.fail task
+    --> task
+
+    Task.onError (\\x -> Task.fail y) task
+    --> Task.mapError (\\x -> y) x
+
+    Task.sequence [ Task.succeed a, Task.succeed b ]
+    --> Task.succeed [ a, b ]
+
+    Task.sequence [ Task.succeed a, Task.fail x ]
+    --> Task.fail x
+
+    Task.sequence [ a, Task.fail x, b ]
+    --> Task.sequence [ a, Task.fail x ]
+
+    Task.sequence [ task ]
+    --> Task.map List.singleton task
+
+
+### Html.Attributes
+
+    Html.Attributes.classList [ x, y, ( z, False ) ]
+    --> Html.Attributes.classList [ x, y ]
+
+    Html.Attributes.classList [ ( onlyOneThing, True ) ]
+    --> Html.Attributes.class onlyOneThing
+
+### Parser
+
+    Parser.oneOf [ a ]
+    --> a
+
+### Test
+
+    Test.concat [ test ]
+    --> test
+
+    Test.concat [ test0, Test.concat [ test1, test2 ], test3 ]
+    --> Test.concat [ test0, test1, test2, test3 ]
+
+-}
+
+import Dict exposing (Dict)
+import Elm.Docs
+import Elm.Project exposing (Exposed)
+import Elm.Syntax.Declaration as Declaration exposing (Declaration)
+import Elm.Syntax.Exposing as Exposing
+import Elm.Syntax.Expression as Expression exposing (Expression)
+import Elm.Syntax.Import exposing (Import)
+import Elm.Syntax.Module
+import Elm.Syntax.ModuleName exposing (ModuleName)
+import Elm.Syntax.Node as Node exposing (Node(..))
+import Elm.Syntax.Pattern as Pattern exposing (Pattern)
+import Elm.Syntax.Range as Range exposing (Location, Range)
+import Elm.Syntax.TypeAnnotation as TypeAnnotation
+import Elm.Type
+import Fn.Array
+import Fn.Basics
+import Fn.Dict
+import Fn.Html.Attributes
+import Fn.Json.Decode
+import Fn.List
+import Fn.Maybe
+import Fn.Parser
+import Fn.Parser.Advanced
+import Fn.Platform.Cmd
+import Fn.Platform.Sub
+import Fn.Random
+import Fn.Result
+import Fn.Set
+import Fn.String
+import Fn.Task
+import Fn.Test
+import Fn.Tuple
+import Review.Fix as Fix exposing (Fix)
+import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
+import Review.Project.Dependency as Dependency exposing (Dependency)
+import Review.Rule as Rule exposing (Error, Rule)
+import Set exposing (Set)
+import Simplify.AstHelpers as AstHelpers exposing (emptyStringAsString, qualifiedToString)
+import Simplify.Evaluate as Evaluate
+import Simplify.Infer as Infer
+import Simplify.Match exposing (Match(..))
+import Simplify.Normalize as Normalize
+import Simplify.RangeDict as RangeDict exposing (RangeDict)
+
+
+{-| Rule to simplify Elm code.
+-}
+rule : Configuration -> Rule
+rule (Configuration config) =
+    Rule.newProjectRuleSchema "Simplify" initialContext
+        |> Rule.withDirectDependenciesProjectVisitor (dependenciesVisitor (Set.fromList config.ignoreConstructors))
+        |> Rule.withModuleVisitor (moduleVisitor config)
+        |> Rule.withContextFromImportedModules
+        |> Rule.withModuleContextUsingContextCreator
+            { fromProjectToModule = fromProjectToModule
+            , fromModuleToProject = fromModuleToProject
+            , foldProjectContexts = foldProjectContexts
+            }
+        |> Rule.providesFixesForProjectRule
+        |> Rule.fromProjectRuleSchema
+
+
+moduleVisitor : { config | expectNaN : Bool } -> Rule.ModuleRuleSchema schemaState ModuleContext -> Rule.ModuleRuleSchema { schemaState | hasAtLeastOneVisitor : () } ModuleContext
+moduleVisitor config schema =
+    schema
+        |> Rule.withCommentsVisitor (\\comments context -> ( [], commentsVisitor comments context ))
+        |> Rule.withDeclarationListVisitor (\\decls context -> ( [], declarationListVisitor decls context ))
+        |> Rule.withDeclarationEnterVisitor (\\node context -> ( [], declarationVisitor node context ))
+        |> Rule.withExpressionEnterVisitor (\\expressionNode context -> expressionVisitor expressionNode config context)
+        |> Rule.withExpressionExitVisitor (\\node context -> ( [], expressionExitVisitor node context ))
+
+
+
+-- CONFIGURATION
+
+
+{-| Configuration for this rule. Create a new one with [`defaults`](#defaults) and use [`ignoreCaseOfForTypes`](#ignoreCaseOfForTypes) and [`expectNaN`](#expectNaN) to alter it.
+-}
+type Configuration
+    = Configuration
+        { ignoreConstructors : List String
+        , expectNaN : Bool
+        }
+
+
+{-| Default configuration for this rule.
+
+The rule aims tries to improve the code through simplifications that don't impact the behavior. An exception to this are
+when the presence of `NaN` values
+
+Use [`expectNaN`](#expectNaN) if you want to opt out of changes that can impact the behaviour of your code if you expect to work with `NaN` values.
+
+Use [`ignoreCaseOfForTypes`](#ignoreCaseOfForTypes) if you want to prevent simplifying case expressions that work on custom types defined in dependencies.
+
+    config =
+        [ Simplify.rule Simplify.defaults
+        ]
+
+    -- or
+    config =
+        [ Simplify.defaults
+            |> Simplify.expectNaN
+            |> Simplify.ignoreCaseOfForTypes [ "Module.Name.Type" ]
+            |> Simplify.rule
+        ]
+
+-}
+defaults : Configuration
+defaults =
+    Configuration
+        { ignoreConstructors = []
+        , expectNaN = False
+        }
+
+
+{-| Ignore some reports about types from dependencies used in case expressions.
+
+This rule simplifies the following construct:
+
+    module Module.Name exposing (..)
+
+    case value of
+        Just _ -> x
+        Nothing -> x
+    --> x
+
+(Since `v2.0.19`) it will not try to simplify the case expression when some of the patterns references custom types constructors
+defined in the project. It will only do so for custom types that are defined in dependencies (including `elm/core`).
+
+If you do happen to want to disable this simplification for a type `Module.Name.Type`, you can configure the rule like this:
+
+    config =
+        [ Simplify.defaults
+            |> Simplify.ignoreCaseOfForTypes [ "Module.Name.Type" ]
+            |> Simplify.rule
+        ]
+
+I personally don't recommend to use this function too much, because this could be a sign of premature abstraction, and because
+I think that often [You Aren't Gonna Need this code](https://jfmengels.net/safe-dead-code-removal/#yagni-you-arent-gonna-need-it).
+
+Please let me know by opening an issue if you do use this function, I am very curious to know;
+
+-}
+ignoreCaseOfForTypes : List String -> Configuration -> Configuration
+ignoreCaseOfForTypes ignoreConstructors (Configuration config) =
+    Configuration { ignoreConstructors = ignoreConstructors ++ config.ignoreConstructors, expectNaN = config.expectNaN }
+
+
+{-| Usually, `elm-review-simplify` will only suggest simplifications that are safe to apply without risk of changing the original behavior.
+However, when encountering [`NaN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN)
+values, some simplifications can actually impact behavior.
+
+For instance, the following expression will evaluate to `True`:
+
+    x == x
+    --> True
+
+However, if `x` is `NaN` or a value containing `NaN` then the expression will evaluate to `False`:
+
+    -- given x = NaN
+    x == x
+    --> False
+
+    -- given x = { a = ( NaN, 0 ) }
+    x == x
+    --> False
+
+Given the potential presence of `NaN`, some simplifications become unsafe to apply:
+
+  - `x == x` to `True`
+  - `List.member x [ x ]` to `True`
+  - `n * 0` to `0`
+
+This special value is hard to recreate in Elm code both intentionally and unintentionally,
+and it's therefore unlikely to be found in your application,
+which is why the rule applies these simplifications by defaults.
+
+If you somehow expect to create and encounter `NaN` values in your codebase, then you can use this function to disable these simplifications altogether.
+
+    config =
+        [ Simplify.defaults
+            |> Simplify.expectNaN
+            |> Simplify.rule
+        ]
+
+-}
+expectNaN : Configuration -> Configuration
+expectNaN (Configuration config) =
+    Configuration { ignoreConstructors = config.ignoreConstructors, expectNaN = True }
+
+
+
+-- CONTEXT
+
+
+type alias ProjectContext =
+    { customTypesToReportInCases : Set ( ModuleName, ConstructorName )
+    , exposedVariants : Dict ModuleName (Set String)
+    , exposedRecordTypeAliases : Dict ModuleName (Dict String (List String))
+    , exposedCustomTypes : Dict ModuleName (Dict String { variantNames : Set String })
+    }
+
+
+type alias ModuleContext =
+    { lookupTable : ModuleNameLookupTable
+    , moduleName : ModuleName
+    , exposed : ExposingContext
+    , commentRanges : List Range
+    , importRecordTypeAliases : Dict ModuleName (Dict String (List String))
+    , moduleRecordTypeAliases : Dict String (List String)
+    , importCustomTypes : Dict ModuleName (Dict String { variantNames : Set String })
+    , moduleCustomTypes : Dict String { variantNames : Set String }
+    , moduleBindings : Set String
+    , localBindings : RangeDict (Set String)
+    , branchLocalBindings : RangeDict (Set String)
+    , rangesToIgnore : RangeDict ()
+    , rightSidesOfPlusPlus : RangeDict ()
+    , customTypesToReportInCases : Set ( ModuleName, ConstructorName )
+    , localIgnoredCustomTypes : List Constructor
+    , constructorsToIgnore : Set ( ModuleName, String )
+    , inferredConstantsDict : RangeDict Infer.Inferred
+    , inferredConstants : ( Infer.Inferred, List Infer.Inferred )
+    , extractSourceCode : Range -> String
+    , exposedVariants : Set String
+    , importLookup : ImportLookup
+    }
+
+
+type alias ImportLookup =
+    Dict
+        ModuleName
+        { alias : Maybe ModuleName
+        , exposed :
+            -- includes names of found variants
+            Exposed
+        }
+
+
+type alias QualifyResources a =
+    { a
+        | importLookup : ImportLookup
+        , moduleBindings : Set String
+        , localBindings : RangeDict (Set String)
+    }
+
+
+defaultQualifyResources : QualifyResources {}
+defaultQualifyResources =
+    { importLookup = implicitImports
+    , localBindings = RangeDict.empty
+    , moduleBindings = Set.empty
+    }
+
+
+type ExposingContext
+    = ExposingAllContext
+    | ExposingSomeContext { typesExposingVariants : Set String, potentialTypeAliases : Set String }
+
+
+type Exposed
+    = ExposedAll
+    | ExposedSome (Set String)
+
+
+isExposedFrom : Exposed -> String -> Bool
+isExposedFrom exposed name =
+    case exposed of
+        ExposedAll ->
+            True
+
+        ExposedSome some ->
+            Set.member name some
+
+
+type alias ConstructorName =
+    String
+
+
+type alias Constructor =
+    { moduleName : ModuleName
+    , name : String
+    , constructors : List String
+    }
+
+
+initialContext : ProjectContext
+initialContext =
+    { customTypesToReportInCases = Set.empty
+    , exposedVariants = Dict.empty
+    , exposedRecordTypeAliases = Dict.empty
+    , exposedCustomTypes = Dict.empty
+    }
+
+
+fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
+fromModuleToProject =
+    Rule.initContextCreator
+        (\\moduleContext ->
+            { customTypesToReportInCases = Set.empty
+            , exposedVariants =
+                Dict.singleton moduleContext.moduleName
+                    moduleContext.exposedVariants
+            , exposedRecordTypeAliases =
+                Dict.singleton moduleContext.moduleName
+                    (case moduleContext.exposed of
+                        ExposingAllContext ->
+                            moduleContext.moduleRecordTypeAliases
+
+                        ExposingSomeContext exposingSomeContext ->
+                            Set.foldl
+                                (\\exposedPotentialTypeAlias soFar ->
+                                    case Dict.get exposedPotentialTypeAlias moduleContext.moduleRecordTypeAliases of
+                                        Nothing ->
+                                            soFar
+
+                                        Just recordTypeAlias ->
+                                            Dict.insert exposedPotentialTypeAlias recordTypeAlias soFar
+                                )
+                                Dict.empty
+                                exposingSomeContext.potentialTypeAliases
+                    )
+            , exposedCustomTypes =
+                Dict.singleton moduleContext.moduleName
+                    (case moduleContext.exposed of
+                        ExposingAllContext ->
+                            moduleContext.moduleCustomTypes
+
+                        ExposingSomeContext exposingSomeContext ->
+                            Set.foldl
+                                (\\exposedPotentialTypeAlias soFar ->
+                                    case Dict.get exposedPotentialTypeAlias moduleContext.moduleCustomTypes of
+                                        Nothing ->
+                                            soFar
+
+                                        Just recordTypeAlias ->
+                                            Dict.insert exposedPotentialTypeAlias recordTypeAlias soFar
+                                )
+                                Dict.empty
+                                exposingSomeContext.typesExposingVariants
+                    )
+            }
+        )
+
+
+fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
+fromProjectToModule =
+    Rule.initContextCreator
+        (\\lookupTable metadata extractSourceCode fullAst projectContext ->
+            let
+                imports : ImportLookup
+                imports =
+                    List.foldl
+                        (\\import_ importLookup ->
+                            let
+                                importInfo : { moduleName : ModuleName, exposed : Exposed, alias : Maybe ModuleName }
+                                importInfo =
+                                    importContext import_
+                            in
+                            insertImport importInfo.moduleName { alias = importInfo.alias, exposed = importInfo.exposed } importLookup
+                        )
+                        implicitImports
+                        fullAst.imports
+            in
+            { lookupTable = lookupTable
+            , moduleName = Rule.moduleNameFromMetadata metadata
+            , exposed =
+                moduleExposingContext (Elm.Syntax.Module.exposingList (Node.value fullAst.moduleDefinition))
+            , importLookup =
+                createImportLookup
+                    { imports = imports
+                    , importExposedVariants = projectContext.exposedVariants
+                    }
+            , commentRanges = []
+            , importRecordTypeAliases = projectContext.exposedRecordTypeAliases
+            , moduleRecordTypeAliases = Dict.empty
+            , importCustomTypes = projectContext.exposedCustomTypes
+            , moduleCustomTypes = Dict.empty
+            , moduleBindings = Set.empty
+            , localBindings = RangeDict.empty
+            , branchLocalBindings = RangeDict.empty
+            , rangesToIgnore = RangeDict.empty
+            , rightSidesOfPlusPlus = RangeDict.empty
+            , localIgnoredCustomTypes = []
+            , customTypesToReportInCases = projectContext.customTypesToReportInCases
+            , constructorsToIgnore = Set.empty
+            , inferredConstantsDict = RangeDict.empty
+            , inferredConstants = ( Infer.empty, [] )
+            , extractSourceCode = extractSourceCode
+            , exposedVariants = Set.empty
+            }
+        )
+        |> Rule.withModuleNameLookupTable
+        |> Rule.withMetadata
+        |> Rule.withSourceCodeExtractor
+        |> Rule.withFullAst
+
+
+importContext : Node Import -> { moduleName : ModuleName, exposed : Exposed, alias : Maybe ModuleName }
+importContext importNode =
+    let
+        import_ : Import
+        import_ =
+            Node.value importNode
+    in
+    { moduleName = import_.moduleName |> Node.value
+    , alias =
+        import_.moduleAlias |> Maybe.map Node.value
+    , exposed =
+        case import_.exposingList of
+            Nothing ->
+                ExposedSome Set.empty
+
+            Just (Node _ existingExposing) ->
+                case existingExposing of
+                    Exposing.All _ ->
+                        ExposedAll
+
+                    Exposing.Explicit exposes ->
+                        ExposedSome
+                            (Set.fromList
+                                (List.map
+                                    (\\(Node _ expose) -> AstHelpers.nameOfExpose expose)
+                                    exposes
+                                )
+                            )
+    }
+
+
+createImportLookup :
+    { imports : Dict ModuleName { alias : Maybe ModuleName, exposed : Exposed }
+    , importExposedVariants : Dict ModuleName (Set String)
+    }
+    -> ImportLookup
+createImportLookup context =
+    context.imports
+        |> Dict.map
+            (\\moduleName import_ ->
+                case import_.exposed of
+                    ExposedAll ->
+                        import_
+
+                    ExposedSome some ->
+                        case Dict.get moduleName context.importExposedVariants of
+                            Nothing ->
+                                import_
+
+                            Just importExposedVariants ->
+                                { import_
+                                    | exposed =
+                                        ExposedSome
+                                            (Set.union some importExposedVariants)
+                                }
+            )
+
+
+moduleExposingContext : Exposing.Exposing -> ExposingContext
+moduleExposingContext exposingSyntax =
+    case exposingSyntax of
+        Exposing.All _ ->
+            ExposingAllContext
+
+        Exposing.Explicit some ->
+            ExposingSomeContext
+                (List.foldl
+                    (\\(Node _ expose) soFar ->
+                        case expose of
+                            Exposing.InfixExpose _ ->
+                                soFar
+
+                            Exposing.FunctionExpose _ ->
+                                soFar
+
+                            Exposing.TypeOrAliasExpose name ->
+                                { soFar | potentialTypeAliases = Set.insert name soFar.potentialTypeAliases }
+
+                            Exposing.TypeExpose variantType ->
+                                case variantType.open of
+                                    Nothing ->
+                                        soFar
+
+                                    Just _ ->
+                                        { soFar | typesExposingVariants = Set.insert variantType.name soFar.typesExposingVariants }
+                    )
+                    { typesExposingVariants = Set.empty
+                    , potentialTypeAliases = Set.empty
+                    }
+                    some
+                )
+
+
+foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
+foldProjectContexts newContext previousContext =
+    { customTypesToReportInCases = Set.empty
+    , exposedVariants = Dict.union newContext.exposedVariants previousContext.exposedVariants
+    , exposedRecordTypeAliases = Dict.union newContext.exposedRecordTypeAliases previousContext.exposedRecordTypeAliases
+    , exposedCustomTypes = Dict.union newContext.exposedCustomTypes previousContext.exposedCustomTypes
+    }
+
+
+
+-- DEPENDENCIES VISITOR
+
+
+dependenciesVisitor : Set String -> Dict String Dependency -> ProjectContext -> ( List (Error scope), ProjectContext )
+dependenciesVisitor typeNamesAsStrings dict context =
+    let
+        modules : List Elm.Docs.Module
+        modules =
+            dict
+                |> Dict.values
+                |> List.concatMap Dependency.modules
+
+        unions : Set String
+        unions =
+            List.concatMap (\\module_ -> List.map (\\union -> module_.name ++ "." ++ union.name) module_.unions) modules
+                |> Set.fromList
+
+        unknownTypesToIgnore : List String
+        unknownTypesToIgnore =
+            Set.diff typeNamesAsStrings unions
+                |> Set.toList
+
+        customTypesToReportInCases : Set ( ModuleName, String )
+        customTypesToReportInCases =
+            modules
+                |> List.concatMap
+                    (\\mod ->
+                        let
+                            moduleName : ModuleName
+                            moduleName =
+                                AstHelpers.moduleNameFromString mod.name
+                        in
+                        mod.unions
+                            |> List.filter (\\union -> not (Set.member (mod.name ++ "." ++ union.name) typeNamesAsStrings))
+                            |> List.concatMap (\\union -> union.tags)
+                            |> List.map (\\( tagName, _ ) -> ( moduleName, tagName ))
+                    )
+                |> Set.fromList
+
+        dependencyExposedVariants : Dict ModuleName (Set String)
+        dependencyExposedVariants =
+            List.foldl
+                (\\moduleDoc acc ->
+                    Dict.insert
+                        (AstHelpers.moduleNameFromString moduleDoc.name)
+                        (moduleDoc.unions
+                            |> List.concatMap
+                                (\\union ->
+                                    union.tags
+                                        |> List.map (\\( variantName, _ ) -> variantName)
+                                )
+                            |> Set.fromList
+                        )
+                        acc
+                )
+                context.exposedVariants
+                modules
+
+        recordTypeAliases : Dict ModuleName (Dict String (List String))
+        recordTypeAliases =
+            modules
+                |> List.foldl
+                    (\\moduleDocs soFar ->
+                        Dict.insert (AstHelpers.moduleNameFromString moduleDocs.name)
+                            (moduleDocs.aliases
+                                |> List.filterMap
+                                    (\\typeAliasDocs ->
+                                        case typeAliasDocs.tipe of
+                                            Elm.Type.Record fields Nothing ->
+                                                Just ( typeAliasDocs.name, List.map (\\( name, _ ) -> name) fields )
+
+                                            _ ->
+                                                Nothing
+                                    )
+                                |> Dict.fromList
+                            )
+                            soFar
+                    )
+                    Dict.empty
+
+        exposedCustomTypes : Dict ModuleName (Dict String { variantNames : Set String })
+        exposedCustomTypes =
+            Dict.union
+                (dict
+                    |> Dict.values
+                    |> List.concatMap
+                        (\\dependency ->
+                            dependency
+                                |> Dependency.modules
+                                |> List.map
+                                    (\\moduleDocs ->
+                                        ( moduleDocs.name |> AstHelpers.moduleNameFromString
+                                        , moduleDocs.unions
+                                            |> List.map
+                                                (\\choiceTypeDocs ->
+                                                    ( choiceTypeDocs.name
+                                                    , { variantNames =
+                                                            choiceTypeDocs.tags |> List.map (\\( name, _ ) -> name) |> Set.fromList
+                                                      }
+                                                    )
+                                                )
+                                            |> Dict.fromList
+                                        )
+                                    )
+                        )
+                    |> Dict.fromList
+                )
+                context.exposedCustomTypes
+    in
+    ( if List.isEmpty unknownTypesToIgnore then
+        []
+
+      else
+        [ errorForUnknownIgnoredConstructor unknownTypesToIgnore ]
+    , { customTypesToReportInCases = customTypesToReportInCases
+      , exposedVariants = dependencyExposedVariants
+      , exposedRecordTypeAliases = recordTypeAliases
+      , exposedCustomTypes = exposedCustomTypes
+      }
+    )
+
+
+errorForUnknownIgnoredConstructor : List String -> Error scope
+errorForUnknownIgnoredConstructor list =
+    Rule.globalError
+        { message = "Could not find type names: " ++ (String.join ", " <| List.map wrapInBackticks list)
+        , details =
+            [ "I expected to find these custom types in the dependencies, but I could not find them."
+            , "Please check whether these types and have not been removed, and if so, remove them from the configuration of this rule."
+            , "If you find that these types have been moved or renamed, please update your configuration."
+            , "Note that I may have provided fixes for things you didn't wish to be fixed, so you might want to undo the changes I have applied."
+            , "Also note that the configuration for this rule changed in v2.0.19: types that are custom to your project are ignored by default, so this configuration setting can only be used to avoid simplifying case expressions that use custom types defined in dependencies."
+            ]
+        }
+
+
+
+-- COMMENTS VISITOR
+
+
+commentsVisitor : List (Node String) -> ModuleContext -> ModuleContext
+commentsVisitor comments context =
+    { context | commentRanges = List.map Node.range comments }
+
+
+
+-- DECLARATION LIST VISITOR
+
+
+declarationListVisitor : List (Node Declaration) -> ModuleContext -> ModuleContext
+declarationListVisitor declarationList context =
+    { context
+        | moduleBindings = AstHelpers.declarationListBindings declarationList
+        , moduleRecordTypeAliases =
+            List.foldl
+                (\\(Node _ declaration) soFar ->
+                    case declaration of
+                        Declaration.AliasDeclaration typeAliasDeclaration ->
+                            case typeAliasDeclaration.typeAnnotation of
+                                Node _ (TypeAnnotation.Record fields) ->
+                                    Dict.insert (Node.value typeAliasDeclaration.name)
+                                        (List.map (\\(Node _ ( Node _ field, _ )) -> field) fields)
+                                        soFar
+
+                                _ ->
+                                    soFar
+
+                        _ ->
+                            soFar
+                )
+                Dict.empty
+                declarationList
+        , moduleCustomTypes =
+            List.foldl
+                (\\(Node _ declaration) soFar ->
+                    case declaration of
+                        Declaration.CustomTypeDeclaration variantType ->
+                            Dict.insert (Node.value variantType.name)
+                                { variantNames =
+                                    variantType.constructors
+                                        |> List.map (\\(Node _ variant) -> Node.value variant.name)
+                                        |> Set.fromList
+                                }
+                                soFar
+
+                        _ ->
+                            soFar
+                )
+                Dict.empty
+                declarationList
+    }
+
+
+
+-- DECLARATION VISITOR
+
+
+declarationVisitor : Node Declaration -> ModuleContext -> ModuleContext
+declarationVisitor declarationNode context =
+    case Node.value declarationNode of
+        Declaration.CustomTypeDeclaration variantType ->
+            let
+                variantsAreExposed : Bool
+                variantsAreExposed =
+                    case context.exposed of
+                        ExposingAllContext ->
+                            True
+
+                        ExposingSomeContext exposingSome ->
+                            Set.member (Node.value variantType.name) exposingSome.typesExposingVariants
+            in
+            if variantsAreExposed then
+                let
+                    exposedVariants : Set String
+                    exposedVariants =
+                        List.foldl
+                            (\\(Node _ variant) acc -> Set.insert (Node.value variant.name) acc)
+                            context.exposedVariants
+                            variantType.constructors
+                in
+                { context | exposedVariants = exposedVariants }
+
+            else
+                context
+
+        Declaration.FunctionDeclaration functionDeclaration ->
+            { context
+                | rangesToIgnore = RangeDict.empty
+                , rightSidesOfPlusPlus = RangeDict.empty
+                , inferredConstantsDict = RangeDict.empty
+                , localBindings =
+                    RangeDict.singleton
+                        (Node.range functionDeclaration.declaration)
+                        (AstHelpers.patternListBindings (Node.value functionDeclaration.declaration).arguments)
+            }
+
+        _ ->
+            context
+
+
+
+-- EXPRESSION VISITOR
+
+
+expressionVisitor : Node Expression -> { config | expectNaN : Bool } -> ModuleContext -> ( List (Error {}), ModuleContext )
+expressionVisitor node config context =
+    let
+        expressionRange : Range
+        expressionRange =
+            Node.range node
+
+        contextWithInferredConstants : ModuleContext
+        contextWithInferredConstants =
+            case RangeDict.get expressionRange context.inferredConstantsDict of
+                Nothing ->
+                    context
+
+                Just inferredConstants ->
+                    let
+                        ( previous, previousStack ) =
+                            context.inferredConstants
+                    in
+                    { context
+                        | inferredConstants = ( inferredConstants, previous :: previousStack )
+                    }
+    in
+    if RangeDict.member expressionRange context.rangesToIgnore then
+        ( [], contextWithInferredConstants )
+
+    else
+        let
+            expression : Expression
+            expression =
+                Node.value node
+
+            withExpressionSurfaceBindings : RangeDict (Set String)
+            withExpressionSurfaceBindings =
+                RangeDict.insert expressionRange (expressionSurfaceBindings expression) context.localBindings
+
+            withNewBranchLocalBindings : RangeDict (Set String)
+            withNewBranchLocalBindings =
+                RangeDict.union (expressionBranchLocalBindings expression)
+                    context.branchLocalBindings
+
+            contextWithInferredConstantsAndLocalBindings : ModuleContext
+            contextWithInferredConstantsAndLocalBindings =
+                case RangeDict.get expressionRange context.branchLocalBindings of
+                    Nothing ->
+                        { contextWithInferredConstants
+                            | localBindings = withExpressionSurfaceBindings
+                            , branchLocalBindings =
+                                withNewBranchLocalBindings
+                        }
+
+                    Just currentBranchLocalBindings ->
+                        { contextWithInferredConstants
+                            | localBindings =
+                                RangeDict.insert expressionRange currentBranchLocalBindings withExpressionSurfaceBindings
+                            , branchLocalBindings =
+                                RangeDict.remove expressionRange withNewBranchLocalBindings
+                        }
+
+            expressionChecked : { error : Maybe (Error {}), rangesToIgnore : RangeDict (), rightSidesOfPlusPlus : RangeDict (), inferredConstants : List ( Range, Infer.Inferred ) }
+            expressionChecked =
+                expressionVisitorHelp node config contextWithInferredConstantsAndLocalBindings
+        in
+        ( expressionChecked.error |> maybeToList
+        , { contextWithInferredConstantsAndLocalBindings
+            | rangesToIgnore = RangeDict.union expressionChecked.rangesToIgnore context.rangesToIgnore
+            , rightSidesOfPlusPlus = RangeDict.union expressionChecked.rightSidesOfPlusPlus context.rightSidesOfPlusPlus
+            , inferredConstantsDict =
+                List.foldl (\\( range, constants ) acc -> RangeDict.insert range constants acc)
+                    contextWithInferredConstants.inferredConstantsDict
+                    expressionChecked.inferredConstants
+          }
+        )
+
+
+{-| From the `elm/core` readme:
+
+>
+> ### Default Imports
+
+> The modules in this package are so common, that some of them are imported by default in all Elm files. So it is as if every Elm file starts with these imports:
+>
+>     import Basics exposing (..)
+>     import List exposing (List, (::))
+>     import Maybe exposing (Maybe(..))
+>     import Result exposing (Result(..))
+>     import String exposing (String)
+>     import Char exposing (Char)
+>     import Tuple
+>     import Debug
+>     import Platform exposing (Program)
+>     import Platform.Cmd as Cmd exposing (Cmd)
+>     import Platform.Sub as Sub exposing (Sub)
+
+-}
+implicitImports : ImportLookup
+implicitImports =
+    [ ( [ "Basics" ], { alias = Nothing, exposed = ExposedAll } )
+    , ( [ "List" ], { alias = Nothing, exposed = ExposedSome (Set.fromList [ "List", "(::)" ]) } )
+    , ( [ "Maybe" ], { alias = Nothing, exposed = ExposedSome (Set.fromList [ "Maybe", "Just", "Nothing" ]) } )
+    , ( [ "Result" ], { alias = Nothing, exposed = ExposedSome (Set.fromList [ "Result", "Ok", "Err" ]) } )
+    , ( [ "String" ], { alias = Nothing, exposed = ExposedSome (Set.singleton "String") } )
+    , ( [ "Char" ], { alias = Nothing, exposed = ExposedSome (Set.singleton "Char") } )
+    , ( [ "Tuple" ], { alias = Nothing, exposed = ExposedSome Set.empty } )
+    , ( [ "Debug" ], { alias = Nothing, exposed = ExposedSome Set.empty } )
+    , ( [ "Platform" ], { alias = Nothing, exposed = ExposedSome (Set.singleton "Program") } )
+    , ( [ "Platform", "Cmd" ], { alias = Just [ "Cmd" ], exposed = ExposedSome (Set.singleton "Cmd") } )
+    , ( [ "Platform", "Sub" ], { alias = Just [ "Sub" ], exposed = ExposedSome (Set.singleton "Sub") } )
+    ]
+        |> Dict.fromList
+
+
+{-| Merge a given new import with an existing import lookup.
+This is strongly preferred over Dict.insert since the implicit default imports can be overridden
+-}
+insertImport : ModuleName -> { alias : Maybe ModuleName, exposed : Exposed } -> ImportLookup -> ImportLookup
+insertImport moduleName importInfoToAdd importLookup =
+    Dict.update moduleName
+        (\\existingImport ->
+            let
+                newImportInfo : { alias : Maybe ModuleName, exposed : Exposed }
+                newImportInfo =
+                    case existingImport of
+                        Nothing ->
+                            importInfoToAdd
+
+                        Just import_ ->
+                            { alias = findMap .alias [ import_, importInfoToAdd ]
+                            , exposed = exposedMerge ( import_.exposed, importInfoToAdd.exposed )
+                            }
+            in
+            Just newImportInfo
+        )
+        importLookup
+
+
+exposedMerge : ( Exposed, Exposed ) -> Exposed
+exposedMerge exposedTuple =
+    case exposedTuple of
+        ( ExposedAll, _ ) ->
+            ExposedAll
+
+        ( ExposedSome _, ExposedAll ) ->
+            ExposedAll
+
+        ( ExposedSome aSet, ExposedSome bSet ) ->
+            ExposedSome (Set.union aSet bSet)
+
+
+qualify : ( ModuleName, String ) -> QualifyResources a -> ( ModuleName, String )
+qualify ( moduleName, name ) qualifyResources =
+    let
+        qualification : ModuleName
+        qualification =
+            case qualifyResources.importLookup |> Dict.get moduleName of
+                Nothing ->
+                    moduleName
+
+                Just import_ ->
+                    let
+                        moduleImportedName : ModuleName
+                        moduleImportedName =
+                            import_.alias |> Maybe.withDefault moduleName
+                    in
+                    if not (isExposedFrom import_.exposed name) then
+                        moduleImportedName
+
+                    else
+                        let
+                            isShadowed : Bool
+                            isShadowed =
+                                isBindingInScope qualifyResources name
+                        in
+                        if isShadowed then
+                            moduleImportedName
+
+                        else
+                            []
+    in
+    ( qualification, name )
+
+
+isBindingInScope :
+    { a
+        | moduleBindings : Set String
+        , localBindings : RangeDict (Set String)
+    }
+    -> String
+    -> Bool
+isBindingInScope resources name =
+    Set.member name resources.moduleBindings
+        || RangeDict.any (\\bindings -> Set.member name bindings) resources.localBindings
+
+
+{-| Whenever you add ranges on expression enter, the same ranges should be removed on expression exit.
+Having one function finding unique ranges and a function for extracting bindings there ensures said consistency.
+
+An alternative approach would be to use some kind of tree structure
+with parent and sub ranges and bindings as leaves (maybe a "trie", tho I've not seen one as an elm package).
+
+Removing all bindings for an expression's range on leave would then be trivial
+
+-}
+expressionSurfaceBindings : Expression -> Set String
+expressionSurfaceBindings expression =
+    case expression of
+        Expression.LambdaExpression lambda ->
+            AstHelpers.patternListBindings lambda.args
+
+        Expression.LetExpression letBlock ->
+            AstHelpers.letDeclarationListBindings letBlock.declarations
+
+        _ ->
+            Set.empty
+
+
+expressionBranchLocalBindings : Expression -> RangeDict (Set String)
+expressionBranchLocalBindings expression =
+    case expression of
+        Expression.CaseExpression caseBlock ->
+            RangeDict.mapFromList
+                (\\( Node _ pattern, Node resultRange _ ) ->
+                    ( resultRange
+                    , AstHelpers.patternBindings pattern
+                    )
+                )
+                caseBlock.cases
+
+        Expression.LetExpression letBlock ->
+            List.foldl
+                (\\(Node _ letDeclaration) acc ->
+                    case letDeclaration of
+                        Expression.LetFunction letFunctionOrValueDeclaration ->
+                            RangeDict.insert
+                                (Node.range (Node.value letFunctionOrValueDeclaration.declaration).expression)
+                                (AstHelpers.patternListBindings
+                                    (Node.value letFunctionOrValueDeclaration.declaration).arguments
+                                )
+                                acc
+
+                        _ ->
+                            acc
+                )
+                RangeDict.empty
+                letBlock.declarations
+
+        _ ->
+            RangeDict.empty
+
+
+expressionExitVisitor : Node Expression -> ModuleContext -> ModuleContext
+expressionExitVisitor (Node expressionRange _) context =
+    let
+        contextWithUpdatedLocalBindings : ModuleContext
+        contextWithUpdatedLocalBindings =
+            if RangeDict.member expressionRange context.rangesToIgnore then
+                context
+
+            else
+                { context
+                    | localBindings =
+                        RangeDict.remove expressionRange context.localBindings
+                }
+    in
+    if RangeDict.member expressionRange context.inferredConstantsDict then
+        case Tuple.second context.inferredConstants of
+            topOfStack :: restOfStack ->
+                { contextWithUpdatedLocalBindings | inferredConstants = ( topOfStack, restOfStack ) }
+
+            [] ->
+                -- should never be empty
+                contextWithUpdatedLocalBindings
+
+    else
+        contextWithUpdatedLocalBindings
+
+
+maybeErrorAndRangesToIgnore : Maybe (Error {}) -> RangeDict () -> { error : Maybe (Error {}), rangesToIgnore : RangeDict (), rightSidesOfPlusPlus : RangeDict (), inferredConstants : List ( Range, Infer.Inferred ) }
+maybeErrorAndRangesToIgnore maybeError rangesToIgnore =
+    { error = maybeError
+    , rangesToIgnore = rangesToIgnore
+    , rightSidesOfPlusPlus = RangeDict.empty
+    , inferredConstants = []
+    }
+
+
+onlyMaybeError : Maybe (Error {}) -> { error : Maybe (Error {}), rangesToIgnore : RangeDict (), rightSidesOfPlusPlus : RangeDict (), inferredConstants : List ( Range, Infer.Inferred ) }
+onlyMaybeError maybeError =
+    { error = maybeError
+    , rangesToIgnore = RangeDict.empty
+    , rightSidesOfPlusPlus = RangeDict.empty
+    , inferredConstants = []
+    }
+
+
+expressionVisitorHelp : Node Expression -> { config | expectNaN : Bool } -> ModuleContext -> { error : Maybe (Error {}), rangesToIgnore : RangeDict (), rightSidesOfPlusPlus : RangeDict (), inferredConstants : List ( Range, Infer.Inferred ) }
+expressionVisitorHelp (Node expressionRange expression) config context =
+    let
+        toCheckInfo :
+            { fnRange : Range
+            , fn : ( ModuleName, String )
+            , argCount : Int
+            , firstArg : Node Expression
+            , argsAfterFirst : List (Node Expression)
+            , callStyle : FunctionCallStyle
+            }
+            -> CallCheckInfo
+        toCheckInfo checkInfo =
+            let
+                ( parentRange, callStyle ) =
+                    case List.drop (checkInfo.argCount - 1) (checkInfo.firstArg :: checkInfo.argsAfterFirst) of
+                        lastExpectedArg :: _ :: _ ->
+                            -- Too many arguments!
+                            -- We'll update the range to drop the extra ones and force the call style to application
+                            ( case checkInfo.callStyle of
+                                Application ->
+                                    { start = checkInfo.fnRange.start, end = (Node.range lastExpectedArg).end }
+
+                                Pipe LeftToRight ->
+                                    { start = checkInfo.fnRange.start, end = (Node.range lastExpectedArg).end }
+
+                                Pipe RightToLeft ->
+                                    { start = (Node.range checkInfo.firstArg).start, end = (Node.range checkInfo.firstArg).end }
+                            , Application
+                            )
+
+                        -- [] | _ :: [] ->
+                        _ ->
+                            ( expressionRange, checkInfo.callStyle )
+
+                argsAfterFirst : List (Node Expression)
+                argsAfterFirst =
+                    -- Drop the extra arguments
+                    List.take (checkInfo.argCount - 1) checkInfo.argsAfterFirst
+            in
+            { lookupTable = context.lookupTable
+            , expectNaN = config.expectNaN
+            , extractSourceCode = context.extractSourceCode
+            , importLookup = context.importLookup
+            , commentRanges = context.commentRanges
+            , moduleBindings = context.moduleBindings
+            , localBindings = context.localBindings
+            , inferredConstants = context.inferredConstants
+            , parentRange = parentRange
+            , fnRange = checkInfo.fnRange
+            , fn = checkInfo.fn
+            , argCount = checkInfo.argCount
+            , firstArg = checkInfo.firstArg
+            , argsAfterFirst = argsAfterFirst
+            , secondArg = List.head argsAfterFirst
+            , thirdArg = List.head (List.drop 1 argsAfterFirst)
+            , callStyle = callStyle
+            }
+
+        toCompositionCheckInfo :
+            { earlier : Node Expression
+            , later : Node Expression
+            }
+            -> CompositionCheckInfo
+        toCompositionCheckInfo compositionSpecific =
+            let
+                innerComposition :
+                    { earlier :
+                        { node : Node Expression, removeRange : Range }
+                    , later :
+                        { node : Node Expression, removeRange : Range }
+                    , isEmbeddedInComposition : Bool
+                    }
+                innerComposition =
+                    getInnerComposition compositionSpecific
+            in
+            { lookupTable = context.lookupTable
+            , importLookup = context.importLookup
+            , importRecordTypeAliases = context.importRecordTypeAliases
+            , moduleRecordTypeAliases = context.moduleRecordTypeAliases
+            , inferredConstants = context.inferredConstants
+            , moduleBindings = context.moduleBindings
+            , localBindings = context.localBindings
+            , extractSourceCode = context.extractSourceCode
+            , earlier = innerComposition.earlier
+            , later = innerComposition.later
+            , isEmbeddedInComposition = innerComposition.isEmbeddedInComposition
+            }
+    in
+    case expression of
+        -----------------
+        -- APPLICATION --
+        -----------------
+        Expression.Application (applied :: firstArg :: argsAfterFirst) ->
+            onlyMaybeError
+                (case applied of
+                    Node fnRange (Expression.FunctionOrValue _ fnName) ->
+                        case ModuleNameLookupTable.moduleNameAt context.lookupTable fnRange of
+                            Just moduleName ->
+                                case Dict.get ( moduleName, fnName ) functionCallChecks of
+                                    Just ( argCount, checkFn ) ->
+                                        checkFn
+                                            (toCheckInfo
+                                                { fnRange = fnRange
+                                                , fn = ( moduleName, fnName )
+                                                , argCount = argCount
+                                                , firstArg = firstArg
+                                                , argsAfterFirst = argsAfterFirst
+                                                , callStyle = Application
+                                                }
+                                            )
+
+                                    Nothing ->
+                                        Nothing
+
+                            Nothing ->
+                                Nothing
+
+                    Node _ (Expression.ParenthesizedExpression (Node lambdaRange (Expression.LambdaExpression lambda))) ->
+                        appliedLambdaError
+                            { nodeRange = expressionRange
+                            , lambdaRange = lambdaRange
+                            , lambda = lambda
+                            }
+
+                    Node operatorRange (Expression.PrefixOperator operator) ->
+                        case argsAfterFirst of
+                            right :: [] ->
+                                Just
+                                    (fullyAppliedPrefixOperatorError
+                                        { operator = operator
+                                        , operatorRange = operatorRange
+                                        , left = firstArg
+                                        , right = right
+                                        }
+                                    )
+
+                            _ ->
+                                Nothing
+
+                    otherApplied ->
+                        case AstHelpers.getRecordAccessFunction otherApplied of
+                            Just fieldName ->
+                                accessingRecordChecks
+                                    { parentRange = Range.combine [ Node.range applied, Node.range firstArg ]
+                                    , record = firstArg
+                                    , fieldRange = Node.range otherApplied
+                                    , fieldName = fieldName
+                                    , importRecordTypeAliases = context.importRecordTypeAliases
+                                    , moduleRecordTypeAliases = context.moduleRecordTypeAliases
+                                    , lookupTable = context.lookupTable
+                                    }
+                                    |> Maybe.map (\\e -> Rule.errorWithFix e.info (Node.range otherApplied) e.fix)
+
+                            Nothing ->
+                                Nothing
+                )
+
+        ----------
+        -- (<|) --
+        ----------
+        Expression.OperatorApplication "<|" _ pipedInto lastArg ->
+            case pipedInto of
+                Node fnRange (Expression.FunctionOrValue _ fnName) ->
+                    onlyMaybeError
+                        (case ModuleNameLookupTable.moduleNameAt context.lookupTable fnRange of
+                            Just moduleName ->
+                                case Dict.get ( moduleName, fnName ) functionCallChecks of
+                                    Just ( argCount, checkFn ) ->
+                                        checkFn
+                                            (toCheckInfo
+                                                { fnRange = fnRange
+                                                , fn = ( moduleName, fnName )
+                                                , argCount = argCount
+                                                , firstArg = lastArg
+                                                , argsAfterFirst = []
+                                                , callStyle = Pipe RightToLeft
+                                                }
+                                            )
+
+                                    Nothing ->
+                                        Nothing
+
+                            Nothing ->
+                                Nothing
+                        )
+
+                Node applicationRange (Expression.Application ((Node fnRange (Expression.FunctionOrValue _ fnName)) :: firstArg :: argsBetweenFirstAndLast)) ->
+                    case ModuleNameLookupTable.moduleNameAt context.lookupTable fnRange of
+                        Just moduleName ->
+                            case Dict.get ( moduleName, fnName ) functionCallChecks of
+                                Just ( argCount, checkFn ) ->
+                                    maybeErrorAndRangesToIgnore
+                                        (checkFn
+                                            (toCheckInfo
+                                                { fnRange = fnRange
+                                                , argCount = argCount
+                                                , fn = ( moduleName, fnName )
+                                                , firstArg = firstArg
+                                                , argsAfterFirst = argsBetweenFirstAndLast ++ [ lastArg ]
+                                                , callStyle = Pipe RightToLeft
+                                                }
+                                            )
+                                        )
+                                        (RangeDict.singleton applicationRange ())
+
+                                Nothing ->
+                                    onlyMaybeError Nothing
+
+                        Nothing ->
+                            onlyMaybeError Nothing
+
+                pipedIntoOther ->
+                    onlyMaybeError
+                        (pipelineChecks
+                            { commentRanges = context.commentRanges
+                            , extractSourceCode = context.extractSourceCode
+                            , direction = RightToLeft
+                            , nodeRange = expressionRange
+                            , pipedInto = pipedIntoOther
+                            , arg = lastArg
+                            , importRecordTypeAliases = context.importRecordTypeAliases
+                            , moduleRecordTypeAliases = context.moduleRecordTypeAliases
+                            , lookupTable = context.lookupTable
+                            }
+                        )
+
+        ----------
+        -- (|>) --
+        ----------
+        Expression.OperatorApplication "|>" _ lastArg pipedInto ->
+            case pipedInto of
+                Node fnRange (Expression.FunctionOrValue _ fnName) ->
+                    onlyMaybeError
+                        (case ModuleNameLookupTable.moduleNameAt context.lookupTable fnRange of
+                            Just moduleName ->
+                                case Dict.get ( moduleName, fnName ) functionCallChecks of
+                                    Just ( argCount, checks ) ->
+                                        checks
+                                            (toCheckInfo
+                                                { fnRange = fnRange
+                                                , fn = ( moduleName, fnName )
+                                                , argCount = argCount
+                                                , firstArg = lastArg
+                                                , argsAfterFirst = []
+                                                , callStyle = Pipe LeftToRight
+                                                }
+                                            )
+
+                                    Nothing ->
+                                        Nothing
+
+                            Nothing ->
+                                Nothing
+                        )
+
+                Node applicationRange (Expression.Application ((Node fnRange (Expression.FunctionOrValue _ fnName)) :: firstArg :: argsBetweenFirstAndLast)) ->
+                    case ModuleNameLookupTable.moduleNameAt context.lookupTable fnRange of
+                        Just moduleName ->
+                            case Dict.get ( moduleName, fnName ) functionCallChecks of
+                                Just ( argCount, checks ) ->
+                                    maybeErrorAndRangesToIgnore
+                                        (checks
+                                            (toCheckInfo
+                                                { fnRange = fnRange
+                                                , fn = ( moduleName, fnName )
+                                                , argCount = argCount
+                                                , firstArg = firstArg
+                                                , argsAfterFirst = argsBetweenFirstAndLast ++ [ lastArg ]
+                                                , callStyle = Pipe LeftToRight
+                                                }
+                                            )
+                                        )
+                                        (RangeDict.singleton applicationRange ())
+
+                                Nothing ->
+                                    onlyMaybeError Nothing
+
+                        Nothing ->
+                            onlyMaybeError Nothing
+
+                pipedIntoOther ->
+                    onlyMaybeError
+                        (pipelineChecks
+                            { commentRanges = context.commentRanges
+                            , extractSourceCode = context.extractSourceCode
+                            , direction = LeftToRight
+                            , nodeRange = expressionRange
+                            , pipedInto = pipedIntoOther
+                            , arg = lastArg
+                            , importRecordTypeAliases = context.importRecordTypeAliases
+                            , moduleRecordTypeAliases = context.moduleRecordTypeAliases
+                            , lookupTable = context.lookupTable
+                            }
+                        )
+
+        ----------
+        -- (>>) --
+        ----------
+        Expression.OperatorApplication ">>" _ earlier composedLater ->
+            onlyMaybeError
+                (firstThatConstructsJust compositionChecks
+                    (toCompositionCheckInfo { earlier = earlier, later = composedLater })
+                )
+
+        ----------
+        -- (<<) --
+        ----------
+        Expression.OperatorApplication "<<" _ composedLater earlier ->
+            onlyMaybeError
+                (firstThatConstructsJust compositionChecks
+                    (toCompositionCheckInfo { earlier = earlier, later = composedLater })
+                )
+
+        ---------------------
+        -- OTHER OPERATION --
+        ---------------------
+        Expression.OperatorApplication operator _ left right ->
+            case Dict.get operator operatorApplicationChecks of
+                Just checkFn ->
+                    { error =
+                        let
+                            leftRange : Range
+                            leftRange =
+                                Node.range left
+
+                            rightRange : Range
+                            rightRange =
+                                Node.range right
+                        in
+                        checkFn
+                            { lookupTable = context.lookupTable
+                            , extractSourceCode = context.extractSourceCode
+                            , expectNaN = config.expectNaN
+                            , importLookup = context.importLookup
+                            , moduleBindings = context.moduleBindings
+                            , localBindings = context.localBindings
+                            , inferredConstants = context.inferredConstants
+                            , parentRange = expressionRange
+                            , operator = operator
+                            , operatorRange =
+                                findOperatorRange
+                                    { operator = operator
+                                    , commentRanges = context.commentRanges
+                                    , extractSourceCode = context.extractSourceCode
+                                    , leftRange = leftRange
+                                    , rightRange = rightRange
+                                    }
+                            , left = left
+                            , leftRange = leftRange
+                            , right = right
+                            , rightRange = rightRange
+                            , isOnTheRightSideOfPlusPlus = RangeDict.member expressionRange context.rightSidesOfPlusPlus
+                            }
+                    , rangesToIgnore = RangeDict.empty
+                    , rightSidesOfPlusPlus =
+                        case operator of
+                            "++" ->
+                                RangeDict.singleton (Node.range (AstHelpers.removeParens right)) ()
+
+                            _ ->
+                                RangeDict.empty
+                    , inferredConstants = []
+                    }
+
+                Nothing ->
+                    onlyMaybeError Nothing
+
+        --------------
+        -- NEGATION --
+        --------------
+        Expression.Negation negatedExpression ->
+            onlyMaybeError
+                (negationChecks { parentRange = expressionRange, negatedExpression = negatedExpression })
+
+        -------------------
+        -- RECORD ACCESS --
+        -------------------
+        Expression.RecordAccess record (Node fieldRange fieldName) ->
+            onlyMaybeError
+                (accessingRecordChecks
+                    { parentRange = expressionRange
+                    , record = record
+                    , fieldRange = fieldRange
+                    , fieldName = fieldName
+                    , importRecordTypeAliases = context.importRecordTypeAliases
+                    , moduleRecordTypeAliases = context.moduleRecordTypeAliases
+                    , lookupTable = context.lookupTable
+                    }
+                    |> Maybe.map (\\e -> Rule.errorWithFix e.info { start = (Node.range record).end, end = fieldRange.end } e.fix)
+                )
+
+        --------
+        -- IF --
+        --------
+        Expression.IfBlock condition trueBranch falseBranch ->
+            let
+                ifCheckInfo : IfCheckInfo
+                ifCheckInfo =
+                    { nodeRange = expressionRange
+                    , condition = condition
+                    , trueBranch = trueBranch
+                    , falseBranch = falseBranch
+                    , lookupTable = context.lookupTable
+                    , inferredConstants = context.inferredConstants
+                    , importLookup = context.importLookup
+                    , moduleBindings = context.moduleBindings
+                    , localBindings = context.localBindings
+                    }
+            in
+            case ifChecks ifCheckInfo of
+                Just ifErrors ->
+                    maybeErrorAndRangesToIgnore (Just ifErrors.errors) ifErrors.rangesToIgnore
+
+                Nothing ->
+                    { error = Nothing
+                    , rangesToIgnore = RangeDict.empty
+                    , rightSidesOfPlusPlus = RangeDict.empty
+                    , inferredConstants =
+                        Infer.inferForIfCondition
+                            (Node.value (Normalize.normalize context condition))
+                            { trueBranchRange = Node.range trueBranch
+                            , falseBranchRange = Node.range falseBranch
+                            }
+                            (Tuple.first context.inferredConstants)
+                    }
+
+        -------------
+        -- CASE OF --
+        -------------
+        Expression.CaseExpression caseBlock ->
+            onlyMaybeError
+                (firstThatConstructsJust caseOfChecks
+                    { lookupTable = context.lookupTable
+                    , moduleCustomTypes = context.moduleCustomTypes
+                    , importCustomTypes = context.importCustomTypes
+                    , extractSourceCode = context.extractSourceCode
+                    , customTypesToReportInCases = context.customTypesToReportInCases
+                    , inferredConstants = context.inferredConstants
+                    , parentRange = expressionRange
+                    , caseOf = caseBlock
+                    }
+                )
+
+        ------------
+        -- LET IN --
+        ------------
+        Expression.LetExpression caseBlock ->
+            onlyMaybeError (letInChecks caseBlock)
+
+        -------------------
+        -- RECORD UPDATE --
+        -------------------
+        Expression.RecordUpdateExpression variable fields ->
+            onlyMaybeError (recordUpdateChecks expressionRange variable fields)
+
+        --------------------
+        -- NOT SIMPLIFIED --
+        --------------------
+        Expression.UnitExpr ->
+            onlyMaybeError Nothing
+
+        Expression.CharLiteral _ ->
+            onlyMaybeError Nothing
+
+        Expression.Integer _ ->
+            onlyMaybeError Nothing
+
+        Expression.Hex _ ->
+            onlyMaybeError Nothing
+
+        Expression.Floatable _ ->
+            onlyMaybeError Nothing
+
+        Expression.Literal _ ->
+            onlyMaybeError Nothing
+
+        Expression.GLSLExpression _ ->
+            onlyMaybeError Nothing
+
+        Expression.PrefixOperator _ ->
+            onlyMaybeError Nothing
+
+        Expression.RecordAccessFunction _ ->
+            onlyMaybeError Nothing
+
+        Expression.FunctionOrValue _ _ ->
+            onlyMaybeError Nothing
+
+        Expression.ParenthesizedExpression _ ->
+            onlyMaybeError Nothing
+
+        Expression.TupledExpression _ ->
+            onlyMaybeError Nothing
+
+        Expression.ListExpr _ ->
+            onlyMaybeError Nothing
+
+        Expression.RecordExpr _ ->
+            onlyMaybeError Nothing
+
+        Expression.LambdaExpression _ ->
+            onlyMaybeError Nothing
+
+        ----------------------
+        -- IMPOSSIBLE CASES --
+        ----------------------
+        Expression.Operator _ ->
+            onlyMaybeError Nothing
+
+        Expression.Application [] ->
+            onlyMaybeError Nothing
+
+        Expression.Application (_ :: []) ->
+            onlyMaybeError Nothing
+
+
+type alias OperatorApplicationCheckInfo =
+    { lookupTable : ModuleNameLookupTable
+    , extractSourceCode : Range -> String
+    , expectNaN : Bool
+    , importLookup : ImportLookup
+    , moduleBindings : Set String
+    , localBindings : RangeDict (Set String)
+    , inferredConstants : ( Infer.Inferred, List Infer.Inferred )
+    , parentRange : Range
+    , operator : String
+    , operatorRange : Range
+    , left : Node Expression
+    , leftRange : Range
+    , right : Node Expression
+    , rightRange : Range
+    , isOnTheRightSideOfPlusPlus : Bool
+    }
+
+
+operatorApplicationChecks : Dict String (OperatorApplicationCheckInfo -> Maybe (Error {}))
+operatorApplicationChecks =
+    Dict.fromList
+        [ ( "+", plusChecks )
+        , ( "-", minusChecks )
+        , ( "*", multiplyChecks )
+        , ( "/", divisionChecks )
+        , ( "//", intDivideChecks )
+        , ( "++", plusplusChecks )
+        , ( "::", consChecks )
+        , ( "||", orChecks )
+        , ( "&&", andChecks )
+        , ( "==", equalityChecks True )
+        , ( "/=", equalityChecks False )
+        , ( "<", numberComparisonChecks (<) )
+        , ( ">", numberComparisonChecks (>) )
+        , ( "<=", numberComparisonChecks (<=) )
+        , ( ">=", numberComparisonChecks (>=) )
+        ]
+
+
+type alias CallCheckInfo =
+    { lookupTable : ModuleNameLookupTable
+    , expectNaN : Bool
+    , importLookup : ImportLookup
+    , extractSourceCode : Range -> String
+    , commentRanges : List Range
+    , moduleBindings : Set String
+    , localBindings : RangeDict (Set String)
+    , inferredConstants : ( Infer.Inferred, List Infer.Inferred )
+    , parentRange : Range
+    , fnRange : Range
+    , fn : ( ModuleName, String )
+    , argCount : Int
+    , callStyle : FunctionCallStyle
+    , firstArg : Node Expression
+    , argsAfterFirst : List (Node Expression)
+    , -- stored for quick access since usage is very common
+      -- prefer using secondArg and thirdArg functions
+      -- because the optimization could change in the future
+      secondArg : Maybe (Node Expression)
+    , thirdArg : Maybe (Node Expression)
+    }
+
+
+{-| How an argument is given as input to a function:
+
+  - `Pipe RightToLeft`: `function <| argument`
+  - `Pipe LeftToRight`: `argument |> function`
+  - `Application`: `function argument`
+
+-}
+type FunctionCallStyle
+    = Application
+    | Pipe LeftOrRightDirection
+
+
+type LeftOrRightDirection
+    = RightToLeft
+    | LeftToRight
+
+
+secondArg : CallCheckInfo -> Maybe (Node Expression)
+secondArg checkInfo =
+    checkInfo.secondArg
+
+
+thirdArg : CallCheckInfo -> Maybe (Node Expression)
+thirdArg checkInfo =
+    checkInfo.thirdArg
+
+
+type alias CompositionIntoCheckInfo =
+    { lookupTable : ModuleNameLookupTable
+    , importLookup : ImportLookup
+    , inferredConstants : ( Infer.Inferred, List Infer.Inferred )
+    , moduleBindings : Set String
+    , localBindings : RangeDict (Set String)
+    , extractSourceCode : Range -> String
+    , later :
+        { range : Range
+        , fn : ( ModuleName, String )
+        , fnRange : Range
+        , args : List (Node Expression)
+        , -- how many arguments a fully applied call would have
+          argCount : Int
+        , removeRange : Range
+        }
+    , earlier :
+        { range : Range
+        , fn : ( ModuleName, String )
+        , fnRange : Range
+        , args : List (Node Expression)
+        , removeRange : Range
+        }
+    , isEmbeddedInComposition : Bool
+    }
+"""
+                )
             ]
         ]
 
@@ -5161,7 +7400,7 @@ expectPrintedAs expected source =
                         ++ printed
                         ++ "\n\nbut I expected\n\n"
                         ++ expected
-                        ++ "\n\nThey differ in lines "
+                        ++ "\n\nThey differ in lines\n"
                         ++ (List.map2
                                 (\actualLine expectedLine -> { actual = actualLine, expected = expectedLine })
                                 (printed |> String.lines)
@@ -5172,10 +7411,11 @@ expectPrintedAs expected source =
                                             Nothing
 
                                         else
-                                            Just (i |> String.fromInt)
+                                            Just ((i |> String.fromInt) ++ ": " ++ lines.actual)
                                     )
                                 |> List.filterMap identity
-                                |> String.join " "
+                                |> List.take 10
+                                |> String.join "\n"
                            )
                     )
 
