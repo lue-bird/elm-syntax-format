@@ -2900,6 +2900,64 @@ b =
     1
 """
                 )
+            , Test.test "{- -} multiple linebreaks, indented characters and spaces"
+                (\() ->
+                    """module A exposing (..)
+a =
+    0
+{-   x
+        
+   a-}
+b =
+    1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    0
+
+
+
+{- x
+
+   a
+-}
+
+
+b =
+    1
+"""
+                )
+            , Test.test "{- -} multiple linebreaks, multiple differently-indented characters and spaces"
+                (\() ->
+                    """module A exposing (..)
+a =
+    0
+{-   x
+        
+    a
+        b-}
+b =
+    1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    0
+
+
+
+{- x
+
+   a
+       b
+-}
+
+
+b =
+    1
+"""
+                )
             ]
         , Test.describe "full module samples"
             [ Test.test "elm-syntax-sscce"

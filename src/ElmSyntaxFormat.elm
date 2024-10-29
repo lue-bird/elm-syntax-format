@@ -1297,29 +1297,41 @@ comment syntaxComment =
             else
                 -- comment starts with {-
                 let
-                    commentContent : List String
-                    commentContent =
+                    commentContentLines : List String
+                    commentContentLines =
                         nonDirectlyClosingMultiLineComment
                             |> -- {-
                                String.dropLeft 2
                             |> -- -}
                                String.dropRight 2
                             |> String.lines
-                            |> List.map String.trim
-                            |> listDropLastIfIs
-                                (\line ->
-                                    case line of
-                                        "" ->
-                                            True
 
-                                        _ ->
-                                            False
-                                )
+                    commentContentNormal : List String
+                    commentContentNormal =
+                        case commentContentLines of
+                            [] ->
+                                []
+
+                            commentContentLine0 :: commentContentLine1Up ->
+                                (commentContentLine0 |> String.trimLeft)
+                                    :: (commentContentLine1Up
+                                            |> listDropLastIfIs
+                                                (\line ->
+                                                    case line |> String.trim of
+                                                        "" ->
+                                                            True
+
+                                                        _ ->
+                                                            False
+                                                )
+                                            |> unindent
+                                       )
+                                    |> List.map String.trimRight
                 in
                 Print.exactly "{-"
                     |> Print.followedBy
                         -- if original commentContent contains >= 2 lines, keep but
-                        (case commentContent of
+                        (case commentContentNormal of
                             -- only spaces
                             [] ->
                                 Print.exactly "  "
@@ -1357,6 +1369,51 @@ comment syntaxComment =
                                         )
                         )
                     |> Print.followedBy (Print.exactly "-}")
+
+
+unindent : List String -> List String
+unindent lines =
+    let
+        nonBlankLines : List String
+        nonBlankLines =
+            lines
+                |> List.filterMap
+                    (\line ->
+                        case line |> String.trim of
+                            "" ->
+                                Nothing
+
+                            _ ->
+                                Just line
+                    )
+    in
+    case nonBlankLines |> List.map lineIndentation |> List.minimum of
+        Nothing ->
+            lines
+
+        Just minimumIndentation ->
+            lines
+                |> List.map (\line -> line |> String.dropLeft minimumIndentation)
+
+
+lineIndentation : String -> Int
+lineIndentation line =
+    line
+        |> String.foldl
+            (\char soFar ->
+                if soFar.onlySpaces then
+                    case char of
+                        ' ' ->
+                            { spaceCount = soFar.spaceCount + 1, onlySpaces = True }
+
+                        _ ->
+                            { spaceCount = soFar.spaceCount, onlySpaces = False }
+
+                else
+                    soFar
+            )
+            { spaceCount = 0, onlySpaces = True }
+        |> .spaceCount
 
 
 listDropLastIfIs : (a -> Bool) -> List a -> List a
