@@ -1594,6 +1594,64 @@ a =
             0
 """
                 )
+            , Test.test "case-of with consecutive comments before cased expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case -- 0
+    -- 1
+    () of
+        () -> 0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case
+        -- 0
+        -- 1
+        ()
+    of
+        () ->
+            0
+"""
+                )
+            , Test.test "case-of with consecutive comments before case pattern"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case () of -- 0
+        -- 1
+        () -> 0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case () of
+        -- 0
+        -- 1
+        () ->
+            0
+"""
+                )
+            , Test.test "case-of with consecutive comments before case result"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case () of
+        () -> -- 0
+            -- 1
+            0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case () of
+        () ->
+            -- 0
+            -- 1
+            0
+"""
+                )
             , Test.test "case-of with multiple cases"
                 (\() ->
                     """module A exposing (..)

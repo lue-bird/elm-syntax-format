@@ -4372,7 +4372,11 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                         }
 
         Elm.Syntax.Expression.CaseExpression syntaxCaseOf ->
-            expressionCaseOf syntaxComments syntaxCaseOf
+            expressionCaseOf syntaxComments
+                { fullRange = fullRange
+                , expression = syntaxCaseOf.expression
+                , cases = syntaxCaseOf.cases
+                }
 
         Elm.Syntax.Expression.LambdaExpression syntaxLambda ->
             expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda)
@@ -5298,19 +5302,44 @@ expressionIfThenElse syntaxComments syntaxIfThenElse =
 
 expressionCaseOf :
     List (Elm.Syntax.Node.Node String)
-    -> Elm.Syntax.Expression.CaseBlock
+    ->
+        { fullRange : Elm.Syntax.Range.Range
+        , expression : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+        , cases : Elm.Syntax.Expression.Cases
+        }
     -> Print
 expressionCaseOf syntaxComments syntaxCaseOf =
-    -- TODO comments
     let
+        commentsBeforeCasedExpression : List String
+        commentsBeforeCasedExpression =
+            commentsInRange
+                { start = syntaxCaseOf.fullRange.start
+                , end = syntaxCaseOf.expression |> Elm.Syntax.Node.range |> .start
+                }
+                syntaxComments
+
         casedExpressionLineOffset : Print.LineOffset
         casedExpressionLineOffset =
-            lineOffsetInNode syntaxCaseOf.expression
+            case commentsBeforeCasedExpression of
+                _ :: _ ->
+                    Print.NextLine
+
+                [] ->
+                    lineOffsetInNode syntaxCaseOf.expression
     in
     Print.symbol "case"
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
                 (Print.layout casedExpressionLineOffset
+                    |> Print.followedBy
+                        (case commentsBeforeCasedExpression of
+                            [] ->
+                                Print.empty
+
+                            comment0 :: comment1Up ->
+                                comments (comment0 :: comment1Up)
+                                    |> Print.followedBy (Print.layout Print.NextLine)
+                        )
                     |> Print.followedBy
                         (expressionNotParenthesized syntaxComments
                             syntaxCaseOf.expression
@@ -5326,7 +5355,40 @@ expressionCaseOf syntaxComments syntaxCaseOf =
                     |> Print.followedBy
                         (Print.inSequence
                             (syntaxCaseOf.cases
-                                |> List.map (\syntaxCase -> case_ syntaxComments syntaxCase)
+                                |> List.foldl
+                                    (\( casePattern, caseResult ) soFar ->
+                                        let
+                                            commentsBeforeCasePattern : List String
+                                            commentsBeforeCasePattern =
+                                                commentsInRange
+                                                    { start = soFar.end
+                                                    , end = casePattern |> Elm.Syntax.Node.range |> .start
+                                                    }
+                                                    syntaxComments
+
+                                            commentsAndCasePrint : Print
+                                            commentsAndCasePrint =
+                                                (case commentsBeforeCasePattern of
+                                                    [] ->
+                                                        Print.empty
+
+                                                    comment0 :: comment1Up ->
+                                                        comments (comment0 :: comment1Up)
+                                                            |> Print.followedBy
+                                                                (Print.layout Print.NextLine)
+                                                )
+                                                    |> Print.followedBy
+                                                        (case_ syntaxComments ( casePattern, caseResult ))
+                                        in
+                                        { end = caseResult |> Elm.Syntax.Node.range |> .end
+                                        , reverse = commentsAndCasePrint :: soFar.reverse
+                                        }
+                                    )
+                                    { end = syntaxCaseOf.expression |> Elm.Syntax.Node.range |> .end
+                                    , reverse = []
+                                    }
+                                |> .reverse
+                                |> List.reverse
                                 |> List.intersperse
                                     (Print.linebreak
                                         |> Print.followedBy (Print.layout Print.NextLine)
@@ -5523,12 +5585,31 @@ case_ :
     -> Elm.Syntax.Expression.Case
     -> Print
 case_ syntaxComments ( casePattern, caseResult ) =
+    let
+        commentsBeforeExpression : List String
+        commentsBeforeExpression =
+            commentsInRange
+                { start = casePattern |> Elm.Syntax.Node.range |> .end
+                , end = caseResult |> Elm.Syntax.Node.range |> .start
+                }
+                syntaxComments
+    in
     patternNotParenthesized syntaxComments casePattern
         |> Print.followedBy Print.space
         |> Print.followedBy (Print.symbol "->")
         |> Print.followedBy
             (Print.indentedByNextMultipleOf4
                 (Print.layout Print.NextLine
-                    |> Print.followedBy (expressionNotParenthesized syntaxComments caseResult)
+                    |> Print.followedBy
+                        (case commentsBeforeExpression of
+                            [] ->
+                                Print.empty
+
+                            comment0 :: comment1Up ->
+                                comments (comment0 :: comment1Up)
+                                    |> Print.followedBy (Print.layout Print.NextLine)
+                        )
+                    |> Print.followedBy
+                        (expressionNotParenthesized syntaxComments caseResult)
                 )
             )
