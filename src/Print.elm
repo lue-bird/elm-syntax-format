@@ -1,10 +1,9 @@
 module Print exposing
     ( Print, toString
-    , symbol
-    , empty, space, linebreak
-    , followedBy, inSequence
-    , indentedByNextMultipleOf4, indented, layout, emptiableLayout
-    , LineOffset(..), lineOffsetMerge, listCombineLineOffset, lineOffset
+    , exactly, empty, space, linebreak
+    , followedBy, sequence
+    , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
+    , LineSpread(..), lineSpreadMerge, lineSpreadsCombine, lineSpread
     )
 
 {-| simple pretty printing
@@ -14,74 +13,134 @@ module Print exposing
 
 ### primitive
 
-@docs symbol
-
-For convenience, these common symbols are exposed as well
-
-@docs empty, space, linebreak
+@docs exactly, empty, space, linebreak
 
 
 ### combine
 
-@docs followedBy, inSequence
+@docs followedBy, sequence
 
 
 ### indent
 
-@docs indentedByNextMultipleOf4, indented, layout, emptiableLayout
-@docs LineOffset, lineOffsetMerge, listCombineLineOffset, lineOffset
+@docs withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
+@docs LineSpread, lineSpreadMerge, lineSpreadsCombine, lineSpread
 
 -}
 
 
+{-| Like a string that knows which lines need to be indented
+if the whole thing is indented.
+
+For example, elm-format inserts full-on linebreaks between the cases of a case-of
+or let declarations of a let-in.
+These should never have spaces on them no matter how many levels of indentation in
+they are.
+
+-}
 type alias Print =
     { indent : Int } -> String
 
 
+{-| Convert to a String with no extra indentation
+and no restrictions on line width
+-}
 toString : Print -> String
 toString print =
     print { indent = 0 }
 
 
-lineOffset : Print -> LineOffset
-lineOffset print =
+{-| [How many lines](#LineSpread) the given [`Print`](#Print)
+take up if turned into a string?
+-}
+lineSpread : Print -> LineSpread
+lineSpread print =
     -- TODO can performance be improved? defunctionalization etc
     if toString print |> String.contains "\n" then
-        NextLine
+        MultipleLines
 
     else
-        SameLine
+        SingleLine
 
 
-{-| Do not include linebreaks here and instead use [`linebreak`](#linebreak)
+{-| A given string. Mostly used for keywords, symbols and literal text.
+
+Do not include linebreaks here and instead use [`linebreak`](#linebreak)
+
+    Print.exactly (4 |> String.fromInt)
+        |> Print.toString
+    --> "4"
+
 -}
-symbol : String -> Print
-symbol exactNextString =
+exactly : String -> Print
+exactly exactNextString =
     \_ -> exactNextString
 
 
+{-| `exactly ""`.
+Useful when you want to conditionally append something
+
+    printSign : Sign -> Print
+    printSign =
+        case sign of
+            Sign.Negative ->
+                Print.exactly "-"
+
+            Sign.Positive ->
+                Print.empty
+
+-}
 empty : Print
 empty =
-    symbol ""
+    exactly ""
 
 
+{-| `exactly " "`.
+Often used after opening brackets
+and followed by [`Print.withIndentIncreasedBy 2`](#withIndentIncreasedBy)
+-}
 space : Print
 space =
-    symbol " "
+    exactly " "
 
 
+{-| Empty line (\\n).
+Usually followed by [`Print.linebreakIndented`](#linebreakIndented)
+-}
 linebreak : Print
 linebreak =
-    symbol "\n"
+    exactly "\n"
 
 
+{-| Prepend a given [`Print`](#Print)
+
+    Print.exactly "a"
+        |> Print.followedBy (Print.exactly "b")
+        |> Print.toString
+    --> "ab"
+
+To append more than 2, use [`Print.sequence`](#sequence)
+
+-}
 followedBy : Print -> (Print -> Print)
 followedBy nextPrint soFarPrint =
     \indent -> soFarPrint indent ++ nextPrint indent
 
 
-inSequence : List Print -> Print
-inSequence printSequence =
+{-| Concatenate a given list of [`Print`](#Print)s
+one after the other
+
+    [ "a", "b" ]
+        |> List.map Print.exactly
+        |> Print.sequence
+        |> Print.toString
+    --> "ab"
+
+To only concatenate 2, use [`Print.followedBy`](#followedBy)
+
+-}
+sequence : List Print -> Print
+sequence printSequence =
     case printSequence of
         [] ->
             empty
@@ -92,51 +151,113 @@ inSequence printSequence =
                     head
 
 
-indented : Int -> (Print -> Print)
-indented indentationIncrease print =
+{-| Set the indentation used by [`Print.linebreakIndented`](#linebreakIndented),
+[`Print.spaceOrLinebreakIndented`](#spaceOrLinebreakIndented)
+and [`Print.emptyOrLinebreakIndented`](#emptyOrLinebreakIndented)
+to the current indent + a given number.
+-}
+withIndentIncreasedBy : Int -> (Print -> Print)
+withIndentIncreasedBy indentationIncrease print =
     \soFarState -> print { indent = soFarState.indent + indentationIncrease }
 
 
-indentedByNextMultipleOf4 : Print -> Print
-indentedByNextMultipleOf4 print =
+{-| Set the indentation used by [`Print.linebreakIndented`](#linebreakIndented),
+[`Print.spaceOrLinebreakIndented`](#spaceOrLinebreakIndented)
+and [`Print.emptyOrLinebreakIndented`](#emptyOrLinebreakIndented)
+to the current indent minus its remainder by 4 + 4.
+-}
+withIndentAtNextMultipleOf4 : Print -> Print
+withIndentAtNextMultipleOf4 print =
     \soFarState -> print { indent = soFarState.indent // 4 * 4 + 4 }
 
 
-type LineOffset
-    = SameLine
-    | NextLine
+{-| All on the same line or split across multiple?
+-}
+type LineSpread
+    = SingleLine
+    | MultipleLines
 
 
-lineOffsetMerge : LineOffset -> LineOffset -> LineOffset
-lineOffsetMerge aLineOffset bLineOffset =
-    case aLineOffset of
-        NextLine ->
-            NextLine
+{-| If either spans [`MultipleLines`](#LineSpread), gives [`MultipleLines`](#LineSpread).
+If both are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
 
-        SameLine ->
-            bLineOffset
+To merge more than 2, use [`Print.lineSpreadsCombine`](#lineSpreadsCombine)
+
+-}
+lineSpreadMerge : LineSpread -> LineSpread -> LineSpread
+lineSpreadMerge aLineSpread bLineSpread =
+    case aLineSpread of
+        MultipleLines ->
+            MultipleLines
+
+        SingleLine ->
+            bLineSpread
 
 
-listCombineLineOffset : List LineOffset -> LineOffset
-listCombineLineOffset lineOffsets =
-    lineOffsets |> List.foldl lineOffsetMerge SameLine
+{-| If any spans [`MultipleLines`](#LineSpread), gives [`MultipleLines`](#LineSpread).
+If all are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
+
+To only combine 2, use [`Print.lineSpreadsCombine`](#lineSpreadsCombine)
+
+-}
+lineSpreadsCombine : List LineSpread -> LineSpread
+lineSpreadsCombine lineSpreads =
+    case lineSpreads of
+        [] ->
+            SingleLine
+
+        head :: tail ->
+            case head of
+                MultipleLines ->
+                    MultipleLines
+
+                SingleLine ->
+                    lineSpreadsCombine tail
 
 
-layout : LineOffset -> Print
-layout lineOffsetToUse =
-    case lineOffsetToUse of
-        SameLine ->
+{-| [`Print.space`](#space) when [`SingleLine`](#LineSpread),
+[`Print.linebreakIndented`](#linebreakIndented) when [`MultipleLines`](#LineSpread),
+
+Specify the indentation with
+[`Print.withIndentIncreasedBy`](#withIndentIncreasedBy)
+and [`withIndentAtNextMultipleOf4`](#withIndentAtNextMultipleOf4)
+
+-}
+spaceOrLinebreakIndented : LineSpread -> Print
+spaceOrLinebreakIndented lineSpreadToUse =
+    case lineSpreadToUse of
+        SingleLine ->
             space
 
-        NextLine ->
-            \state -> "\n" ++ String.repeat state.indent " "
+        MultipleLines ->
+            linebreakIndented
 
 
-emptiableLayout : LineOffset -> Print
-emptiableLayout lineOffsetToUse =
-    case lineOffsetToUse of
-        SameLine ->
+{-| [`Print.empty`](#empty) when [`SingleLine`](#LineSpread),
+[`Print.linebreakIndented`](#linebreakIndented) when [`MultipleLines`](#LineSpread),
+
+Specify the indentation with
+[`Print.withIndentIncreasedBy`](#withIndentIncreasedBy)
+and [`withIndentAtNextMultipleOf4`](#withIndentAtNextMultipleOf4)
+
+-}
+emptyOrLinebreakIndented : LineSpread -> Print
+emptyOrLinebreakIndented lineSpreadToUse =
+    case lineSpreadToUse of
+        SingleLine ->
             empty
 
-        NextLine ->
-            \state -> "\n" ++ String.repeat state.indent " "
+        MultipleLines ->
+            linebreakIndented
+
+
+{-| Linebreak followed by spaces to the current indentation level.
+
+Specify the indentation with
+[`Print.withIndentIncreasedBy`](#withIndentIncreasedBy)
+and [`withIndentAtNextMultipleOf4`](#withIndentAtNextMultipleOf4)
+
+-}
+linebreakIndented : Print
+linebreakIndented =
+    \state -> "\n" ++ String.repeat state.indent " "
