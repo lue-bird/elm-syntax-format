@@ -1629,23 +1629,23 @@ unsafeHexDigitIntToString int =
             "9"
 
         10 ->
-            "a"
+            "A"
 
         11 ->
-            "b"
+            "B"
 
         12 ->
-            "c"
+            "C"
 
         13 ->
-            "d"
+            "D"
 
         14 ->
-            "e"
+            "E"
 
         -- 15
         _ ->
-            "f"
+            "F"
 
 
 characterHex : Char -> String
