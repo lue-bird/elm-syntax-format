@@ -9,7 +9,7 @@ import Test exposing (Test)
 
 suite : Test
 suite =
-    Test.describe "Bits"
+    Test.describe "elm-syntax-format"
         [ Test.describe "import"
             [ Test.test "only name, already same line"
                 (\() ->
