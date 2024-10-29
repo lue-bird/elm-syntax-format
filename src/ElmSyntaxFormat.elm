@@ -3056,14 +3056,18 @@ qualifiedReference syntaxReference =
 
         modulePartHead :: modulePartTail ->
             Print.exactly modulePartHead
-                |> Print.followedBy (Print.exactly ".")
                 |> Print.followedBy
                     (Print.sequence
                         (modulePartTail
-                            |> List.map Print.exactly
-                            |> List.intersperse (Print.exactly ".")
+                            |> List.map
+                                (\modulePart ->
+                                    Print.exactly "."
+                                        |> Print.followedBy
+                                            (Print.exactly modulePart)
+                                )
                         )
                     )
+                |> Print.followedBy (Print.exactly ".")
                 |> Print.followedBy (Print.exactly syntaxReference.unqualified)
 
 
