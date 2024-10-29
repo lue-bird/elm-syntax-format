@@ -1579,6 +1579,72 @@ a =
         )
 """
                 )
+            , Test.test "if-then-else with another parenthesized if-then-else in the else branch with comments and comments before parens"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if True then
+        0
+
+    else
+        -- on False
+        (-- in parens
+         if False then
+            1
+
+         else
+            2
+        )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    if True then
+        0
+
+    else
+        -- on False
+        (-- in parens
+         if False then
+            1
+
+         else
+            2
+        )
+"""
+                )
+            , Test.test "if-then-else with comments before if-then-else in the else branch without comments itself (!)"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if True then
+        0
+
+    else -- on False
+        ((if False then
+            1
+
+        else
+            2))"""
+                        |> expectPrintedAs
+                            -- elm-format prints this really weirdly
+                            """module A exposing (..)
+
+a =
+    if True then
+        0
+
+    else
+    -- on False
+    if
+        False
+    then
+        1
+
+    else
+        2
+"""
+                )
             , Test.test "case-of with one case"
                 (\() ->
                     """module A exposing (..)
