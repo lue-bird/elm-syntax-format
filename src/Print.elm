@@ -32,7 +32,7 @@ module Print exposing
 {-| Like a string that knows which lines need to be indented
 if the whole thing is indented.
 
-For example, elm-format inserts full-on linebreaks between the cases of a case-of
+For example, elm-format inserts full-on linebreaks inside multi-line strings, between the cases of a case-of
 or let declarations of a let-in.
 These should never have spaces on them no matter how many levels of indentation in
 they are.
