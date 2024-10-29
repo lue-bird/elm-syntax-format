@@ -4,7 +4,8 @@ Pretty print an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-synta
 If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https://dark.elm.dmy.fr/packages/mdgriffith/elm-codegen/latest/) and [`the-sett/elm-syntax-dsl`](https://dark.elm.dmy.fr/packages/the-sett/elm-syntax-dsl/latest/).
 
 ## TODO
-  - find minor discrepancies (e.g. putting consecutive {- -} comments in one line if following syntax is single-line)
+  - put -- comment after on the same line if syntax is single-line and is originally on the same row
+  - put consecutive {- -} comments in one line if following syntax is single-line
 
 ## known deviations in printing
   - ranges of `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line
