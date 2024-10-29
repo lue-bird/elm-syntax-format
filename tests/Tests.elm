@@ -1971,6 +1971,48 @@ a =
         |> identity
 """
                 )
+            , Test.test "|> pipeline with multi-line function"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity |> identity
+    identity |> identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        |> identity
+            identity
+        |> identity
+"""
+                )
+            , Test.test "|> pipeline with parenthesized multi-line function"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity
+        |> (if True then
+                identity
+
+            else
+                identity
+           )
+        |> identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        |> (if True then
+                identity
+
+            else
+                identity
+           )
+        |> identity
+"""
+                )
             , Test.test "|> pipeline, single-line"
                 (\() ->
                     """module A exposing (..)

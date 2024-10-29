@@ -4864,10 +4864,12 @@ expressionOperation syntaxComments syntaxOperation =
                                             )
                                 )
                             |> Print.followedBy
-                                (Print.withIndentAtNextMultipleOf4
-                                    (expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
-                                        operationExpanded.rightestExpression
-                                    )
+                                (if operationExpanded.rightestExpression |> expressionIsSpaceSeparatedExceptApplication then
+                                    Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
+                                        (expressionParenthesized syntaxComments operationExpanded.rightestExpression)
+
+                                 else
+                                    expressionNotParenthesized syntaxComments operationExpanded.rightestExpression
                                 )
                         )
     in
@@ -4914,7 +4916,11 @@ expressionOperation syntaxComments syntaxOperation =
                                                         )
                                             )
                                         |> Print.followedBy
-                                            (Print.withIndentAtNextMultipleOf4
+                                            (if operatorExpression.expression |> expressionIsSpaceSeparatedExceptApplication then
+                                                Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
+                                                    operatorExpression.expressionPrint
+
+                                             else
                                                 operatorExpression.expressionPrint
                                             )
                                     )
@@ -5012,22 +5018,27 @@ expressionOperationExpand left operator right =
             }
 
 
+expressionIsSpaceSeparatedExceptApplication : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Bool
+expressionIsSpaceSeparatedExceptApplication expressionNode =
+    if expressionIsSpaceSeparated (expressionNode |> Elm.Syntax.Node.value) then
+        case expressionNode |> expressionToNotParenthesized of
+            Elm.Syntax.Node.Node _ (Elm.Syntax.Expression.Application _) ->
+                False
+
+            _ ->
+                True
+
+    else
+        False
+
+
 expressionParenthesizedIfSpaceSeparatedExceptApplication :
     List (Elm.Syntax.Node.Node String)
     -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
     -> Print
 expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments expressionNode =
-    let
-        (Elm.Syntax.Node.Node _ syntaxExpression) =
-            expressionNode
-    in
-    if expressionIsSpaceSeparated syntaxExpression then
-        case expressionNode |> expressionToNotParenthesized of
-            Elm.Syntax.Node.Node _ (Elm.Syntax.Expression.Application _) ->
-                expressionNotParenthesized syntaxComments expressionNode
-
-            _ ->
-                expressionParenthesized syntaxComments expressionNode
+    if expressionNode |> expressionIsSpaceSeparatedExceptApplication then
+        expressionParenthesized syntaxComments expressionNode
 
     else
         expressionNotParenthesized syntaxComments expressionNode
