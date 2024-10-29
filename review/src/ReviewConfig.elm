@@ -143,14 +143,6 @@ config =
                   ]
                     |> String.concat
                 ]
-      , ReviewPipelineStyles.parentheticalApplicationPipelines
-            |> ReviewPipelineStyles.forbid
-            |> ReviewPipelineStyles.that
-                (ReviewPipelineStyles.Predicates.haveAnyNonInputStepThatIs
-                    ReviewPipelineStyles.Predicates.aSemanticallyInfixFunction
-                )
-            |> ReviewPipelineStyles.andTryToFixThemBy ReviewPipelineStyles.Fixes.convertingToRightPizza
-            |> ReviewPipelineStyles.andCallThem "parenthetical application of a semantically-infix function"
       ]
         |> ReviewPipelineStyles.rule
     , UseCamelCase.rule
