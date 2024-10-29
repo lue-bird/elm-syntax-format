@@ -2741,6 +2741,33 @@ a
     0
 """
                 )
+            , Test.test ":: with multiple patterns as tail, consecutive comments before rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        b :: Just c :: {- 0 -} {- 1 -} d ->
+            b
+
+        _ ->
+            0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        b
+            :: (Just c)
+            :: {- 0 -}
+               {- 1 -}
+               d
+        ->
+            b
+
+        _ ->
+            0
+"""
+                )
             ]
         , Test.describe "comment"
             [ Test.test "module level {--} has new lines in front if preceded by other comments"

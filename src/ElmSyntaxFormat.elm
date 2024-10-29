@@ -2065,11 +2065,8 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
                 { fullRange = fullRange, fields = fields }
 
         Elm.Syntax.Pattern.UnConsPattern headPattern tailPattern ->
-            patternParenthesizedIfSpaceSeparated syntaxComments headPattern
-                |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "::")
-                |> Print.followedBy Print.space
-                |> Print.followedBy (patternParenthesizedIfSpaceSeparated syntaxComments tailPattern)
+            patternCons syntaxComments
+                { head = headPattern, tail = tailPattern }
 
         Elm.Syntax.Pattern.ListPattern elementPatterns ->
             listLiteral patternNotParenthesized
@@ -2088,6 +2085,160 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
         Elm.Syntax.Pattern.AsPattern aliasedPattern aliasNameNode ->
             patternAs syntaxComments
                 { aliasedPattern = aliasedPattern, aliasNameNode = aliasNameNode }
+
+
+patternCons :
+    List (Elm.Syntax.Node.Node String)
+    ->
+        { head : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+        , tail : Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+        }
+    -> Print
+patternCons syntaxComments syntaxCons =
+    let
+        headPrint : Print
+        headPrint =
+            patternParenthesizedIfSpaceSeparated syntaxComments syntaxCons.head
+
+        tailPatterns : List (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern)
+        tailPatterns =
+            syntaxCons.tail |> patternConsExpand
+
+        tailPatternPrints : List Print
+        tailPatternPrints =
+            tailPatterns
+                |> List.map
+                    (patternParenthesizedIfSpaceSeparated syntaxComments)
+
+        tailPatternsCommentsBefore : List (List String)
+        tailPatternsCommentsBefore =
+            tailPatterns
+                |> List.foldl
+                    (\(Elm.Syntax.Node.Node tailPatternRange _) soFar ->
+                        { reverse =
+                            commentsInRange { start = soFar.end, end = tailPatternRange.start }
+                                syntaxComments
+                                :: soFar.reverse
+                        , end = tailPatternRange.end
+                        }
+                    )
+                    { reverse = []
+                    , end = syntaxCons.head |> Elm.Syntax.Node.range |> .end
+                    }
+                |> .reverse
+                |> List.reverse
+
+        lineSpread : Print.LineSpread
+        lineSpread =
+            if tailPatternsCommentsBefore |> List.all List.isEmpty then
+                Print.lineSpreadMerge
+                    (headPrint |> Print.lineSpread)
+                    (tailPatternPrints |> List.map Print.lineSpread |> Print.lineSpreadsCombine)
+
+            else
+                Print.MultipleLines
+    in
+    headPrint
+        |> Print.followedBy
+            (Print.withIndentAtNextMultipleOf4
+                (Print.spaceOrLinebreakIndented lineSpread
+                    |> Print.followedBy
+                        (Print.sequence
+                            (List.map2
+                                (\tailPatternPrint commentsBefore ->
+                                    Print.exactly "::"
+                                        |> Print.followedBy Print.space
+                                        |> Print.followedBy
+                                            (Print.withIndentIncreasedBy 3
+                                                ((case commentsBefore of
+                                                    [] ->
+                                                        Print.empty
+
+                                                    comment0 :: comment1Up ->
+                                                        comments (comment0 :: comment1Up)
+                                                            |> Print.followedBy
+                                                                (Print.spaceOrLinebreakIndented lineSpread)
+                                                 )
+                                                    |> Print.followedBy tailPatternPrint
+                                                )
+                                            )
+                                )
+                                tailPatternPrints
+                                tailPatternsCommentsBefore
+                                |> List.intersperse
+                                    (Print.spaceOrLinebreakIndented lineSpread)
+                            )
+                        )
+                )
+            )
+
+
+patternConsExpand :
+    Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+    -> List (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern)
+patternConsExpand (Elm.Syntax.Node.Node fulRange syntaxPattern) =
+    case syntaxPattern of
+        Elm.Syntax.Pattern.UnConsPattern headPattern tailPattern ->
+            headPattern :: patternConsExpand tailPattern
+
+        Elm.Syntax.Pattern.AllPattern ->
+            [ Elm.Syntax.Node.Node fulRange Elm.Syntax.Pattern.AllPattern ]
+
+        Elm.Syntax.Pattern.UnitPattern ->
+            [ Elm.Syntax.Node.Node fulRange Elm.Syntax.Pattern.UnitPattern ]
+
+        Elm.Syntax.Pattern.CharPattern char ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.CharPattern char) ]
+
+        Elm.Syntax.Pattern.StringPattern string ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.StringPattern string) ]
+
+        Elm.Syntax.Pattern.IntPattern int ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.IntPattern int) ]
+
+        Elm.Syntax.Pattern.HexPattern int ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.HexPattern int) ]
+
+        Elm.Syntax.Pattern.FloatPattern float ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.FloatPattern float) ]
+
+        Elm.Syntax.Pattern.TuplePattern parts ->
+            case parts of
+                [ part0, part1 ] ->
+                    [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.TuplePattern [ part0, part1 ]) ]
+
+                [ part0, part1, part2 ] ->
+                    [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.TuplePattern [ part0, part1, part2 ]) ]
+
+                [] ->
+                    -- should be handled by UnitPattern
+                    [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.TuplePattern []) ]
+
+                [ inParens ] ->
+                    -- should be handled by ParenthesizedPattern
+                    [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.TuplePattern [ inParens ]) ]
+
+                part0 :: part1 :: part2 :: part3 :: part4Up ->
+                    -- should be handled by ParenthesizedPattern
+                    [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.TuplePattern (part0 :: part1 :: part2 :: part3 :: part4Up)) ]
+
+        Elm.Syntax.Pattern.RecordPattern fields ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.RecordPattern fields) ]
+
+        Elm.Syntax.Pattern.ListPattern elements ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.ListPattern elements) ]
+
+        Elm.Syntax.Pattern.VarPattern variableName ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.VarPattern variableName) ]
+
+        Elm.Syntax.Pattern.NamedPattern reference parameters ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.NamedPattern reference parameters) ]
+
+        Elm.Syntax.Pattern.AsPattern aliasedPattern aliasName ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.AsPattern aliasedPattern aliasName) ]
+
+        Elm.Syntax.Pattern.ParenthesizedPattern inParens ->
+            [ Elm.Syntax.Node.Node fulRange (Elm.Syntax.Pattern.ParenthesizedPattern inParens) ]
 
 
 patternAs :
@@ -5684,6 +5835,10 @@ case_ :
     -> Print
 case_ syntaxComments ( casePattern, caseResult ) =
     let
+        patternPrint : Print
+        patternPrint =
+            patternNotParenthesized syntaxComments casePattern
+
         commentsBeforeExpression : List String
         commentsBeforeExpression =
             commentsInRange
@@ -5692,8 +5847,9 @@ case_ syntaxComments ( casePattern, caseResult ) =
                 }
                 syntaxComments
     in
-    patternNotParenthesized syntaxComments casePattern
-        |> Print.followedBy Print.space
+    patternPrint
+        |> Print.followedBy
+            (Print.spaceOrLinebreakIndented (patternPrint |> Print.lineSpread))
         |> Print.followedBy (Print.exactly "->")
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
