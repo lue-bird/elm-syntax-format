@@ -4495,7 +4495,7 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
             hexLiteral int
 
         Elm.Syntax.Expression.Floatable float ->
-            cappedFloat float
+            floatLiteral float
 
         Elm.Syntax.Expression.Negation negated ->
             Print.exactly "-"
@@ -4632,11 +4632,25 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                 }
 
         Elm.Syntax.Expression.GLSLExpression glsl ->
-            Print.exactly glsl
+            expressionGlsl glsl
 
 
-cappedFloat : Float -> Print
-cappedFloat float =
+expressionGlsl : String -> Print
+expressionGlsl glslContent =
+    Print.exactly "[glsl|"
+        |> Print.followedBy
+            (Print.sequence
+                (glslContent
+                    |> String.lines
+                    |> List.map Print.exactly
+                    |> List.intersperse Print.linebreak
+                )
+            )
+        |> Print.followedBy (Print.exactly "|]")
+
+
+floatLiteral : Float -> Print
+floatLiteral float =
     if (float |> Basics.truncate |> Basics.toFloat) == float then
         Print.exactly (String.fromFloat float)
             |> Print.followedBy (Print.exactly ".0")
