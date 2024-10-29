@@ -2990,7 +2990,7 @@ b =
             [ Test.test "elm-syntax-sscce"
                 (\() ->
                     expectPrintedAsSame
-                        -- copied from https://github.com/pdamoc/elm-syntax-sscce
+                        -- copied from https://github.com/pdamoc/elm-syntax-sscce (and slightly edited)
                         -- big thanks!
                         """port module Main exposing (Msg(..), Natural, main)
 
@@ -3222,8 +3222,8 @@ update msg ({ count } as model) =
                 -- attempting to use a named declaration multiple times will result in a compiler error
                 _ =
                     newValue
-                        -- adding the next line at the end of a declaration with result in it being logged to the JS console
-                        |> Debug.log "newValue"
+                        |> -- adding the next line at the end of a declaration with result in it being logged to the JS console
+                           Debug.log "newValue"
             in
             if newValue == count then
                 -- Shows how to call a port
@@ -3317,12 +3317,10 @@ view model =
     in
     main_ []
         [ button [ onClick Increment ] [ text "+1" ]
-
-        -- Shows how to avoid parentheses by using the backwards pipe operator
-        , div [] [ text <| toString model.count ]
-
-        -- Shows how to used a function from a module without having to expose it in the import section.
-        , div [] [ button [ Events.onClick Decrement ] [ text "-1" ] ]
+        , -- Shows how to avoid parentheses by using the backwards pipe operator
+          div [] [ text <| toString model.count ]
+        , -- Shows how to used a function from a module without having to expose it in the import section.
+          div [] [ button [ Events.onClick Decrement ] [ text "-1" ] ]
         , button [ onClick AddNextTen ] [ text "Add Next Ten" ]
         , div [] [ namedNaturalToHtml namedCount ]
         , String.lines multiline
@@ -3422,7 +3420,8 @@ void main () {
   gl_Position = view * vec4(position, 1.0);
   vcoord = coord.xy;
 }
-|]"""
+|]
+"""
                 )
             ]
         ]
