@@ -3345,7 +3345,32 @@ b =
                 )
             ]
         , Test.describe "full module samples"
-            [ Test.test "elm-syntax-sscce"
+            [ Test.test "example from readme"
+                (\() ->
+                    """
+module   Sample  exposing(..)
+plus2 (n)= {- this adds 2-} n
+    + 2
+"""
+                        |> Elm.Parser.parseToFile
+                        |> Result.map
+                            (\syntaxModule ->
+                                syntaxModule
+                                    |> ElmSyntaxFormat.module_
+                                    |> ElmSyntaxFormat.printToString
+                            )
+                        |> Expect.equal
+                            (Ok
+                                """module Sample exposing (..)
+
+plus2 n =
+    {- this adds 2 -}
+    n
+        + 2
+"""
+                            )
+                )
+            , Test.test "elm-syntax-sscce"
                 (\() ->
                     expectPrintedAsSame
                         -- copied from https://github.com/pdamoc/elm-syntax-sscce (and slightly edited)

@@ -1,7 +1,33 @@
 Pretty print an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/) tree as [`elm-format`](https://github.com/avh4/elm-format) would
 (breaking lines and inserting comments in the right places).
 
-If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https://dark.elm.dmy.fr/packages/mdgriffith/elm-codegen/latest/) and [`the-sett/elm-syntax-dsl`](https://dark.elm.dmy.fr/packages/the-sett/elm-syntax-dsl/latest/).
+```elm
+import ElmSyntaxFormat
+import Elm.Parser -- from stil4m/elm-syntax
+
+"""
+module   Sample  exposing(..)
+plus2 (n)= {- this adds 2-} n
+    + 2
+"""
+    |> Elm.Parser.parseToFile
+    |> Result.map
+        (\syntaxModule ->
+            syntaxModule
+                |> ElmSyntaxFormat.module_
+                |> ElmSyntaxFormat.printToString
+        )
+-->
+Ok """module Sample exposing (..)
+
+plus2 n =
+    {- this adds 2 -}
+    n
+        + 2
+"""
+```
+
+If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https://dark.elm.dmy.fr/packages/mdgriffith/elm-codegen/latest/) or [`the-sett/elm-syntax-dsl`](https://dark.elm.dmy.fr/packages/the-sett/elm-syntax-dsl/latest/).
 
 ## TODO
   - put consecutive {- -} comments (not {--} or --) in one line without linebreak after if following syntax is single-line pattern or type or expression before call argument or after operator
