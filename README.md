@@ -4,7 +4,7 @@ Pretty print an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-synta
 If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https://dark.elm.dmy.fr/packages/mdgriffith/elm-codegen/latest/) and [`the-sett/elm-syntax-dsl`](https://dark.elm.dmy.fr/packages/the-sett/elm-syntax-dsl/latest/).
 
 ## TODO
-  - put -- comment after on the same line if syntax is single-line and is originally on the same row: type function arguments, recordLiteral/typeRecordExtension if name and value on same line
+  - put -- comment after on the same line if syntax is single-line and is originally on the same row: type function arguments, recordLiteral/expressionRecordUpdate/typeRecordExtension if name and value on same line
   - put consecutive {- -} comments in one line if following syntax is single-line
 
 ## known deviations in printing
