@@ -37,7 +37,8 @@ import Print
 import Unicode
 
 
-{-| Pretty printable intermediate representation
+{-| Pretty printable intermediate representation.
+See [`printToString`](#printToString)
 -}
 type alias Print =
     { indent : Int } -> String
