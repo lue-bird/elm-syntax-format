@@ -572,7 +572,7 @@ exposeMerge a b =
             b
 
 
-{-| The stuff after `exposing` in a module header.
+{-| Print the stuff after `exposing` in a module header.
 For import exposing: [`importExposing`](#importExposing)
 -}
 moduleExposing :
@@ -1220,7 +1220,7 @@ import_ syntaxComments (Elm.Syntax.Node.Node incorrectImportRange syntaxImport) 
             )
 
 
-{-| The stuff after `exposing` in an import.
+{-| Print the stuff after `exposing` in an import.
 For module header exposing: [`moduleExposing`](#moduleExposing)
 -}
 importExposing :
@@ -1244,7 +1244,7 @@ importExposing syntaxComments (Elm.Syntax.Node.Node exposingRange syntaxExposing
                         { fullRange = exposingRange, expose0 = expose0, expose1Up = expose1Up }
 
 
-{-| `--` or `{- -}` comments placed _within a declaration_.
+{-| Print `--` or `{- -}` comments placed _within a declaration_.
 For top-level comments: [`moduleLevelComments`](#moduleLevelComments)
 -}
 comments : List String -> Print
@@ -1303,7 +1303,7 @@ commentCanBePartOfCollapsible syntaxComment =
                 && Basics.not (commentNotDirectlyClosed |> String.contains "\n")
 
 
-{-| `--` or `{- -}` comments placed outside of declarations at the top level.
+{-| Print `--` or `{- -}` comments placed outside of declarations at the top level.
 For comments within a declaration: [`comments`](#comments)
 -}
 moduleLevelComments : List String -> Print
