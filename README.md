@@ -15,7 +15,7 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
   - handling int (and float?) overflow (elm-format itself seems to have issues here, too https://github.com/avh4/elm-format/issues/635)
   - formatting documentation markdown
 
-I'm 100% sure there are other deviations I've missed. Please [report](https://github.com/lue-bird/elm-syntax-format/issues/new) if you notice some <3
+Please [report](https://github.com/lue-bird/elm-syntax-format/issues/new) others you notice <3
 
 ## performance problems?
 Great performance is not a primary goal
