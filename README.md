@@ -23,7 +23,7 @@ but if you notice it's unusable for your use case, please [open an issue](https:
 
 Ideas:
   - pre-filter comments per declaration
-  - switch Print to defunctionalized
+  - convert Print to defunctionalized (this will likely make `Print.lineSpread` faster)
   - pre-define prints for static parts like symbols
 
 ## considering for the future
