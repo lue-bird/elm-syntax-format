@@ -1,20 +1,28 @@
 module ElmSyntaxFormat exposing
     ( printToString, Print
-    , module_, moduleName, moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
+    , module_
+    , moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
     , declarations, declaration, declarationChoiceType, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
     , expressionNotParenthesized, case_, patternNotParenthesized, typeNotParenthesized
-    , qualifiedReference
+    , moduleName, qualifiedReference
     )
 
 {-| Pretty printing an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/) tree
 in a way consistent with [`elm-format`](https://github.com/avh4/elm-format).
 
 @docs printToString, Print
+@docs module_
 
-@docs module_, moduleName, moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
+That's all you'll need most of the time.
+
+Sometimes it's useful to print only some part of the syntax,
+to, say, display only an expression in an article
+or reformat only the touched declarations on save.
+
+@docs moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
 @docs declarations, declaration, declarationChoiceType, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
 @docs expressionNotParenthesized, case_, patternNotParenthesized, typeNotParenthesized
-@docs qualifiedReference
+@docs moduleName, qualifiedReference
 
 -}
 
