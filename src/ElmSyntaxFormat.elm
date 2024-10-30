@@ -2,7 +2,7 @@ module ElmSyntaxFormat exposing
     ( printToString, Print
     , module_
     , moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
-    , declarations, declaration, declarationChoiceType, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
+    , declarations, declaration, declarationChoiceType, declarationSignature, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
     , expressionNotParenthesized, case_, patternNotParenthesized, typeNotParenthesized
     , moduleName, qualifiedReference
     )
@@ -20,7 +20,7 @@ to, say, display only an expression in an article
 or reformat only the touched declarations on save.
 
 @docs moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
-@docs declarations, declaration, declarationChoiceType, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
+@docs declarations, declaration, declarationChoiceType, declarationSignature, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
 @docs expressionNotParenthesized, case_, patternNotParenthesized, typeNotParenthesized
 @docs moduleName, qualifiedReference
 
@@ -3944,8 +3944,10 @@ declaration syntaxComments syntaxDeclaration =
             declarationDestructuring syntaxComments.comments destructuringPattern destructuringExpression
 
 
+{-| Print an [`Elm.Syntax.Signature.Signature`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Signature#Signature)
+as `name : Type`
+-}
 declarationSignature :
-    --3
     List (Elm.Syntax.Node.Node String)
     -> Elm.Syntax.Signature.Signature
     -> Print
