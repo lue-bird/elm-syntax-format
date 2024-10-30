@@ -1178,6 +1178,20 @@ type alias T =
         Int
 """
                 )
+            , Test.test "function consecutive collapsible comments between types"
+                (\() ->
+                    """module A exposing (..)
+type alias T =
+    Int -> {- 0 -} {- 1 -}
+    Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T =
+    Int
+    -> {- 0 -} {- 1 -} Int
+"""
+                )
             , Test.test "consecutive function comments between types"
                 (\() ->
                     """module A exposing (..)

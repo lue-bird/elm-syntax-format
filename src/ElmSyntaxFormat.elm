@@ -3295,6 +3295,12 @@ typeFunctionNotParenthesized syntaxComments function =
             (Print.sequence
                 (List.map2
                     (\afterArrowTypeNode commentsBeforeAfterArrowType ->
+                        let
+                            afterArrowTypePrint : Print
+                            afterArrowTypePrint =
+                                typeParenthesizedIfParenthesizedFunction syntaxComments
+                                    afterArrowTypeNode
+                        in
                         Print.spaceOrLinebreakIndented fullLineSpread
                             |> Print.followedBy (Print.exactly "->")
                             |> Print.followedBy
@@ -3304,14 +3310,25 @@ typeFunctionNotParenthesized syntaxComments function =
                                             Print.spaceOrLinebreakIndented (lineSpreadInNode afterArrowTypeNode)
 
                                         comment0 :: comment1Up ->
-                                            Print.linebreakIndented
-                                                |> Print.followedBy (comments (comment0 :: comment1Up))
-                                                |> Print.followedBy Print.linebreakIndented
+                                            let
+                                                commentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+                                                commentsCollapsible =
+                                                    collapsibleComments (comment0 :: comment1Up)
+
+                                                lineSpread : Print.LineSpread
+                                                lineSpread =
+                                                    Print.lineSpreadMerge
+                                                        commentsCollapsible.lineSpread
+                                                        (afterArrowTypePrint |> Print.lineSpread)
+                                            in
+                                            Print.spaceOrLinebreakIndented lineSpread
+                                                |> Print.followedBy commentsCollapsible.print
+                                                |> Print.followedBy
+                                                    (Print.spaceOrLinebreakIndented
+                                                        lineSpread
+                                                    )
                                      )
-                                        |> Print.followedBy
-                                            (typeParenthesizedIfParenthesizedFunction syntaxComments
-                                                afterArrowTypeNode
-                                            )
+                                        |> Print.followedBy afterArrowTypePrint
                                     )
                                 )
                     )
