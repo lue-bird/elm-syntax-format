@@ -184,7 +184,7 @@ config =
     , Review.OpaqueType.forbid
     , NoCatchAllForSpecificRemainingPatterns.rule
     ]
-        |> List.map (Review.Rule.ignoreErrorsForDirectories [ "VerifyExamples/" ])
+        |> List.map (Review.Rule.ignoreErrorsForDirectories [ "tests/VerifyExamples/" ])
 
 
 toCamelCase : String -> String
