@@ -2330,6 +2330,18 @@ a =
     )
 """
                 )
+            , Test.test "empty list with consecutive comments"
+                (\() ->
+                    """module A exposing (..)
+a = [ {- 0 -} ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [{- 0 -}
+    ]
+"""
+                )
             , Test.test "comments before first list element"
                 (\() ->
                     """module A exposing (..)
@@ -2426,6 +2438,21 @@ a =
     -- 0
     -- 1
     ]
+"""
+                )
+            , Test.test "empty record with consecutive comments"
+                (\() ->
+                    """module A exposing (..)
+a = { -- 0
+      -- 1
+    }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    {-- 0
+     -- 1
+    }
 """
                 )
             , Test.test "comments before first record field"
@@ -2766,6 +2793,24 @@ a
     0
 """
                 )
+            , Test.test "empty record with consecutive comments"
+                (\() ->
+                    """module A exposing (..)
+a { -- 0
+  -- 1
+  } =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    {-- 0
+     -- 1
+    }
+    =
+    0
+"""
+                )
             , Test.test "record with comments before first field"
                 (\() ->
                     """module A exposing (..)
@@ -2824,6 +2869,30 @@ a
     }
     =
     0
+"""
+                )
+            , Test.test "consecutive comments in empty list"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        [ -- 0
+         -- 1
+         ] -> 0
+        _ -> 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        [-- 0
+         -- 1
+        ]
+        ->
+            0
+
+        _ ->
+            1
 """
                 )
             , Test.test "consecutive comments before first list element"

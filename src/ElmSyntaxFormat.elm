@@ -2096,7 +2096,18 @@ patternList :
 patternList syntaxComments syntaxList =
     case syntaxList.elements of
         [] ->
-            Print.exactly "[]"
+            Print.exactly "["
+                |> Print.followedBy
+                    (case commentsInRange syntaxList.fullRange syntaxComments of
+                        [] ->
+                            Print.empty
+
+                        comment0 :: comment1Up ->
+                            Print.withIndentIncreasedBy 1
+                                (comments (comment0 :: comment1Up))
+                                |> Print.followedBy Print.linebreakIndented
+                    )
+                |> Print.followedBy (Print.exactly "]")
 
         element0 :: element1Up ->
             let
@@ -2392,7 +2403,18 @@ patternRecord :
 patternRecord syntaxComments syntaxRecord =
     case syntaxRecord.fields of
         [] ->
-            Print.exactly "{}"
+            Print.exactly "{"
+                |> Print.followedBy
+                    (case commentsInRange syntaxRecord.fullRange syntaxComments of
+                        [] ->
+                            Print.empty
+
+                        comment0 :: comment1Up ->
+                            Print.withIndentIncreasedBy 1
+                                (comments (comment0 :: comment1Up))
+                                |> Print.followedBy Print.linebreakIndented
+                    )
+                |> Print.followedBy (Print.exactly "}")
 
         field0 :: field1Up ->
             let
@@ -3008,7 +3030,18 @@ recordLiteral :
 recordLiteral fieldSpecific syntaxComments syntaxRecord =
     case syntaxRecord.fields of
         [] ->
-            Print.exactly "{}"
+            Print.exactly "{"
+                |> Print.followedBy
+                    (case commentsInRange syntaxRecord.fullRange syntaxComments of
+                        [] ->
+                            Print.empty
+
+                        comment0 :: comment1Up ->
+                            Print.withIndentIncreasedBy 1
+                                (comments (comment0 :: comment1Up))
+                                |> Print.followedBy Print.linebreakIndented
+                    )
+                |> Print.followedBy (Print.exactly "}")
 
         field0 :: field1Up ->
             let
@@ -5194,7 +5227,18 @@ expressionList :
 expressionList printElementNotParenthesized syntaxComments syntaxList =
     case syntaxList.elements of
         [] ->
-            Print.exactly "[]"
+            Print.exactly "["
+                |> Print.followedBy
+                    (case commentsInRange syntaxList.fullRange syntaxComments of
+                        [] ->
+                            Print.empty
+
+                        comment0 :: comment1Up ->
+                            Print.withIndentIncreasedBy 1
+                                (comments (comment0 :: comment1Up))
+                                |> Print.followedBy Print.linebreakIndented
+                    )
+                |> Print.followedBy (Print.exactly "]")
 
         element0 :: element1Up ->
             let
