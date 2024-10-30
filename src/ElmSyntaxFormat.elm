@@ -2069,8 +2069,7 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
                 { head = headPattern, tail = tailPattern }
 
         Elm.Syntax.Pattern.ListPattern elementPatterns ->
-            listLiteral patternNotParenthesized
-                syntaxComments
+            patternList syntaxComments
                 { fullRange = fullRange, elements = elementPatterns }
 
         Elm.Syntax.Pattern.NamedPattern syntaxQualifiedNameRef argumentPatterns ->
@@ -2085,6 +2084,95 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
         Elm.Syntax.Pattern.AsPattern aliasedPattern aliasNameNode ->
             patternAs syntaxComments
                 { aliasedPattern = aliasedPattern, aliasNameNode = aliasNameNode }
+
+
+patternList :
+    List (Elm.Syntax.Node.Node String)
+    ->
+        { elements : List (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern)
+        , fullRange : Elm.Syntax.Range.Range
+        }
+    -> Print
+patternList syntaxComments syntaxList =
+    case syntaxList.elements of
+        [] ->
+            Print.exactly "[]"
+
+        element0 :: element1Up ->
+            let
+                commentsBeforeElements : { end : Elm.Syntax.Range.Location, reverse : List (List String) }
+                commentsBeforeElements =
+                    (element0 :: element1Up)
+                        |> List.foldl
+                            (\(Elm.Syntax.Node.Node elementRange _) soFar ->
+                                { end = elementRange.end
+                                , reverse =
+                                    commentsInRange { start = soFar.end, end = elementRange.start } syntaxComments
+                                        :: soFar.reverse
+                                }
+                            )
+                            { end = syntaxList.fullRange.start
+                            , reverse = []
+                            }
+
+                commentsAfterElements : List String
+                commentsAfterElements =
+                    commentsInRange { start = commentsBeforeElements.end, end = syntaxList.fullRange.end } syntaxComments
+
+                lineSpread : Print.LineSpread
+                lineSpread =
+                    if
+                        (commentsBeforeElements.reverse |> List.all List.isEmpty)
+                            && (commentsAfterElements |> List.isEmpty)
+                    then
+                        lineSpreadInRange syntaxList.fullRange
+
+                    else
+                        Print.MultipleLines
+            in
+            Print.exactly "["
+                |> Print.followedBy Print.space
+                |> Print.followedBy
+                    (Print.sequence
+                        (List.map2
+                            (\element commentsBeforeElement ->
+                                Print.withIndentIncreasedBy 2
+                                    ((case commentsBeforeElement of
+                                        [] ->
+                                            Print.empty
+
+                                        comment0 :: comment1Up ->
+                                            comments (comment0 :: comment1Up)
+                                                |> Print.followedBy Print.linebreakIndented
+                                     )
+                                        |> Print.followedBy
+                                            (patternNotParenthesized syntaxComments
+                                                element
+                                            )
+                                    )
+                            )
+                            (element0 :: element1Up)
+                            (commentsBeforeElements.reverse |> List.reverse)
+                            |> List.intersperse
+                                (Print.emptyOrLinebreakIndented lineSpread
+                                    |> Print.followedBy (Print.exactly ",")
+                                    |> Print.followedBy Print.space
+                                )
+                        )
+                    )
+                |> Print.followedBy
+                    (case commentsAfterElements of
+                        [] ->
+                            Print.empty
+
+                        comment0 :: comment1Up ->
+                            Print.withIndentIncreasedBy 2
+                                (Print.spaceOrLinebreakIndented lineSpread
+                                    |> Print.followedBy (comments (comment0 :: comment1Up))
+                                )
+                    )
+                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
+                |> Print.followedBy (Print.exactly "]")
 
 
 patternCons :
@@ -4616,7 +4704,7 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                 { fullRange = fullRange, fields = fields }
 
         Elm.Syntax.Expression.ListExpr elements ->
-            listLiteral expressionNotParenthesized syntaxComments { fullRange = fullRange, elements = elements }
+            expressionList expressionNotParenthesized syntaxComments { fullRange = fullRange, elements = elements }
 
         Elm.Syntax.Expression.RecordAccess syntaxRecord (Elm.Syntax.Node.Node _ accessedFieldName) ->
             expressionParenthesizedIfSpaceSeparated syntaxComments syntaxRecord
@@ -5072,7 +5160,7 @@ expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
         expressionNotParenthesized syntaxComments expressionNode
 
 
-listLiteral :
+expressionList :
     (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node element -> Print)
     -> List (Elm.Syntax.Node.Node String)
     ->
@@ -5080,7 +5168,7 @@ listLiteral :
         , fullRange : Elm.Syntax.Range.Range
         }
     -> Print
-listLiteral printElementNotParenthesized syntaxComments syntaxList =
+expressionList printElementNotParenthesized syntaxComments syntaxList =
     case syntaxList.elements of
         [] ->
             Print.exactly "[]"

@@ -2783,6 +2783,133 @@ a
     0
 """
                 )
+            , Test.test "consecutive comments before first list element"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        [ -- 0
+         -- 1
+         0 ] -> 0
+        _ -> 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        [ -- 0
+          -- 1
+          0
+        ]
+        ->
+            0
+
+        _ ->
+            1
+"""
+                )
+            , Test.test "comments between list elements"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        [ 0, -- zero
+          0 ] -> 0
+        _ -> 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        [ 0
+        , -- zero
+          0
+        ]
+        ->
+            0
+
+        _ ->
+            1
+"""
+                )
+            , Test.test "consecutive comments between list elements"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        [ 0, -- 0
+         -- 1
+         0 ] -> 0
+        _ -> 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        [ 0
+        , -- 0
+          -- 1
+          0
+        ]
+        ->
+            0
+
+        _ ->
+            1
+"""
+                )
+            , Test.test "comments after list elements"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        [ 0, 0
+          -- zero
+         ] -> 0
+        _ -> 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        [ 0
+        , 0
+          -- zero
+        ]
+        ->
+            0
+
+        _ ->
+            1
+"""
+                )
+            , Test.test "consecutive comments after list elements"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        [ 0, 0
+          -- 0
+          -- 1
+          ] -> 0
+        _ -> 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        [ 0
+        , 0
+          -- 0
+          -- 1
+        ]
+        ->
+            0
+
+        _ ->
+            1
+"""
+                )
             , Test.test ":: with multiple patterns as tail, consecutive comments before rightest expression"
                 (\() ->
                     """module A exposing (..)
