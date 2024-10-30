@@ -1095,6 +1095,26 @@ a _ =
     0
 """
                 )
+            , Test.test "function, comment between signature and implementation name"
+                (\() ->
+                    """module A exposing (..)
+a : Int {- 0 -}
+a =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a : Int
+
+
+
+{- 0 -}
+
+
+a =
+    0
+"""
+                )
             ]
         , Test.describe "type"
             [ Test.test "all kinds, single-line"
@@ -1929,6 +1949,29 @@ a =
 a =
     let
         b : Int
+        b =
+            0
+    in
+    b
+"""
+                )
+            , Test.test "let-in with one value declaration with type, comment between signature and implementation name"
+                (\() ->
+                    """module A exposing (..)
+a =
+    let
+        b : Int {- 0 -}
+        b =
+            0
+    in
+    b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    let
+        b : Int
+        {- 0 -}
         b =
             0
     in

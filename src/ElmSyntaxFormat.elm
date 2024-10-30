@@ -4352,17 +4352,6 @@ declarationExpression :
     -> Elm.Syntax.Expression.Function
     -> Print
 declarationExpression syntaxComments syntaxExpressionDeclaration =
-    let
-        maybeSignaturePrint : Print
-        maybeSignaturePrint =
-            case syntaxExpressionDeclaration.signature of
-                Nothing ->
-                    Print.empty
-
-                Just (Elm.Syntax.Node.Node _ signature) ->
-                    declarationSignature syntaxComments signature
-                        |> Print.followedBy Print.linebreak
-    in
     (case syntaxExpressionDeclaration.documentation of
         Nothing ->
             Print.empty
@@ -4386,7 +4375,41 @@ declarationExpression syntaxComments syntaxExpressionDeclaration =
                         )
                     )
     )
-        |> Print.followedBy maybeSignaturePrint
+        |> Print.followedBy
+            (case syntaxExpressionDeclaration.signature of
+                Nothing ->
+                    Print.empty
+
+                Just (Elm.Syntax.Node.Node signatureRange signature) ->
+                    let
+                        commentsBetweenSignatureAndImplementationName : List String
+                        commentsBetweenSignatureAndImplementationName =
+                            commentsInRange
+                                { start = signatureRange.end
+                                , end =
+                                    syntaxExpressionDeclaration.declaration
+                                        |> Elm.Syntax.Node.range
+                                        |> .start
+                                }
+                                syntaxComments
+                    in
+                    declarationSignature syntaxComments signature
+                        |> Print.followedBy Print.linebreak
+                        |> Print.followedBy
+                            (case commentsBetweenSignatureAndImplementationName of
+                                [] ->
+                                    Print.empty
+
+                                comment0 :: comment1Up ->
+                                    Print.linebreak
+                                        |> Print.followedBy Print.linebreak
+                                        |> Print.followedBy Print.linebreak
+                                        |> Print.followedBy
+                                            (moduleLevelComments (comment0 :: comment1Up))
+                                        |> Print.followedBy Print.linebreak
+                                        |> Print.followedBy Print.linebreak
+                            )
+            )
         |> Print.followedBy
             (declarationExpressionImplementation
                 syntaxComments
@@ -5862,18 +5885,36 @@ expressionLetDeclaration :
 expressionLetDeclaration syntaxComments letDeclaration =
     case letDeclaration of
         Elm.Syntax.Expression.LetFunction letDeclarationExpression ->
-            let
-                maybeSignaturePrint : Print
-                maybeSignaturePrint =
-                    case letDeclarationExpression.signature of
-                        Nothing ->
-                            Print.empty
+            (case letDeclarationExpression.signature of
+                Nothing ->
+                    Print.empty
 
-                        Just (Elm.Syntax.Node.Node _ signature) ->
-                            declarationSignature syntaxComments signature
-                                |> Print.followedBy Print.linebreakIndented
-            in
-            maybeSignaturePrint
+                Just (Elm.Syntax.Node.Node signatureRange signature) ->
+                    let
+                        commentsBetweenSignatureAndImplementationName : List String
+                        commentsBetweenSignatureAndImplementationName =
+                            commentsInRange
+                                { start = signatureRange.end
+                                , end =
+                                    letDeclarationExpression.declaration
+                                        |> Elm.Syntax.Node.range
+                                        |> .start
+                                }
+                                syntaxComments
+                    in
+                    declarationSignature syntaxComments signature
+                        |> Print.followedBy
+                            (case commentsBetweenSignatureAndImplementationName of
+                                [] ->
+                                    Print.empty
+
+                                comment0 :: comment1Up ->
+                                    Print.linebreakIndented
+                                        |> Print.followedBy
+                                            (comments (comment0 :: comment1Up))
+                            )
+                        |> Print.followedBy Print.linebreakIndented
+            )
                 |> Print.followedBy
                     (declarationExpressionImplementation syntaxComments
                         (letDeclarationExpression.declaration |> Elm.Syntax.Node.value)
