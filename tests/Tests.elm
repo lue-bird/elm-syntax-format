@@ -2753,6 +2753,69 @@ a
     0
 """
                 )
+            , Test.test "parenthesized with consecutive collapsible comments only before single-line"
+                (\() ->
+                    """module A exposing (..)
+a ({-0-}{-1-}
+    _ as argument) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a ({- 0 -} {- 1 -} _ as argument) =
+    0
+"""
+                )
+            , Test.test "parenthesized with consecutive collapsible comments only after single-line"
+                (\() ->
+                    """module A exposing (..)
+a (_ as argument
+   {-0-}{-1-}) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a (_ as argument {- 0 -} {- 1 -}) =
+    0
+"""
+                )
+            , Test.test "parenthesized with consecutive collapsible comments before and after single-line"
+                (\() ->
+                    """module A exposing (..)
+a ({-0-}{-1-}
+   _ as argument
+   {-2-}{-3-}) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a ({- 0 -} {- 1 -} _ as argument {- 2 -} {- 3 -}) =
+    0
+"""
+                )
+            , Test.test "parenthesized with consecutive collapsible comments before and after multi-line"
+                (\() ->
+                    """module A exposing (..)
+a ({-0-}{-1-}
+   _ as -- line breaker
+   argument
+   {-2-}{-3-}) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    ({- 0 -} {- 1 -}
+     _
+     as
+        -- line breaker
+        argument
+     {- 2 -} {- 3 -}
+    )
+    =
+    0
+"""
+                )
             , Test.test "as with comments before name"
                 (\() ->
                     """module A exposing (..)

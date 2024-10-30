@@ -1250,6 +1250,50 @@ comments syntaxComments =
         )
 
 
+collapsibleComments : List String -> { print : Print, lineSpread : Print.LineSpread }
+collapsibleComments commentsToPrint =
+    case commentsToPrint of
+        [] ->
+            { print = Print.empty, lineSpread = Print.SingleLine }
+
+        comment0 :: comment1Up ->
+            let
+                commentPrints : List Print
+                commentPrints =
+                    (comment0 :: comment1Up) |> List.map comment
+            in
+            if
+                commentPrints
+                    |> List.all
+                        (\commentPrint ->
+                            commentPrint |> Print.toString |> commentCanBePartOfCollapsible
+                        )
+            then
+                { print =
+                    Print.sequence
+                        (commentPrints
+                            |> List.intersperse Print.space
+                        )
+                , lineSpread = Print.SingleLine
+                }
+
+            else
+                { print = comments (comment0 :: comment1Up)
+                , lineSpread = Print.MultipleLines
+                }
+
+
+commentCanBePartOfCollapsible : String -> Bool
+commentCanBePartOfCollapsible syntaxComment =
+    case syntaxComment of
+        "{--}" ->
+            False
+
+        commentNotDirectlyClosed ->
+            (commentNotDirectlyClosed |> String.startsWith "{-")
+                && Basics.not (commentNotDirectlyClosed |> String.contains "\n")
+
+
 {-| `--` or `{- -}` comments placed outside of declarations at the top level.
 For comments within a declaration: [`comments`](#comments)
 -}
@@ -3444,41 +3488,49 @@ parenthesized printNotParenthesized syntax syntaxComments =
         notParenthesizedPrint : Print
         notParenthesizedPrint =
             printNotParenthesized syntaxComments syntax.notParenthesized
+
+        commentsBeforeInnerCollapsible : { print : Print, lineSpread : Print.LineSpread }
+        commentsBeforeInnerCollapsible =
+            collapsibleComments commentsBeforeInner
+
+        commentsAfterInnerCollapsible : { print : Print, lineSpread : Print.LineSpread }
+        commentsAfterInnerCollapsible =
+            collapsibleComments commentsAfterInner
+
+        lineSpread : Print.LineSpread
+        lineSpread =
+            Print.lineSpreadsCombine
+                [ notParenthesizedPrint |> Print.lineSpread
+                , commentsBeforeInnerCollapsible.lineSpread
+                , commentsAfterInnerCollapsible.lineSpread
+                ]
     in
     Print.exactly "("
         |> Print.followedBy
-            (case commentsBeforeInner of
-                [] ->
-                    case commentsAfterInner of
-                        [] ->
-                            Print.withIndentIncreasedBy 1 notParenthesizedPrint
-                                |> Print.followedBy
-                                    (Print.emptyOrLinebreakIndented (notParenthesizedPrint |> Print.lineSpread))
+            (Print.withIndentIncreasedBy 1
+                ((case commentsBeforeInner of
+                    [] ->
+                        Print.empty
 
-                        comment0AfterInner :: comment1UpAfterInner ->
-                            Print.withIndentIncreasedBy 1
-                                (notParenthesizedPrint
-                                    |> Print.followedBy Print.linebreakIndented
-                                    |> Print.followedBy (comments (comment0AfterInner :: comment1UpAfterInner))
-                                )
-                                |> Print.followedBy Print.linebreakIndented
-
-                comment0BeforeInner :: comment1UpBeforeInner ->
-                    Print.withIndentIncreasedBy 1
-                        (comments (comment0BeforeInner :: comment1UpBeforeInner)
-                            |> Print.followedBy Print.linebreakIndented
-                            |> Print.followedBy notParenthesizedPrint
+                    _ :: _ ->
+                        commentsBeforeInnerCollapsible.print
                             |> Print.followedBy
-                                (case commentsAfterInner of
-                                    [] ->
-                                        Print.empty
+                                (Print.spaceOrLinebreakIndented lineSpread)
+                 )
+                    |> Print.followedBy notParenthesizedPrint
+                    |> Print.followedBy
+                        (case commentsAfterInner of
+                            [] ->
+                                Print.empty
 
-                                    comment0AfterInner :: comment1UpAfterInner ->
-                                        Print.linebreakIndented
-                                            |> Print.followedBy (comments (comment0AfterInner :: comment1UpAfterInner))
-                                )
+                            _ :: _ ->
+                                Print.spaceOrLinebreakIndented lineSpread
+                                    |> Print.followedBy
+                                        commentsAfterInnerCollapsible.print
                         )
-                        |> Print.followedBy Print.linebreakIndented
+                )
+                |> Print.followedBy
+                    (Print.emptyOrLinebreakIndented lineSpread)
             )
         |> Print.followedBy (Print.exactly ")")
 
