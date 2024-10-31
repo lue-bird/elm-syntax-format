@@ -6,6 +6,7 @@ package-lock.json
 compare-with-elm-format/examples
 compare-with-elm-format/pre
 compare-with-elm-format/post
+elm.js
 
 # Editors
 .idea/
