@@ -2471,9 +2471,17 @@ patternRecord syntaxComments syntaxRecord =
                             Print.empty
 
                         comment0 :: comment1Up ->
+                            let
+                                commentsCollapsed : { print : Print, lineSpread : Print.LineSpread }
+                                commentsCollapsed =
+                                    collapsibleComments (comment0 :: comment1Up)
+                            in
                             Print.withIndentIncreasedBy 1
-                                (comments (comment0 :: comment1Up))
-                                |> Print.followedBy Print.linebreakIndented
+                                commentsCollapsed.print
+                                |> Print.followedBy
+                                    (Print.emptyOrLinebreakIndented
+                                        commentsCollapsed.lineSpread
+                                    )
                     )
                 |> Print.followedBy (Print.exactly "}")
 
@@ -3122,9 +3130,17 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                             Print.empty
 
                         comment0 :: comment1Up ->
+                            let
+                                commentsCollapsed : { print : Print, lineSpread : Print.LineSpread }
+                                commentsCollapsed =
+                                    collapsibleComments (comment0 :: comment1Up)
+                            in
                             Print.withIndentIncreasedBy 1
-                                (comments (comment0 :: comment1Up))
-                                |> Print.followedBy Print.linebreakIndented
+                                commentsCollapsed.print
+                                |> Print.followedBy
+                                    (Print.emptyOrLinebreakIndented
+                                        commentsCollapsed.lineSpread
+                                    )
                     )
                 |> Print.followedBy (Print.exactly "}")
 

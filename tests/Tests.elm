@@ -2750,6 +2750,19 @@ a =
     }
 """
                 )
+            , Test.test "empty record with consecutive comments collapsible"
+                (\() ->
+                    """module A exposing (..)
+a = { {- 0 -}
+      {- 1 -}
+    }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    {{- 0 -} {- 1 -}}
+"""
+                )
             , Test.test "comments before first record field"
                 (\() ->
                     """module A exposing (..)
