@@ -30,7 +30,7 @@ plus2 n =
 If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https://dark.elm.dmy.fr/packages/mdgriffith/elm-codegen/latest/) or [`the-sett/elm-syntax-dsl`](https://dark.elm.dmy.fr/packages/the-sett/elm-syntax-dsl/latest/).
 
 ## TODO
-  - put consecutive {- -} comments (not {--} or --) in one line without linebreak after if following syntax is single-line pattern or type or expression after operator
+  - put consecutive {- -} comments (not {--} or --) in one line without linebreak after if following syntax is single-line pattern or type
 
 ## known deviations in printing
   - ranges of `of`, `exposing` and `as` are needed to determine whether they should be on the next line or at the end of last line

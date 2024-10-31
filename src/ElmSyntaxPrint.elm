@@ -5186,7 +5186,7 @@ expressionOperation syntaxComments syntaxOperation =
                 syntaxOperation.right
 
         beforeRightestComments :
-            { commentsReverse : List (List String)
+            { commentsReverse : List (Maybe { print : Print, lineSpread : Print.LineSpread })
             , end : Elm.Syntax.Range.Location
             }
         beforeRightestComments =
@@ -5198,12 +5198,22 @@ expressionOperation syntaxComments syntaxOperation =
                             expressionRange =
                                 operatorAndExpressionBeforeRightest.expression
                                     |> Elm.Syntax.Node.range
+
+                            commentsBefore : List String
+                            commentsBefore =
+                                commentsInRange
+                                    { start = soFar.end, end = expressionRange.start }
+                                    syntaxComments
                         in
                         { end = expressionRange.end
                         , commentsReverse =
-                            commentsInRange
-                                { start = soFar.end, end = expressionRange.start }
-                                syntaxComments
+                            (case commentsBefore of
+                                [] ->
+                                    Nothing
+
+                                comment0 :: comment1Up ->
+                                    Just (collapsibleComments (comment0 :: comment1Up))
+                            )
                                 :: soFar.commentsReverse
                         }
                     )
@@ -5222,6 +5232,10 @@ expressionOperation syntaxComments syntaxOperation =
                 }
                 syntaxComments
 
+        commentsCollapsibleBeforeRightestExpression : { print : Print, lineSpread : Print.LineSpread }
+        commentsCollapsibleBeforeRightestExpression =
+            collapsibleComments commentsBeforeRightestExpression
+
         leftestPrint : Print
         leftestPrint =
             expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
@@ -5229,14 +5243,14 @@ expressionOperation syntaxComments syntaxOperation =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            if
-                (beforeRightestComments.commentsReverse |> List.all List.isEmpty)
-                    && (commentsBeforeRightestExpression |> List.isEmpty)
-            then
-                lineSpreadInRange syntaxOperation.fullRange
-
-            else
-                Print.MultipleLines
+            Print.lineSpreadsCombine
+                [ lineSpreadInRange syntaxOperation.fullRange
+                , beforeRightestComments.commentsReverse
+                    |> List.filterMap identity
+                    |> List.map .lineSpread
+                    |> Print.lineSpreadsCombine
+                , commentsCollapsibleBeforeRightestExpression.lineSpread
+                ]
 
         beforeRightestOperatorExpressionChainWithPreviousLineSpread :
             { previousLineSpread : Print.LineSpread
@@ -5245,7 +5259,7 @@ expressionOperation syntaxComments syntaxOperation =
                     { operator : String
                     , expression : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
                     , expressionPrint : Print
-                    , commentsBeforeExpression : List String
+                    , commentsBeforeExpression : Maybe { print : Print, lineSpread : Print.LineSpread }
                     , previousLineSpread : Print.LineSpread
                     }
             }
@@ -5286,6 +5300,12 @@ expressionOperation syntaxComments syntaxOperation =
         rightestOperatorExpressionPrint =
             case operationExpanded.rightestOperator of
                 "<|" ->
+                    let
+                        expressionPrint : Print
+                        expressionPrint =
+                            expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
+                                operationExpanded.rightestExpression
+                    in
                     Print.spaceOrLinebreakIndented beforeRightestOperatorExpressionChainWithPreviousLineSpread.previousLineSpread
                         |> Print.followedBy (Print.exactly "<|")
                         |> Print.followedBy
@@ -5296,18 +5316,31 @@ expressionOperation syntaxComments syntaxOperation =
                                             [] ->
                                                 Print.empty
 
-                                            comment0 :: comment1Up ->
-                                                comments (comment0 :: comment1Up)
-                                                    |> Print.followedBy Print.linebreakIndented
+                                            _ :: _ ->
+                                                commentsCollapsibleBeforeRightestExpression.print
+                                                    |> Print.followedBy
+                                                        (Print.spaceOrLinebreakIndented
+                                                            (Print.lineSpreadMerge
+                                                                commentsCollapsibleBeforeRightestExpression.lineSpread
+                                                                (expressionPrint |> Print.lineSpread)
+                                                            )
+                                                        )
                                         )
-                                    |> Print.followedBy
-                                        (expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
-                                            operationExpanded.rightestExpression
-                                        )
+                                    |> Print.followedBy expressionPrint
                                 )
                             )
 
                 nonApLOperator ->
+                    let
+                        expressionPrint : Print
+                        expressionPrint =
+                            if operationExpanded.rightestExpression |> expressionIsSpaceSeparatedExceptApplication then
+                                Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
+                                    (expressionParenthesized syntaxComments operationExpanded.rightestExpression)
+
+                            else
+                                expressionNotParenthesized syntaxComments operationExpanded.rightestExpression
+                    in
                     Print.withIndentAtNextMultipleOf4
                         (Print.spaceOrLinebreakIndented lineSpread
                             |> Print.followedBy (Print.exactly nonApLOperator)
@@ -5317,20 +5350,19 @@ expressionOperation syntaxComments syntaxOperation =
                                     [] ->
                                         Print.empty
 
-                                    comment0 :: comment1Up ->
+                                    _ :: _ ->
                                         Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
-                                            (comments (comment0 :: comment1Up)
-                                                |> Print.followedBy Print.linebreakIndented
+                                            (commentsCollapsibleBeforeRightestExpression.print
+                                                |> Print.followedBy
+                                                    (Print.spaceOrLinebreakIndented
+                                                        (Print.lineSpreadMerge
+                                                            commentsCollapsibleBeforeRightestExpression.lineSpread
+                                                            (expressionPrint |> Print.lineSpread)
+                                                        )
+                                                    )
                                             )
                                 )
-                            |> Print.followedBy
-                                (if operationExpanded.rightestExpression |> expressionIsSpaceSeparatedExceptApplication then
-                                    Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
-                                        (expressionParenthesized syntaxComments operationExpanded.rightestExpression)
-
-                                 else
-                                    expressionNotParenthesized syntaxComments operationExpanded.rightestExpression
-                                )
+                            |> Print.followedBy expressionPrint
                         )
     in
     leftestPrint
@@ -5347,12 +5379,18 @@ expressionOperation syntaxComments syntaxOperation =
                                             (Print.spaceOrLinebreakIndented lineSpread
                                                 |> Print.followedBy
                                                     (case operatorExpression.commentsBeforeExpression of
-                                                        [] ->
+                                                        Nothing ->
                                                             Print.empty
 
-                                                        comment0 :: comment1Up ->
-                                                            comments (comment0 :: comment1Up)
-                                                                |> Print.followedBy Print.linebreakIndented
+                                                        Just commentsBeforeExpression ->
+                                                            commentsBeforeExpression.print
+                                                                |> Print.followedBy
+                                                                    (Print.spaceOrLinebreakIndented
+                                                                        (Print.lineSpreadMerge
+                                                                            commentsBeforeExpression.lineSpread
+                                                                            (operatorExpression.expressionPrint |> Print.lineSpread)
+                                                                        )
+                                                                    )
                                                     )
                                                 |> Print.followedBy operatorExpression.expressionPrint
                                                 |> Print.followedBy chainRightPrint
@@ -5366,13 +5404,19 @@ expressionOperation syntaxComments syntaxOperation =
                                         |> Print.followedBy Print.space
                                         |> Print.followedBy
                                             (case operatorExpression.commentsBeforeExpression of
-                                                [] ->
+                                                Nothing ->
                                                     Print.empty
 
-                                                comment0 :: comment1Up ->
+                                                Just commentsBeforeExpression ->
                                                     Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
-                                                        (comments (comment0 :: comment1Up)
-                                                            |> Print.followedBy Print.linebreakIndented
+                                                        (commentsBeforeExpression.print
+                                                            |> Print.followedBy
+                                                                (Print.spaceOrLinebreakIndented
+                                                                    (Print.lineSpreadMerge
+                                                                        commentsBeforeExpression.lineSpread
+                                                                        (operatorExpression.expressionPrint |> Print.lineSpread)
+                                                                    )
+                                                                )
                                                         )
                                             )
                                         |> Print.followedBy

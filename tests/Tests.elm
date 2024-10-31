@@ -2355,7 +2355,7 @@ a =
                 (\() ->
                     """module A exposing (..)
 a =
-    identity |> identity identity |> {- 0 -} {- 1 -} identity"""
+    identity |> identity identity |> {- 0 -} {--} identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
@@ -2363,11 +2363,56 @@ a =
     identity
         |> identity identity
         |> {- 0 -}
-           {- 1 -}
+           {--}
            identity
 """
                 )
+            , Test.test "|> pipeline, written as single-line with consecutive comments collapsible before single-line rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity |> identity identity |> {- 0 -} {- 1 -} identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity |> identity identity |> {- 0 -} {- 1 -} identity
+"""
+                )
+            , Test.test "|> pipeline, with consecutive comments collapsible before multi-line rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity |> identity identity |> {- 0 -} {- 1 -} identity
+    identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        |> identity identity
+        |> {- 0 -} {- 1 -}
+           identity
+            identity
+"""
+                )
             , Test.test "|> pipeline, written as single-line with consecutive comments before not rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity |> {- 0 -} {--} identity identity |> identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        |> {- 0 -}
+           {--}
+           identity identity
+        |> identity
+"""
+                )
+            , Test.test "|> pipeline, written as single-line with consecutive collapsible comments before not rightest expression"
                 (\() ->
                     """module A exposing (..)
 a =
@@ -2376,11 +2421,7 @@ a =
                             """module A exposing (..)
 
 a =
-    identity
-        |> {- 0 -}
-           {- 1 -}
-           identity identity
-        |> identity
+    identity |> {- 0 -} {- 1 -} identity identity |> identity
 """
                 )
             , Test.test "<| pipeline, multi-line"
@@ -2416,6 +2457,22 @@ a =
             identity
 """
                 )
+            , Test.test "<| pipeline, multi-line, consecutive comments collapsible before rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity identity <| {- 0 -}
+    {- 1 -}
+    identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <|
+        identity identity <|
+            {- 0 -} {- 1 -} identity
+"""
+                )
             , Test.test "<| pipeline, multi-line, consecutive comments before non-rightest expression"
                 (\() ->
                     """module A exposing (..)
@@ -2431,6 +2488,22 @@ a =
         -- 0
         -- 1
         identity identity <|
+            identity
+"""
+                )
+            , Test.test "<| pipeline, multi-line, consecutive comments collapsible before non-rightest expression"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| {- 0 -}
+    {- 1 -}
+    identity identity <| identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity <|
+        {- 0 -} {- 1 -} identity identity <|
             identity
 """
                 )
