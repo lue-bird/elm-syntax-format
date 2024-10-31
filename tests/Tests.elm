@@ -2699,6 +2699,39 @@ a =
     ]
 """
                 )
+            , Test.test "consecutive comments collapsible before single-line list element"
+                (\() ->
+                    """module A exposing (..)
+a = [ 0, {- 0 -}
+    {- 1 -}
+    0 ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [ 0
+    , {- 0 -} {- 1 -} 0
+    ]
+"""
+                )
+            , Test.test "consecutive comments collapsible before multi-line list element"
+                (\() ->
+                    """module A exposing (..)
+a = [ 0, {- 0 -}
+    {- 1 -}
+    (0{--}) ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [ 0
+    , {- 0 -} {- 1 -}
+      (0
+       {--}
+      )
+    ]
+"""
+                )
             , Test.test "comments after list elements"
                 (\() ->
                     """module A exposing (..)
