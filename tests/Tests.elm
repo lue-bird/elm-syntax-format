@@ -1464,6 +1464,20 @@ type alias A r =
     }
 """
                 )
+            , Test.test "comments collapsible before record extension record variable"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { {- zero -}
+    r | zero : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { {- zero -} r
+        | zero : Int
+    }
+"""
+                )
             , Test.test "comments before first record extension field"
                 (\() ->
                     """module A exposing (..)
@@ -1496,6 +1510,20 @@ type alias A r =
     }
 """
                 )
+            , Test.test "comments collapsible before first record extension field"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { r | {- zero -}
+    zero : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { r
+        | {- zero -} zero : Int
+    }
+"""
+                )
             , Test.test "comments between record extension field name and value"
                 (\() ->
                     """module A exposing (..)
@@ -1512,6 +1540,21 @@ type alias A r =
     }
 """
                 )
+            , Test.test "comments between record extension field name and value not on the same line"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { r | zero : {- zero -}
+    Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { r
+        | zero :
+            {- zero -} Int
+    }
+"""
+                )
             , Test.test "comments between record extension fields"
                 (\() ->
                     """module A exposing (..)
@@ -1525,6 +1568,39 @@ type alias A r =
         | zero : Int
         , -- zero
           one : Int
+    }
+"""
+                )
+            , Test.test "consecutive comments between record extension fields"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { r | zero : Int, -- zero
+ -- one
+    one : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { r
+        | zero : Int
+        , -- zero
+          -- one
+          one : Int
+    }
+"""
+                )
+            , Test.test "comments collapsed between record extension fields"
+                (\() ->
+                    """module A exposing (..)
+type alias A r = { r | zero : Int, {- one -}
+    one : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A r =
+    { r
+        | zero : Int
+        , {- one -} one : Int
     }
 """
                 )
