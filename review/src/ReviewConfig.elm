@@ -174,7 +174,7 @@ config =
     , NoUnoptimizedRecursion.optOutWithComment "IGNORE TCO"
         |> NoUnoptimizedRecursion.rule
         |> Review.Rule.ignoreErrorsForDirectories [ "tests/" ]
-        |> Review.Rule.ignoreErrorsForFiles [ "src/ElmSyntaxFormat.elm" ]
+        |> Review.Rule.ignoreErrorsForFiles [ "src/ElmSyntaxPrint.elm" ]
     , NoSimpleLetBody.rule
     , NoUnnecessaryTrailingUnderscore.rule
     , NoUnsafeDivision.rule

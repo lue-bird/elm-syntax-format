@@ -2,7 +2,7 @@ Pretty print an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-synta
 (breaking lines and inserting comments in the right places).
 
 ```elm
-import ElmSyntaxFormat
+import ElmSyntaxPrint
 import Elm.Parser -- from stil4m/elm-syntax
 
 """
@@ -14,8 +14,8 @@ plus2 (n)= {- this adds 2-} n
     |> Result.map
         (\syntaxModule ->
             syntaxModule
-                |> ElmSyntaxFormat.module_
-                |> ElmSyntaxFormat.printToString
+                |> ElmSyntaxPrint.module_
+                |> ElmSyntaxPrint.printToString
         )
 -->
 Ok """module Sample exposing (..)

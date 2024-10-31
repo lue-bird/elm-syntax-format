@@ -1,4 +1,4 @@
-module ElmSyntaxFormat exposing
+module ElmSyntaxPrint exposing
     ( printToString, Print
     , module_
     , moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment

@@ -1,7 +1,7 @@
 module Tests exposing (suite)
 
 import Elm.Parser
-import ElmSyntaxFormat
+import ElmSyntaxPrint
 import Expect
 import Print
 import Test exposing (Test)
@@ -3508,8 +3508,8 @@ plus2 (n)= {- this adds 2-} n
                         |> Result.map
                             (\syntaxModule ->
                                 syntaxModule
-                                    |> ElmSyntaxFormat.module_
-                                    |> ElmSyntaxFormat.printToString
+                                    |> ElmSyntaxPrint.module_
+                                    |> ElmSyntaxPrint.printToString
                             )
                         |> Expect.equal
                             (Ok
@@ -7881,7 +7881,7 @@ expectPrintedAs expected source =
                 printed : String
                 printed =
                     parsed
-                        |> ElmSyntaxFormat.module_
+                        |> ElmSyntaxPrint.module_
                         |> Print.toString
             in
             if printed == expected then
