@@ -3269,24 +3269,43 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                     { end : Elm.Syntax.Range.Location
                     , reverse :
                         List
-                            { beforeName : List String
-                            , betweenNameAndValue : List String
+                            { beforeName : Maybe { print : Print, lineSpread : Print.LineSpread }
+                            , betweenNameAndValue : Maybe { print : Print, lineSpread : Print.LineSpread }
                             }
                     }
                 commentsBeforeFields =
                     (field0 :: field1Up)
                         |> List.foldl
                             (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange _, Elm.Syntax.Node.Node fieldValueRange _ )) soFar ->
-                                { end = fieldValueRange.end
-                                , reverse =
-                                    { beforeName =
+                                let
+                                    commentsBeforeName : List String
+                                    commentsBeforeName =
                                         commentsInRange
                                             { start = soFar.end, end = fieldNameRange.start }
                                             syntaxComments
-                                    , betweenNameAndValue =
+
+                                    commentsBetweenNameAndValue : List String
+                                    commentsBetweenNameAndValue =
                                         commentsInRange
                                             { start = fieldNameRange.start, end = fieldValueRange.start }
                                             syntaxComments
+                                in
+                                { end = fieldValueRange.end
+                                , reverse =
+                                    { beforeName =
+                                        case commentsBeforeName of
+                                            [] ->
+                                                Nothing
+
+                                            comment0 :: comment1Up ->
+                                                Just (collapsibleComments (comment0 :: comment1Up))
+                                    , betweenNameAndValue =
+                                        case commentsBetweenNameAndValue of
+                                            [] ->
+                                                Nothing
+
+                                            comment0 :: comment1Up ->
+                                                Just (collapsibleComments (comment0 :: comment1Up))
                                     }
                                         :: soFar.reverse
                                 }
@@ -3294,6 +3313,14 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                             { end = syntaxRecord.fullRange.start
                             , reverse = []
                             }
+
+                fieldValuePrints : List Print
+                fieldValuePrints =
+                    (field0 :: field1Up)
+                        |> List.map
+                            (\(Elm.Syntax.Node.Node _ ( _, fieldValue )) ->
+                                fieldSpecific.printValueNotParenthesized syntaxComments fieldValue
+                            )
 
                 commentsAfterFields : List String
                 commentsAfterFields =
@@ -3305,35 +3332,64 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
 
                 lineSpread : Print.LineSpread
                 lineSpread =
-                    if
-                        (commentsBeforeFields.reverse
-                            |> List.all
+                    Print.lineSpreadsCombine
+                        [ lineSpreadInRange syntaxRecord.fullRange
+                        , commentsBeforeFields.reverse
+                            |> List.map
                                 (\fieldComments ->
-                                    (fieldComments.beforeName |> List.isEmpty)
-                                        && (fieldComments.betweenNameAndValue |> List.isEmpty)
-                                )
-                        )
-                            && (commentsAfterFields |> List.isEmpty)
-                    then
-                        lineSpreadInRange syntaxRecord.fullRange
+                                    Print.lineSpreadMerge
+                                        (case fieldComments.beforeName of
+                                            Nothing ->
+                                                Print.SingleLine
 
-                    else
-                        Print.MultipleLines
+                                            Just commentsBeforeName ->
+                                                commentsBeforeName.lineSpread
+                                        )
+                                        (case fieldComments.betweenNameAndValue of
+                                            Nothing ->
+                                                Print.SingleLine
+
+                                            Just commentsBetweenNameAndValue ->
+                                                commentsBetweenNameAndValue.lineSpread
+                                        )
+                                )
+                            |> Print.lineSpreadsCombine
+                        , case commentsAfterFields of
+                            [] ->
+                                Print.SingleLine
+
+                            _ :: _ ->
+                                Print.MultipleLines
+                        ]
             in
             Print.exactly "{"
                 |> Print.followedBy Print.space
                 |> Print.followedBy
                     (Print.sequence
-                        (List.map2
-                            (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) fieldComments ->
+                        (List.map3
+                            (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) valuePrint fieldComments ->
+                                let
+                                    lineSpreadBetweenNameAndValueNotConsideringComments : Print.LineSpread
+                                    lineSpreadBetweenNameAndValueNotConsideringComments =
+                                        Print.lineSpreadMerge
+                                            (lineSpreadInRange
+                                                { start = fieldNameRange.start
+                                                , end = fieldValue |> Elm.Syntax.Node.range |> .end
+                                                }
+                                            )
+                                            (valuePrint |> Print.lineSpread)
+                                in
                                 Print.withIndentIncreasedBy 2
                                     (case fieldComments.beforeName of
-                                        [] ->
+                                        Nothing ->
                                             Print.empty
 
-                                        comment0 :: comment1Up ->
-                                            comments (comment0 :: comment1Up)
-                                                |> Print.followedBy Print.linebreakIndented
+                                        Just commentsBeforeName ->
+                                            commentsBeforeName.print
+                                                |> Print.followedBy
+                                                    (Print.spaceOrLinebreakIndented
+                                                        commentsBeforeName.lineSpread
+                                                    )
                                     )
                                     |> Print.followedBy
                                         (Print.exactly fieldName)
@@ -3344,27 +3400,33 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                                 |> Print.followedBy
                                                     (Print.withIndentAtNextMultipleOf4
                                                         ((case fieldComments.betweenNameAndValue of
-                                                            [] ->
+                                                            Nothing ->
                                                                 Print.spaceOrLinebreakIndented
-                                                                    (lineSpreadInRange
-                                                                        { start = fieldNameRange.start
-                                                                        , end = fieldValue |> Elm.Syntax.Node.range |> .end
-                                                                        }
-                                                                    )
+                                                                    lineSpreadBetweenNameAndValueNotConsideringComments
 
-                                                            comment0 :: comment1Up ->
-                                                                Print.linebreakIndented
-                                                                    |> Print.followedBy (comments (comment0 :: comment1Up))
-                                                                    |> Print.followedBy Print.linebreakIndented
+                                                            Just commentsBetweenNameAndValue ->
+                                                                Print.spaceOrLinebreakIndented
+                                                                    (Print.lineSpreadMerge
+                                                                        commentsBetweenNameAndValue.lineSpread
+                                                                        lineSpreadBetweenNameAndValueNotConsideringComments
+                                                                    )
+                                                                    |> Print.followedBy commentsBetweenNameAndValue.print
+                                                                    |> Print.followedBy
+                                                                        (Print.spaceOrLinebreakIndented
+                                                                            (Print.lineSpreadMerge
+                                                                                commentsBetweenNameAndValue.lineSpread
+                                                                                (valuePrint |> Print.lineSpread)
+                                                                            )
+                                                                        )
                                                          )
-                                                            |> Print.followedBy
-                                                                (fieldSpecific.printValueNotParenthesized syntaxComments fieldValue)
+                                                            |> Print.followedBy valuePrint
                                                         )
                                                     )
                                             )
                                         )
                             )
                             (field0 :: field1Up)
+                            fieldValuePrints
                             (commentsBeforeFields.reverse |> List.reverse)
                             |> List.intersperse
                                 (Print.emptyOrLinebreakIndented lineSpread

@@ -2883,6 +2883,30 @@ a =
     }
 """
                 )
+            , Test.test "single-line record, comments collapsible before first field"
+                (\() ->
+                    """module A exposing (..)
+a = {{- zero -} zero = 0}"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { {- zero -} zero = 0 }
+"""
+                )
+            , Test.test "multi-line record, comments collapsible before first field"
+                (\() ->
+                    """module A exposing (..)
+a = { {- zero -}
+    zero = 0 }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { {- zero -} zero = 0
+    }
+"""
+                )
             , Test.test "comments between record field name and value"
                 (\() ->
                     """module A exposing (..)
@@ -2898,6 +2922,49 @@ a =
     }
 """
                 )
+            , Test.test "multi-line record, comments between field name and value not on same line"
+                (\() ->
+                    """module A exposing (..)
+a = { zero = {- zero -}
+    0 }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { zero =
+        {- zero -} 0
+    }
+"""
+                )
+            , Test.test "multi-line record, comments between field name and multi-line value"
+                (\() ->
+                    """module A exposing (..)
+a = { zero = {- zero -} identity
+    0 }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { zero =
+        {- zero -}
+        identity
+            0
+    }
+"""
+                )
+            , Test.test "multi-line record, comments between field name and value on same line"
+                (\() ->
+                    """module A exposing (..)
+a = { zero = {- zero -} 0
+    }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { zero = {- zero -} 0
+    }
+"""
+                )
             , Test.test "comments between record fields"
                 (\() ->
                     """module A exposing (..)
@@ -2910,6 +2977,20 @@ a =
     { zero = 0
     , -- zero
       one = 1
+    }
+"""
+                )
+            , Test.test "multi-line record, comments collapsible between fields"
+                (\() ->
+                    """module A exposing (..)
+a = { zero = 0, {- zero -}
+    one = 1 }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    { zero = 0
+    , {- zero -} one = 1
     }
 """
                 )
