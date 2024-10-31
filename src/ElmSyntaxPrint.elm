@@ -4189,7 +4189,10 @@ declarationChoiceType :
     -> Print
 declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
     let
-        parameterPrints : List Print
+        parameterPrints :
+            { end : Elm.Syntax.Range.Location
+            , reverse : List Print
+            }
         parameterPrints =
             syntaxChoiceTypeDeclaration.generics
                 |> List.foldl
@@ -4199,7 +4202,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                             parameterPrintedRange =
                                 parameterPattern |> Elm.Syntax.Node.range
                         in
-                        { prints =
+                        { reverse =
                             ((case
                                 commentsInRange
                                     { start = soFar.end, end = parameterPrintedRange.start }
@@ -4223,35 +4226,20 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                 |> Print.followedBy
                                     (Print.exactly (parameterPattern |> Elm.Syntax.Node.value))
                             )
-                                :: soFar.prints
+                                :: soFar.reverse
                         , end = parameterPrintedRange.end
                         }
                     )
-                    { prints = []
+                    { reverse = []
                     , end =
                         syntaxChoiceTypeDeclaration.name
                             |> Elm.Syntax.Node.range
                             |> .end
                     }
-                |> .prints
-                |> List.reverse
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
-            Print.lineSpreadsCombine (parameterPrints |> List.map Print.lineSpread)
-
-        endBeforeVariants : Elm.Syntax.Range.Location
-        endBeforeVariants =
-            case syntaxChoiceTypeDeclaration.generics of
-                [] ->
-                    syntaxChoiceTypeDeclaration.name
-                        |> Elm.Syntax.Node.range
-                        |> .end
-
-                parameter0 :: parameter1Up ->
-                    listFilledLast ( parameter0, parameter1Up )
-                        |> Elm.Syntax.Node.range
-                        |> .end
+            Print.lineSpreadsCombine (parameterPrints.reverse |> List.map Print.lineSpread)
 
         variantPrints : List Print
         variantPrints =
@@ -4283,7 +4271,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                         }
                     )
                     { prints = []
-                    , end = endBeforeVariants
+                    , end = parameterPrints.end
                     }
                 |> .prints
                 |> List.reverse
@@ -4317,7 +4305,8 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                     |> Print.followedBy
                         (Print.withIndentAtNextMultipleOf4
                             (Print.sequence
-                                (parameterPrints
+                                (parameterPrints.reverse
+                                    |> List.reverse
                                     |> List.map
                                         (\parameterPrint ->
                                             Print.spaceOrLinebreakIndented parametersLineSpread
