@@ -2896,6 +2896,10 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                 }
                 syntaxComments
 
+        beforePart0CommentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+        beforePart0CommentsCollapsible =
+            collapsibleComments beforePart0Comments
+
         beforePart1Comments : List String
         beforePart1Comments =
             commentsInRange
@@ -2903,6 +2907,10 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                 , end = syntaxTuple.part1 |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
+
+        beforePart1CommentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+        beforePart1CommentsCollapsible =
+            collapsibleComments beforePart1Comments
 
         afterPart1Comments : List String
         afterPart1Comments =
@@ -2914,18 +2922,25 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            case ( beforePart0Comments, ( beforePart1Comments, afterPart1Comments ) ) of
-                ( _ :: _, _ ) ->
-                    Print.MultipleLines
+            Print.lineSpreadsCombine
+                [ lineSpreadInRange syntaxTuple.fullRange
+                , beforePart0CommentsCollapsible.lineSpread
+                , beforePart1CommentsCollapsible.lineSpread
+                , case afterPart1Comments of
+                    _ :: _ ->
+                        Print.MultipleLines
 
-                ( _, ( _ :: _, _ ) ) ->
-                    Print.MultipleLines
+                    [] ->
+                        Print.SingleLine
+                ]
 
-                ( _, ( _, _ :: _ ) ) ->
-                    Print.MultipleLines
+        part0Print : Print
+        part0Print =
+            printPartNotParenthesized syntaxComments syntaxTuple.part0
 
-                ( [], ( [], [] ) ) ->
-                    lineSpreadInRange syntaxTuple.fullRange
+        part1Print : Print
+        part1Print =
+            printPartNotParenthesized syntaxComments syntaxTuple.part1
     in
     Print.exactly "("
         |> Print.followedBy Print.space
@@ -2935,11 +2950,17 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                     [] ->
                         Print.empty
 
-                    comment0 :: comment1Up ->
-                        comments (comment0 :: comment1Up)
-                            |> Print.followedBy Print.linebreakIndented
+                    _ :: _ ->
+                        beforePart0CommentsCollapsible.print
+                            |> Print.followedBy
+                                (Print.spaceOrLinebreakIndented
+                                    (Print.lineSpreadMerge
+                                        beforePart0CommentsCollapsible.lineSpread
+                                        (part0Print |> Print.lineSpread)
+                                    )
+                                )
                  )
-                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTuple.part0)
+                    |> Print.followedBy part0Print
                 )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
@@ -2951,11 +2972,17 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                     [] ->
                         Print.empty
 
-                    comment0 :: comment1Up ->
-                        comments (comment0 :: comment1Up)
-                            |> Print.followedBy Print.linebreakIndented
+                    _ :: _ ->
+                        beforePart1CommentsCollapsible.print
+                            |> Print.followedBy
+                                (Print.spaceOrLinebreakIndented
+                                    (Print.lineSpreadMerge
+                                        beforePart1CommentsCollapsible.lineSpread
+                                        (part1Print |> Print.lineSpread)
+                                    )
+                                )
                  )
-                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTuple.part1)
+                    |> Print.followedBy part1Print
                     |> Print.followedBy
                         (case afterPart1Comments of
                             [] ->

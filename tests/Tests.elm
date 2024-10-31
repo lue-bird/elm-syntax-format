@@ -2930,6 +2930,122 @@ a =
     }
 """
                 )
+            , Test.test "single-line tuple"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, 1 )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0, 1 )
+"""
+                )
+            , Test.test "multi-line tuple"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, 1
+    )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , 1
+    )
+"""
+                )
+            , Test.test "nested multi-line tuple"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, ( 1, 2
+    )    )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , ( 1
+      , 2
+      )
+    )
+"""
+                )
+            , Test.test "single-line with comments collapsed before parts"
+                (\() ->
+                    """module A exposing (..)
+a = ( {- 0 -} 0, {- 1 -} 1 )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( {- 0 -} 0, {- 1 -} 1 )
+"""
+                )
+            , Test.test "multi-line tuple with comments collapsed before parts"
+                (\() ->
+                    """module A exposing (..)
+a = ( {- 0 -} 0, {- 1 -} 1
+    )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( {- 0 -} 0
+    , {- 1 -} 1
+    )
+"""
+                )
+            , Test.test "nested multi-line tuple with consecutive comments collapsed before multi-line part"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, {- 1 -} {- 2 -} ( 1, 2
+    )    )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , {- 1 -} {- 2 -}
+      ( 1
+      , 2
+      )
+    )
+"""
+                )
+            , Test.test "nested multi-line tuple with consecutive comments before multi-line part"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, {--} {--} ( 1, 2
+    )    )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , {--}
+      {--}
+      ( 1
+      , 2
+      )
+    )
+"""
+                )
+            , Test.test "tuple with consecutive comments after last part"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, 1 {--} {--} )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , 1
+      {--}
+      {--}
+    )
+"""
+                )
             , Test.test "char without escapes"
                 (\() ->
                     """module A exposing (..)
