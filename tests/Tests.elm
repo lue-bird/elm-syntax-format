@@ -3490,6 +3490,19 @@ a
     0
 """
                 )
+            , Test.test "single-line as with comments collapsible before name"
+                (\() ->
+                    """module A exposing (..)
+a (_ as {- argument -}
+  argument) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a (_ as {- argument -} argument) =
+    0
+"""
+                )
             , Test.test "as with multi-line pattern"
                 (\() ->
                     """module A exposing (..)
@@ -3506,6 +3519,28 @@ a
      ]
      as
         argument
+    )
+    =
+    0
+"""
+                )
+            , Test.test "multi-line as with comments collapsible before name"
+                (\() ->
+                    """module A exposing (..)
+a ([-- in list
+    _ 
+   ] as {- argument -}
+  argument) =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a
+    ([ -- in list
+       _
+     ]
+     as
+        {- argument -} argument
     )
     =
     0

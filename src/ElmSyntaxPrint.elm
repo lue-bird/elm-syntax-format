@@ -2439,9 +2439,6 @@ patternAs :
     -> Print
 patternAs syntaxComments syntaxAs =
     let
-        (Elm.Syntax.Node.Node aliasNameRange aliasName) =
-            syntaxAs.aliasNameNode
-
         aliasedPatternPrint : Print
         aliasedPatternPrint =
             patternParenthesizedIfSpaceSeparated syntaxComments syntaxAs.aliasedPattern
@@ -2450,18 +2447,19 @@ patternAs syntaxComments syntaxAs =
         commentsBeforeAliasName =
             commentsInRange
                 { start = syntaxAs.aliasedPattern |> Elm.Syntax.Node.range |> .end
-                , end = aliasNameRange.start
+                , end = syntaxAs.aliasNameNode |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
 
+        commentsCollapsibleBeforeAliasName : { print : Print, lineSpread : Print.LineSpread }
+        commentsCollapsibleBeforeAliasName =
+            collapsibleComments commentsBeforeAliasName
+
         lineSpread : Print.LineSpread
         lineSpread =
-            case commentsBeforeAliasName of
-                _ :: _ ->
-                    Print.MultipleLines
-
-                [] ->
-                    aliasedPatternPrint |> Print.lineSpread
+            Print.lineSpreadMerge
+                (aliasedPatternPrint |> Print.lineSpread)
+                commentsCollapsibleBeforeAliasName.lineSpread
     in
     aliasedPatternPrint
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
@@ -2474,11 +2472,17 @@ patternAs syntaxComments syntaxAs =
                             [] ->
                                 Print.empty
 
-                            moduleNameComment0 :: moduleNameComment1Up ->
-                                comments (moduleNameComment0 :: moduleNameComment1Up)
-                                    |> Print.followedBy Print.linebreakIndented
+                            _ :: _ ->
+                                commentsCollapsibleBeforeAliasName.print
+                                    |> Print.followedBy
+                                        (Print.spaceOrLinebreakIndented
+                                            commentsCollapsibleBeforeAliasName.lineSpread
+                                        )
                         )
-                    |> Print.followedBy (Print.exactly aliasName)
+                    |> Print.followedBy
+                        (Print.exactly
+                            (syntaxAs.aliasNameNode |> Elm.Syntax.Node.value)
+                        )
                 )
             )
 
