@@ -2616,13 +2616,25 @@ a =
             , Test.test "empty list with consecutive comments"
                 (\() ->
                     """module A exposing (..)
-a = [ {- 0 -} ]"""
+a = [ {--}{- 0 -} ]"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
 a =
-    [{- 0 -}
+    [{--}
+     {- 0 -}
     ]
+"""
+                )
+            , Test.test "empty list with consecutive comments collapsible"
+                (\() ->
+                    """module A exposing (..)
+a = [ {- 0 -}{- 1 -} ]"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    [{- 0 -} {- 1 -}]
 """
                 )
             , Test.test "comments before first list element"
@@ -3235,6 +3247,27 @@ a =
          -- 1
         ]
         ->
+            0
+
+        _ ->
+            1
+"""
+                )
+            , Test.test "consecutive collapsible comments in empty list"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        [ {- 0 -}
+         {- 1 -}
+         ] -> 0
+        _ -> 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        [{- 0 -} {- 1 -}] ->
             0
 
         _ ->
