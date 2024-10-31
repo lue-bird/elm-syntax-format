@@ -4053,11 +4053,11 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
         parameterPrints =
             syntaxTypeAliasDeclaration.generics
                 |> List.foldl
-                    (\parameterPattern soFar ->
+                    (\parameterName soFar ->
                         let
                             parameterPrintedRange : Elm.Syntax.Range.Range
                             parameterPrintedRange =
-                                parameterPattern |> Elm.Syntax.Node.range
+                                parameterName |> Elm.Syntax.Node.range
                         in
                         { prints =
                             ((case
@@ -4069,11 +4069,19 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                                     Print.empty
 
                                 comment0 :: comment1Up ->
-                                    comments (comment0 :: comment1Up)
-                                        |> Print.followedBy Print.linebreakIndented
+                                    let
+                                        commentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+                                        commentsCollapsible =
+                                            collapsibleComments (comment0 :: comment1Up)
+                                    in
+                                    commentsCollapsible.print
+                                        |> Print.followedBy
+                                            (Print.spaceOrLinebreakIndented
+                                                commentsCollapsible.lineSpread
+                                            )
                              )
                                 |> Print.followedBy
-                                    (Print.exactly (parameterPattern |> Elm.Syntax.Node.value))
+                                    (Print.exactly (parameterName |> Elm.Syntax.Node.value))
                             )
                                 :: soFar.prints
                         , end = parameterPrintedRange.end
@@ -4201,8 +4209,16 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                     Print.empty
 
                                 comment0 :: comment1Up ->
-                                    comments (comment0 :: comment1Up)
-                                        |> Print.followedBy Print.linebreakIndented
+                                    let
+                                        commentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+                                        commentsCollapsible =
+                                            collapsibleComments (comment0 :: comment1Up)
+                                    in
+                                    commentsCollapsible.print
+                                        |> Print.followedBy
+                                            (Print.spaceOrLinebreakIndented
+                                                commentsCollapsible.lineSpread
+                                            )
                              )
                                 |> Print.followedBy
                                     (Print.exactly (parameterPattern |> Elm.Syntax.Node.value))
@@ -4371,7 +4387,10 @@ declarationExpressionImplementation :
     -> Print
 declarationExpressionImplementation syntaxComments implementation =
     let
-        parameterCommentsBefore : { end : Elm.Syntax.Range.Location, reverse : List (List String) }
+        parameterCommentsBefore :
+            { end : Elm.Syntax.Range.Location
+            , reverse : List (Maybe { lineSpread : Print.LineSpread, print : Print })
+            }
         parameterCommentsBefore =
             implementation.arguments
                 |> List.foldl
@@ -4380,11 +4399,21 @@ declarationExpressionImplementation syntaxComments implementation =
                             parameterRange : Elm.Syntax.Range.Range
                             parameterRange =
                                 parameterPattern |> Elm.Syntax.Node.range
+
+                            commentsBeforeParameter : List String
+                            commentsBeforeParameter =
+                                commentsInRange
+                                    { start = soFar.end, end = parameterRange.start }
+                                    syntaxComments
                         in
                         { reverse =
-                            commentsInRange
-                                { start = soFar.end, end = parameterRange.start }
-                                syntaxComments
+                            (case commentsBeforeParameter of
+                                [] ->
+                                    Nothing
+
+                                comment0 :: comment1Up ->
+                                    Just (collapsibleComments (comment0 :: comment1Up))
+                            )
                                 :: soFar.reverse
                         , end = parameterRange.end
                         }
@@ -4406,11 +4435,16 @@ declarationExpressionImplementation syntaxComments implementation =
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
-            if parameterCommentsBefore.reverse |> List.all List.isEmpty then
-                Print.lineSpreadsCombine (parameterPrints |> List.map Print.lineSpread)
-
-            else
-                Print.MultipleLines
+            Print.lineSpreadMerge
+                (parameterCommentsBefore.reverse
+                    |> List.filterMap identity
+                    |> List.map .lineSpread
+                    |> Print.lineSpreadsCombine
+                )
+                (parameterPrints
+                    |> List.map Print.lineSpread
+                    |> Print.lineSpreadsCombine
+                )
 
         commentsBetweenParametersAndResult : List String
         commentsBetweenParametersAndResult =
@@ -4428,16 +4462,22 @@ declarationExpressionImplementation syntaxComments implementation =
             (Print.withIndentAtNextMultipleOf4
                 (Print.sequence
                     (List.map2
-                        (\parameterPrint commentsBefore ->
+                        (\parameterPrint maybeCommentsBefore ->
                             Print.spaceOrLinebreakIndented parametersLineSpread
                                 |> Print.followedBy
-                                    (case commentsBefore of
-                                        [] ->
+                                    (case maybeCommentsBefore of
+                                        Nothing ->
                                             Print.empty
 
-                                        comment0 :: comment1Up ->
-                                            comments (comment0 :: comment1Up)
-                                                |> Print.followedBy Print.linebreakIndented
+                                        Just commentsBefore ->
+                                            commentsBefore.print
+                                                |> Print.followedBy
+                                                    (Print.spaceOrLinebreakIndented
+                                                        (Print.lineSpreadMerge
+                                                            commentsBefore.lineSpread
+                                                            (parameterPrint |> Print.lineSpread)
+                                                        )
+                                                    )
                                     )
                                 |> Print.followedBy parameterPrint
                         )
@@ -5705,19 +5745,35 @@ expressionLambda :
     -> Print
 expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
     let
-        parameterCommentsBefore : { end : Elm.Syntax.Range.Location, reverse : List (List String) }
+        parameterCommentsBefore :
+            { end : Elm.Syntax.Range.Location
+            , reverse : List (Maybe { lineSpread : Print.LineSpread, print : Print })
+            }
         parameterCommentsBefore =
             syntaxLambda.args
                 |> List.foldl
-                    (\(Elm.Syntax.Node.Node parameterPatternRange _) soFar ->
+                    (\parameterPattern soFar ->
+                        let
+                            parameterRange : Elm.Syntax.Range.Range
+                            parameterRange =
+                                parameterPattern |> Elm.Syntax.Node.range
+
+                            commentsBeforeParameter : List String
+                            commentsBeforeParameter =
+                                commentsInRange
+                                    { start = soFar.end, end = parameterRange.start }
+                                    syntaxComments
+                        in
                         { reverse =
-                            commentsInRange
-                                { start = soFar.end
-                                , end = parameterPatternRange.start
-                                }
-                                syntaxComments
+                            (case commentsBeforeParameter of
+                                [] ->
+                                    Nothing
+
+                                comment0 :: comment1Up ->
+                                    Just (collapsibleComments (comment0 :: comment1Up))
+                            )
                                 :: soFar.reverse
-                        , end = parameterPatternRange.end
+                        , end = parameterRange.end
                         }
                     )
                     { reverse = []
@@ -5742,11 +5798,16 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
-            if parameterCommentsBefore.reverse |> List.all List.isEmpty then
-                Print.lineSpreadsCombine (parameterPrints |> List.map Print.lineSpread)
-
-            else
-                Print.MultipleLines
+            Print.lineSpreadMerge
+                (parameterCommentsBefore.reverse
+                    |> List.filterMap identity
+                    |> List.map .lineSpread
+                    |> Print.lineSpreadsCombine
+                )
+                (parameterPrints
+                    |> List.map Print.lineSpread
+                    |> Print.lineSpreadsCombine
+                )
     in
     Print.exactly "\\"
         |> Print.followedBy
@@ -5755,20 +5816,27 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                     |> Print.followedBy
                         (Print.sequence
                             (List.map2
-                                (\parameterPrint commentsBefore ->
-                                    (case commentsBefore of
-                                        [] ->
+                                (\parameterPrint maybeCommentsBefore ->
+                                    (case maybeCommentsBefore of
+                                        Nothing ->
                                             Print.empty
 
-                                        comment0 :: comment1Up ->
-                                            comments (comment0 :: comment1Up)
-                                                |> Print.followedBy Print.linebreakIndented
+                                        Just commentsBefore ->
+                                            commentsBefore.print
+                                                |> Print.followedBy
+                                                    (Print.spaceOrLinebreakIndented
+                                                        (Print.lineSpreadMerge
+                                                            commentsBefore.lineSpread
+                                                            (parameterPrint |> Print.lineSpread)
+                                                        )
+                                                    )
                                     )
                                         |> Print.followedBy parameterPrint
                                 )
                                 parameterPrints
                                 (parameterCommentsBefore.reverse |> List.reverse)
-                                |> List.intersperse (Print.spaceOrLinebreakIndented parametersLineSpread)
+                                |> List.intersperse
+                                    (Print.spaceOrLinebreakIndented parametersLineSpread)
                             )
                         )
                 )
@@ -5778,7 +5846,11 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                     (Print.withIndentAtNextMultipleOf4
                         ((case commentsBeforeResult of
                             [] ->
-                                Print.spaceOrLinebreakIndented (lineSpreadInRange fullRange)
+                                Print.spaceOrLinebreakIndented
+                                    (Print.lineSpreadMerge
+                                        (lineSpreadInRange fullRange)
+                                        parametersLineSpread
+                                    )
 
                             comment0 :: comment1Up ->
                                 Print.linebreakIndented

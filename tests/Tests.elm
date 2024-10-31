@@ -745,6 +745,19 @@ type alias
     ( parameterA, parameterB )
 """
                 )
+            , Test.test "consecutive collapsible comments before parameter"
+                (\() ->
+                    """module A exposing (..)
+type alias A {- 0 -}
+    {- 1 -} parameterA parameterB =
+    (parameterA,parameterB)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A {- 0 -} {- 1 -} parameterA parameterB =
+    ( parameterA, parameterB )
+"""
+                )
             , Test.test "comments between last parameter and type"
                 (\() ->
                     """module A exposing (..)
@@ -873,6 +886,19 @@ type
         {--}
         parameterA
         parameterB
+    = A ( parameterA, parameterB )
+"""
+                )
+            , Test.test "consecutive collapsible comments before parameter"
+                (\() ->
+                    """module A exposing (..)
+type A {- 0 -}
+     {- 1 -} parameterA parameterB
+    = A (parameterA,parameterB)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A {- 0 -} {- 1 -} parameterA parameterB
     = A ( parameterA, parameterB )
 """
                 )
@@ -1848,6 +1874,56 @@ a =
      -- 0
      -- 1
      c
+    ->
+        b
+"""
+                )
+            , Test.test "single-line lambda, consecutive collapsible comments before single-line parameter"
+                (\() ->
+                    """module A exposing (..)
+a =
+    \\ {- 0 -} {- 1 -}
+    b -> b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \\{- 0 -} {- 1 -} b ->
+        b
+"""
+                )
+            , Test.test "multi-line lambda, consecutive collapsible comments before single-line parameter"
+                (\() ->
+                    """module A exposing (..)
+a =
+    \\{- 0 -} {- 1 -} b (c{--}) -> b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \\
+     {- 0 -} {- 1 -} b
+     (c
+      {--}
+     )
+    ->
+        b
+"""
+                )
+            , Test.test "lambda, consecutive collapsible comments before multi-line parameter"
+                (\() ->
+                    """module A exposing (..)
+a =
+    \\{- 0 -} {- 1 -} (b{--}) -> b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    \\
+     {- 0 -} {- 1 -}
+     (b
+      {--}
+     )
     ->
         b
 """
