@@ -55,7 +55,6 @@ take up if turned into a string?
 -}
 lineSpread : Print -> LineSpread
 lineSpread print =
-    -- TODO can performance be improved? defunctionalization etc
     if toString print |> String.contains "\n" then
         MultipleLines
 
