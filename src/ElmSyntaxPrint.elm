@@ -3167,7 +3167,7 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                                     )
                                 )
                  )
-                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTriple.part2)
+                    |> Print.followedBy part2Print
                     |> Print.followedBy
                         (case afterPart2Comments of
                             [] ->
