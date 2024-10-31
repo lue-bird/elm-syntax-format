@@ -3018,6 +3018,10 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                 }
                 syntaxComments
 
+        beforePart0CommentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+        beforePart0CommentsCollapsible =
+            collapsibleComments beforePart0Comments
+
         beforePart1Comments : List String
         beforePart1Comments =
             commentsInRange
@@ -3026,6 +3030,10 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                 }
                 syntaxComments
 
+        beforePart1CommentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+        beforePart1CommentsCollapsible =
+            collapsibleComments beforePart1Comments
+
         beforePart2Comments : List String
         beforePart2Comments =
             commentsInRange
@@ -3033,6 +3041,10 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                 , end = syntaxTriple.part2 |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
+
+        beforePart2CommentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+        beforePart2CommentsCollapsible =
+            collapsibleComments beforePart2Comments
 
         afterPart2Comments : List String
         afterPart2Comments =
@@ -3044,21 +3056,30 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            case ( beforePart0Comments, ( beforePart1Comments, ( beforePart2Comments, afterPart2Comments ) ) ) of
-                ( _ :: _, _ ) ->
-                    Print.MultipleLines
+            Print.lineSpreadsCombine
+                [ lineSpreadInRange syntaxTriple.fullRange
+                , beforePart0CommentsCollapsible.lineSpread
+                , beforePart1CommentsCollapsible.lineSpread
+                , beforePart2CommentsCollapsible.lineSpread
+                , case afterPart2Comments of
+                    _ :: _ ->
+                        Print.MultipleLines
 
-                ( _, ( _ :: _, _ ) ) ->
-                    Print.MultipleLines
+                    [] ->
+                        Print.SingleLine
+                ]
 
-                ( _, ( _, ( _ :: _, _ ) ) ) ->
-                    Print.MultipleLines
+        part0Print : Print
+        part0Print =
+            printPartNotParenthesized syntaxComments syntaxTriple.part0
 
-                ( _, ( _, ( _, _ :: _ ) ) ) ->
-                    Print.MultipleLines
+        part1Print : Print
+        part1Print =
+            printPartNotParenthesized syntaxComments syntaxTriple.part1
 
-                ( [], ( [], ( [], [] ) ) ) ->
-                    lineSpreadInRange syntaxTriple.fullRange
+        part2Print : Print
+        part2Print =
+            printPartNotParenthesized syntaxComments syntaxTriple.part2
     in
     Print.exactly "("
         |> Print.followedBy Print.space
@@ -3068,11 +3089,17 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                     [] ->
                         Print.empty
 
-                    comment0 :: comment1Up ->
-                        comments (comment0 :: comment1Up)
-                            |> Print.followedBy Print.linebreakIndented
+                    _ :: _ ->
+                        beforePart0CommentsCollapsible.print
+                            |> Print.followedBy
+                                (Print.spaceOrLinebreakIndented
+                                    (Print.lineSpreadMerge
+                                        beforePart0CommentsCollapsible.lineSpread
+                                        (part0Print |> Print.lineSpread)
+                                    )
+                                )
                  )
-                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTriple.part0)
+                    |> Print.followedBy part0Print
                 )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
@@ -3084,11 +3111,17 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                     [] ->
                         Print.empty
 
-                    comment0 :: comment1Up ->
-                        comments (comment0 :: comment1Up)
-                            |> Print.followedBy Print.linebreakIndented
+                    _ :: _ ->
+                        beforePart1CommentsCollapsible.print
+                            |> Print.followedBy
+                                (Print.spaceOrLinebreakIndented
+                                    (Print.lineSpreadMerge
+                                        beforePart1CommentsCollapsible.lineSpread
+                                        (part1Print |> Print.lineSpread)
+                                    )
+                                )
                  )
-                    |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTriple.part1)
+                    |> Print.followedBy part1Print
                 )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
@@ -3100,9 +3133,15 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                     [] ->
                         Print.empty
 
-                    comment0 :: comment1Up ->
-                        comments (comment0 :: comment1Up)
-                            |> Print.followedBy Print.linebreakIndented
+                    _ :: _ ->
+                        beforePart2CommentsCollapsible.print
+                            |> Print.followedBy
+                                (Print.spaceOrLinebreakIndented
+                                    (Print.lineSpreadMerge
+                                        beforePart2CommentsCollapsible.lineSpread
+                                        (part2Print |> Print.lineSpread)
+                                    )
+                                )
                  )
                     |> Print.followedBy (printPartNotParenthesized syntaxComments syntaxTriple.part2)
                     |> Print.followedBy

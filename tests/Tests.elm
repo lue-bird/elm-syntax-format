@@ -2971,7 +2971,7 @@ a =
     )
 """
                 )
-            , Test.test "single-line with comments collapsed before parts"
+            , Test.test "tuple single-line with comments collapsed before parts"
                 (\() ->
                     """module A exposing (..)
 a = ( {- 0 -} 0, {- 1 -} 1 )"""
@@ -3041,6 +3041,131 @@ a = ( 0, 1 {--} {--} )"""
 a =
     ( 0
     , 1
+      {--}
+      {--}
+    )
+"""
+                )
+            , Test.test "single-line triple"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, 1, 2 )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0, 1, 2 )
+"""
+                )
+            , Test.test "multi-line triple"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, 1, 2
+    )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , 1
+    , 2
+    )
+"""
+                )
+            , Test.test "nested multi-line triple"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, 1, ( 2, 3, 4
+    )       )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , 1
+    , ( 2
+      , 3
+      , 4
+      )
+    )
+"""
+                )
+            , Test.test "triple single-line with comments collapsed before parts"
+                (\() ->
+                    """module A exposing (..)
+a = ( {- 0 -} 0, {- 1 -} 1, {- 2 -} 2 )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( {- 0 -} 0, {- 1 -} 1, {- 2 -} 2 )
+"""
+                )
+            , Test.test "multi-line triple with comments collapsed before parts"
+                (\() ->
+                    """module A exposing (..)
+a = ( {- 0 -} 0, {- 1 -} 1, {- 2 -} 2
+    )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( {- 0 -} 0
+    , {- 1 -} 1
+    , {- 2 -} 2
+    )
+"""
+                )
+            , Test.test "nested multi-line triple with consecutive comments collapsed before multi-line part"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, 1, {- 2 -} {- 3 -} {- 4 -} ( 2, 3, 4
+    )       )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , 1
+    , {- 2 -} {- 3 -} {- 4 -}
+      ( 2
+      , 3
+      , 4
+      )
+    )
+"""
+                )
+            , Test.test "nested multi-line triple with consecutive comments before multi-line part"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, 1, {--} {--} ( 2, 3, 4
+    )       )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , 1
+    , {--}
+      {--}
+      ( 2
+      , 3
+      , 4
+      )
+    )
+"""
+                )
+            , Test.test "triple with consecutive comments after last part"
+                (\() ->
+                    """module A exposing (..)
+a = ( 0, 1, 2 {--} {--} )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    ( 0
+    , 1
+    , 2
       {--}
       {--}
     )
