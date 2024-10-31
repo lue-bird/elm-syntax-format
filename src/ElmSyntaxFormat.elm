@@ -2746,11 +2746,11 @@ construct :
         , start : Print.Print
         }
     -> Print
-construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxReferenceConstruct =
+construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxConstruct =
     let
         commentsBeforeArguments : List (Maybe { print : Print, lineSpread : Print.LineSpread })
         commentsBeforeArguments =
-            syntaxReferenceConstruct.arguments
+            syntaxConstruct.arguments
                 |> List.foldl
                     (\argument soFar ->
                         let
@@ -2775,31 +2775,33 @@ construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxRefere
                         }
                     )
                     { resultReverse = []
-                    , previousEnd = syntaxReferenceConstruct.fullRange.start
+                    , previousEnd = syntaxConstruct.fullRange.start
                     }
                 |> .resultReverse
                 |> List.reverse
 
         argumentPrints : List Print
         argumentPrints =
-            syntaxReferenceConstruct.arguments
+            syntaxConstruct.arguments
                 |> List.map
-                    (\argument -> printArgumentParenthesizedIfSpaceSeparated syntaxComments argument)
+                    (\argument ->
+                        printArgumentParenthesizedIfSpaceSeparated syntaxComments argument
+                    )
 
         lineSpread : Print.LineSpread
         lineSpread =
-            Print.lineSpreadMerge
-                (commentsBeforeArguments
+            Print.lineSpreadsCombine
+                [ syntaxConstruct.start |> Print.lineSpread
+                , commentsBeforeArguments
                     |> List.filterMap identity
                     |> List.map .lineSpread
                     |> Print.lineSpreadsCombine
-                )
-                (argumentPrints
+                , argumentPrints
                     |> List.map Print.lineSpread
                     |> Print.lineSpreadsCombine
-                )
+                ]
     in
-    syntaxReferenceConstruct.start
+    syntaxConstruct.start
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.sequence
@@ -2815,7 +2817,10 @@ construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxRefere
                                             commentsBeforeArgument.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented
-                                                        commentsBeforeArgument.lineSpread
+                                                        (Print.lineSpreadMerge
+                                                            commentsBeforeArgument.lineSpread
+                                                            (argumentPrint |> Print.lineSpread)
+                                                        )
                                                     )
                                     )
                                 |> Print.followedBy argumentPrint
@@ -4917,29 +4922,141 @@ expressionCall :
     -> Print
 expressionCall syntaxComments syntaxCall =
     let
+        appliedPrint : Print
+        appliedPrint =
+            expressionParenthesizedIfSpaceSeparated syntaxComments
+                syntaxCall.applied
+
+        commentsBeforeArgument0 : List String
+        commentsBeforeArgument0 =
+            commentsInRange
+                { start = syntaxCall.applied |> Elm.Syntax.Node.range |> .end
+                , end =
+                    syntaxCall.argument0
+                        |> Elm.Syntax.Node.range
+                        |> .start
+                }
+                syntaxComments
+
+        collapsibleCommentsBeforeArgument0 : { print : Print, lineSpread : Print.LineSpread }
+        collapsibleCommentsBeforeArgument0 =
+            commentsBeforeArgument0 |> collapsibleComments
+
+        argument0Print : Print
+        argument0Print =
+            expressionParenthesizedIfSpaceSeparated syntaxComments
+                syntaxCall.argument0
+
+        argument1UpCommentsBefore : List (Maybe { print : Print, lineSpread : Print.LineSpread })
+        argument1UpCommentsBefore =
+            syntaxCall.argument1Up
+                |> List.foldl
+                    (\argument soFar ->
+                        let
+                            commentsBeforeArgument : List String
+                            commentsBeforeArgument =
+                                commentsInRange
+                                    { start = soFar.previousEnd
+                                    , end = argument |> Elm.Syntax.Node.range |> .start
+                                    }
+                                    syntaxComments
+                        in
+                        { resultReverse =
+                            (case commentsBeforeArgument of
+                                [] ->
+                                    Nothing
+
+                                comment0 :: comment1Up ->
+                                    Just (collapsibleComments (comment0 :: comment1Up))
+                            )
+                                :: soFar.resultReverse
+                        , previousEnd = argument |> Elm.Syntax.Node.range |> .end
+                        }
+                    )
+                    { resultReverse = []
+                    , previousEnd =
+                        syntaxCall.argument0
+                            |> Elm.Syntax.Node.range
+                            |> .end
+                    }
+                |> .resultReverse
+                |> List.reverse
+
+        argument0LineSpread : Print.LineSpread
+        argument0LineSpread =
+            Print.lineSpreadsCombine
+                [ appliedPrint |> Print.lineSpread
+                , lineSpreadBetweenNodes
+                    syntaxCall.applied
+                    syntaxCall.argument0
+                , collapsibleCommentsBeforeArgument0.lineSpread
+                , argument0Print |> Print.lineSpread
+                ]
+
         argument1UpLineSpread : Print.LineSpread
         argument1UpLineSpread =
-            lineSpreadInRange syntaxCall.fullRange
+            Print.lineSpreadsCombine
+                [ lineSpreadInRange syntaxCall.fullRange
+                , argument0LineSpread
+                , argument1UpCommentsBefore
+                    |> List.filterMap identity
+                    |> List.map .lineSpread
+                    |> Print.lineSpreadsCombine
+                , argument1UpPrints
+                    |> List.map Print.lineSpread
+                    |> Print.lineSpreadsCombine
+                ]
+
+        argument1UpPrints : List Print
+        argument1UpPrints =
+            syntaxCall.argument1Up
+                |> List.map
+                    (\argument -> expressionParenthesizedIfSpaceSeparated syntaxComments argument)
     in
-    expressionParenthesizedIfSpaceSeparated syntaxComments syntaxCall.applied
+    appliedPrint
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
-                (Print.spaceOrLinebreakIndented (lineSpreadBetweenNodes syntaxCall.applied syntaxCall.argument0)
+                (Print.spaceOrLinebreakIndented argument0LineSpread
                     |> Print.followedBy
-                        (expressionParenthesizedIfSpaceSeparated syntaxComments
-                            syntaxCall.argument0
+                        (case commentsBeforeArgument0 of
+                            [] ->
+                                Print.empty
+
+                            _ :: _ ->
+                                collapsibleCommentsBeforeArgument0.print
+                                    |> Print.followedBy
+                                        (Print.spaceOrLinebreakIndented
+                                            (Print.lineSpreadMerge
+                                                collapsibleCommentsBeforeArgument0.lineSpread
+                                                (argument0Print |> Print.lineSpread)
+                                            )
+                                        )
                         )
+                    |> Print.followedBy argument0Print
                     |> Print.followedBy
                         (Print.sequence
-                            (syntaxCall.argument1Up
-                                |> List.map
-                                    (\argument ->
-                                        Print.spaceOrLinebreakIndented argument1UpLineSpread
-                                            |> Print.followedBy
-                                                (expressionParenthesizedIfSpaceSeparated syntaxComments
-                                                    argument
-                                                )
-                                    )
+                            (List.map2
+                                (\argumentPrint maybeCommentsBeforeArgument ->
+                                    Print.spaceOrLinebreakIndented argument1UpLineSpread
+                                        |> Print.followedBy
+                                            (case maybeCommentsBeforeArgument of
+                                                Nothing ->
+                                                    Print.empty
+
+                                                Just commentsBeforeArgument ->
+                                                    commentsBeforeArgument.print
+                                                        |> Print.followedBy
+                                                            (Print.spaceOrLinebreakIndented
+                                                                (Print.lineSpreadMerge
+                                                                    commentsBeforeArgument.lineSpread
+                                                                    (argumentPrint |> Print.lineSpread)
+                                                                )
+                                                            )
+                                            )
+                                        |> Print.followedBy argumentPrint
+                                )
+                                argument1UpPrints
+                                argument1UpCommentsBefore
                             )
                         )
                 )

@@ -2038,6 +2038,133 @@ a =
     b + c
 """
                 )
+            , Test.test "call, applied function is multi-line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    (identity {--}) identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    (identity
+     {--}
+    )
+        identity
+"""
+                )
+            , Test.test "call, multi-line comments before first argument"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity {--} identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        {--}
+        identity
+"""
+                )
+            , Test.test "single-line call, consecutive collapsible comments before first argument"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity {- 0 -} {- 1 -} identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity {- 0 -} {- 1 -} identity
+"""
+                )
+            , Test.test "multi-line call, consecutive collapsible comments before first argument"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity {- 0 -} {- 1 -} (identity
+    )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        {- 0 -} {- 1 -} identity
+"""
+                )
+            , Test.test "call, consecutive collapsible comments before multi-line first argument"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity {- 0 -} {- 1 -} (identity{--})"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity
+        {- 0 -} {- 1 -}
+        (identity
+         {--}
+        )
+"""
+                )
+            , Test.test "call, consecutive collapsible comments before first single-line argument, multi-line follow-up argument"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity {- 0 -} {- 1 -} identity
+        identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity {- 0 -} {- 1 -} identity
+        identity
+"""
+                )
+            , Test.test "single-line call, consecutive collapsible comments before last argument"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity identity {- 0 -} {- 1 -} identity"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity identity {- 0 -} {- 1 -} identity
+"""
+                )
+            , Test.test "call, consecutive collapsible comments before last multi-line argument"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity identity {- 0 -} {- 1 -} (identity{--})"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity identity
+        {- 0 -} {- 1 -}
+        (identity
+         {--}
+        )
+"""
+                )
+            , Test.test "multi-line call, consecutive collapsible comments before last argument"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity identity {- 0 -} {- 1 -} (identity
+    )"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    identity identity
+        {- 0 -} {- 1 -} identity
+"""
+                )
             , Test.test "|> pipeline, multi-line"
                 (\() ->
                     """module A exposing (..)
