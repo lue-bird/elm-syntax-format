@@ -1,5 +1,5 @@
 module ElmSyntaxPrint exposing
-    ( printToString, Print
+    ( toString, Print
     , module_
     , moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
     , declarations, declaration, declarationChoiceType, declarationSignature, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
@@ -10,7 +10,7 @@ module ElmSyntaxPrint exposing
 {-| Pretty printing an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/) tree
 in a way consistent with [`elm-format`](https://github.com/avh4/elm-format).
 
-@docs printToString, Print
+@docs toString, Print
 @docs module_
 
 That's all you'll need most of the time.
@@ -46,17 +46,17 @@ import Unicode
 
 
 {-| Pretty printable intermediate representation.
-See [`printToString`](#printToString)
+See [`toString`](#toString)
 -}
 type alias Print =
     { indent : Int } -> String
 
 
 {-| All other helpers in this module produce a [`Print`](#Print)
-which you can in the end convert to a String with [`printToString`](#printToString)
+which you can in the end convert to a String with [`toString`](#toString)
 -}
-printToString : Print -> String
-printToString print =
+toString : Print -> String
+toString print =
     print |> Print.toString
 
 

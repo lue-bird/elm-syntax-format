@@ -15,7 +15,7 @@ plus2 (n)= {- this adds 2-} n
         (\syntaxModule ->
             syntaxModule
                 |> ElmSyntaxPrint.module_
-                |> ElmSyntaxPrint.printToString
+                |> ElmSyntaxPrint.toString
         )
 -->
 Ok """module Sample exposing (..)
