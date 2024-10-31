@@ -48,6 +48,7 @@ Great performance is not a primary goal
 but if you notice it's unusable for your use case, please [open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new).
 
 Ideas:
+  - combine `LineSpread`s lazily
   - pre-filter comments per declaration
-  - convert Print to defunctionalized (this will likely make `Print.lineSpread` faster)
   - pre-define prints for static parts like symbols
+  - convert Print to defunctionalized (this will likely make `Print.lineSpread` faster)
