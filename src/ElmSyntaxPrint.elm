@@ -24,6 +24,9 @@ or reformat only the touched declarations on save.
 @docs expressionNotParenthesized, case_, patternNotParenthesized, typeNotParenthesized
 @docs moduleName, qualifiedReference
 
+If you need other syntax printing like for collapsible comments to be exposed,
+[open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new)
+
 -}
 
 import Elm.Syntax.Declaration
