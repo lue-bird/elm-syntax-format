@@ -5553,11 +5553,7 @@ expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda :
     -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
     -> Print
 expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments expressionNode =
-    let
-        (Elm.Syntax.Node.Node _ syntaxExpression) =
-            expressionNode
-    in
-    if expressionIsSpaceSeparated syntaxExpression then
+    if expressionNode |> Elm.Syntax.Node.value |> expressionIsSpaceSeparated then
         case expressionNode |> expressionToNotParenthesized |> Elm.Syntax.Node.value of
             Elm.Syntax.Expression.Application _ ->
                 expressionNotParenthesized syntaxComments expressionNode
