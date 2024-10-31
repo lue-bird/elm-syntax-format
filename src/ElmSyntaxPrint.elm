@@ -2297,16 +2297,30 @@ patternCons syntaxComments syntaxCons =
         tailPatternPrints =
             tailPatterns
                 |> List.map
-                    (patternParenthesizedIfSpaceSeparated syntaxComments)
+                    (\tailPattern ->
+                        patternParenthesizedIfSpaceSeparated syntaxComments
+                            tailPattern
+                    )
 
-        tailPatternsCommentsBefore : List (List String)
+        tailPatternsCommentsBefore : List (Maybe { print : Print, lineSpread : Print.LineSpread })
         tailPatternsCommentsBefore =
             tailPatterns
                 |> List.foldl
                     (\(Elm.Syntax.Node.Node tailPatternRange _) soFar ->
+                        let
+                            commentsBeforeTailPattern : List String
+                            commentsBeforeTailPattern =
+                                commentsInRange { start = soFar.end, end = tailPatternRange.start }
+                                    syntaxComments
+                        in
                         { reverse =
-                            commentsInRange { start = soFar.end, end = tailPatternRange.start }
-                                syntaxComments
+                            (case commentsBeforeTailPattern of
+                                [] ->
+                                    Nothing
+
+                                comment0 :: comment1Up ->
+                                    Just (collapsibleComments (comment0 :: comment1Up))
+                            )
                                 :: soFar.reverse
                         , end = tailPatternRange.end
                         }
@@ -2319,13 +2333,14 @@ patternCons syntaxComments syntaxCons =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            if tailPatternsCommentsBefore |> List.all List.isEmpty then
-                Print.lineSpreadMerge
-                    (headPrint |> Print.lineSpread)
-                    (tailPatternPrints |> List.map Print.lineSpread |> Print.lineSpreadsCombine)
-
-            else
-                Print.MultipleLines
+            Print.lineSpreadsCombine
+                [ headPrint |> Print.lineSpread
+                , tailPatternPrints |> List.map Print.lineSpread |> Print.lineSpreadsCombine
+                , tailPatternsCommentsBefore
+                    |> List.filterMap identity
+                    |> List.map .lineSpread
+                    |> Print.lineSpreadsCombine
+                ]
     in
     headPrint
         |> Print.followedBy
@@ -2334,19 +2349,24 @@ patternCons syntaxComments syntaxCons =
                     |> Print.followedBy
                         (Print.sequence
                             (List.map2
-                                (\tailPatternPrint commentsBefore ->
+                                (\tailPatternPrint maybeCommentsBefore ->
                                     Print.exactly "::"
                                         |> Print.followedBy Print.space
                                         |> Print.followedBy
                                             (Print.withIndentIncreasedBy 3
-                                                ((case commentsBefore of
-                                                    [] ->
+                                                ((case maybeCommentsBefore of
+                                                    Nothing ->
                                                         Print.empty
 
-                                                    comment0 :: comment1Up ->
-                                                        comments (comment0 :: comment1Up)
+                                                    Just commentsBefore ->
+                                                        commentsBefore.print
                                                             |> Print.followedBy
-                                                                (Print.spaceOrLinebreakIndented lineSpread)
+                                                                (Print.spaceOrLinebreakIndented
+                                                                    (Print.lineSpreadMerge
+                                                                        commentsBefore.lineSpread
+                                                                        (tailPatternPrint |> Print.lineSpread)
+                                                                    )
+                                                                )
                                                  )
                                                     |> Print.followedBy tailPatternPrint
                                                 )

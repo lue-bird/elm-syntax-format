@@ -3845,7 +3845,34 @@ a =
             1
 """
                 )
-            , Test.test ":: with multiple patterns as tail, consecutive comments before rightest expression"
+            , Test.test ":: with multiple patterns as tail, consecutive comments before rightest tail pattern"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        b :: Just c :: {- 0 -} {--} d ->
+            b
+
+        _ ->
+            0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        b
+            :: (Just c)
+            :: {- 0 -}
+               {--}
+               d
+        ->
+            b
+
+        _ ->
+            0
+"""
+                )
+            , Test.test ":: with multiple patterns as tail, consecutive comments collapsible before single-line tail pattern"
                 (\() ->
                     """module A exposing (..)
 a =
@@ -3860,11 +3887,35 @@ a =
 
 a =
     case [] of
+        b :: (Just c) :: {- 0 -} {- 1 -} d ->
+            b
+
+        _ ->
+            0
+"""
+                )
+            , Test.test ":: with multiple patterns as tail, consecutive comments collapsible before multi-line tail pattern"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        b :: Just c {- 0 -} {- 1 -} :: (d --
+         ) ->
+            b
+
+        _ ->
+            0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
         b
             :: (Just c)
-            :: {- 0 -}
-               {- 1 -}
-               d
+            :: {- 0 -} {- 1 -}
+               (d
+                --
+               )
         ->
             b
 
