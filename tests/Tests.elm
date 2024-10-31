@@ -902,7 +902,7 @@ type A {- 0 -} {- 1 -} parameterA parameterB
     = A ( parameterA, parameterB )
 """
                 )
-            , Test.test "comments between last parameter and first variant"
+            , Test.test "consecutive collapsible comments between last parameter and single-line first variant"
                 (\() ->
                     """module A exposing (..)
 type A parameter {- 0 -}
@@ -911,12 +911,10 @@ type A parameter {- 0 -}
                             """module A exposing (..)
 
 type A parameter
-    = {- 0 -}
-      {- 1 -}
-      A parameter
+    = {- 0 -} {- 1 -} A parameter
 """
                 )
-            , Test.test "comments between name and first variant"
+            , Test.test "consecutive collapsible comments between name and single-line first variant"
                 (\() ->
                     """module A exposing (..)
 type A {- 0 -}
@@ -925,12 +923,40 @@ type A {- 0 -}
                             """module A exposing (..)
 
 type A
-    = {- 0 -}
+    = {- 0 -} {- 1 -} A Int
+"""
+                )
+            , Test.test "comments between name and first variant"
+                (\() ->
+                    """module A exposing (..)
+type A -- 0
+    = {- 1 -} A Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A
+    = -- 0
       {- 1 -}
       A Int
 """
                 )
-            , Test.test "comments between variants"
+            , Test.test "consecutive comments before non-first single-line variant"
+                (\() ->
+                    """module A exposing (..)
+type A
+    = A Int -- 0
+    | {- 1 -} B String"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A
+    = A Int
+    | -- 0
+      {- 1 -}
+      B String
+"""
+                )
+            , Test.test "consecutive collapsible comments before non-first single-line variant"
                 (\() ->
                     """module A exposing (..)
 type A
@@ -941,9 +967,24 @@ type A
 
 type A
     = A Int
-    | {- 0 -}
-      {- 1 -}
-      B String
+    | {- 0 -} {- 1 -} B String
+"""
+                )
+            , Test.test "consecutive collapsible comments before non-first multi-line variant"
+                (\() ->
+                    """module A exposing (..)
+type A
+    = A Int {- 0 -}
+    | {- 1 -} B {--} String"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A
+    = A Int
+    | {- 0 -} {- 1 -}
+      B
+        {--}
+        String
 """
                 )
             , Test.test "comments before first variant parameter"

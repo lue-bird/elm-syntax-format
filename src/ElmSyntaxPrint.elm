@@ -4249,24 +4249,38 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                         let
                             variantPrint : Print
                             variantPrint =
+                                construct typeParenthesizedIfSpaceSeparated
+                                    syntaxComments
+                                    { start = Print.exactly (variant.name |> Elm.Syntax.Node.value)
+                                    , fullRange = variantRange
+                                    , arguments = variant.arguments
+                                    }
+
+                            commentsVariantPrint : Print
+                            commentsVariantPrint =
                                 (case commentsInRange { start = soFar.end, end = variant.name |> Elm.Syntax.Node.range |> .start } syntaxComments of
                                     [] ->
                                         Print.empty
 
                                     comment0 :: comment1Up ->
-                                        comments (comment0 :: comment1Up)
-                                            |> Print.followedBy Print.linebreakIndented
+                                        let
+                                            commentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+                                            commentsCollapsible =
+                                                collapsibleComments (comment0 :: comment1Up)
+                                        in
+                                        commentsCollapsible.print
+                                            |> Print.followedBy
+                                                (Print.spaceOrLinebreakIndented
+                                                    (Print.lineSpreadMerge
+                                                        commentsCollapsible.lineSpread
+                                                        (variantPrint |> Print.lineSpread)
+                                                    )
+                                                )
                                 )
                                     |> Print.followedBy
-                                        (construct typeParenthesizedIfSpaceSeparated
-                                            syntaxComments
-                                            { start = Print.exactly (variant.name |> Elm.Syntax.Node.value)
-                                            , fullRange = variantRange
-                                            , arguments = variant.arguments
-                                            }
-                                        )
+                                        variantPrint
                         in
-                        { prints = variantPrint :: soFar.prints
+                        { prints = commentsVariantPrint :: soFar.prints
                         , end = variantRange.end
                         }
                     )
