@@ -2748,22 +2748,35 @@ construct :
     -> Print
 construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxReferenceConstruct =
     let
-        commentsBeforeArguments : List (List String)
+        commentsBeforeArguments : List (Maybe { print : Print, lineSpread : Print.LineSpread })
         commentsBeforeArguments =
             syntaxReferenceConstruct.arguments
                 |> List.foldl
                     (\argument soFar ->
+                        let
+                            commentsBeforeArgument : List String
+                            commentsBeforeArgument =
+                                commentsInRange
+                                    { start = soFar.previousEnd
+                                    , end = argument |> Elm.Syntax.Node.range |> .start
+                                    }
+                                    syntaxComments
+                        in
                         { resultReverse =
-                            commentsInRange
-                                { start = soFar.previousEnd
-                                , end = argument |> Elm.Syntax.Node.range |> .start
-                                }
-                                syntaxComments
+                            (case commentsBeforeArgument of
+                                [] ->
+                                    Nothing
+
+                                comment0 :: comment1Up ->
+                                    Just (collapsibleComments (comment0 :: comment1Up))
+                            )
                                 :: soFar.resultReverse
                         , previousEnd = argument |> Elm.Syntax.Node.range |> .end
                         }
                     )
-                    { resultReverse = [], previousEnd = syntaxReferenceConstruct.fullRange.start }
+                    { resultReverse = []
+                    , previousEnd = syntaxReferenceConstruct.fullRange.start
+                    }
                 |> .resultReverse
                 |> List.reverse
 
@@ -2775,29 +2788,35 @@ construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxRefere
 
         lineSpread : Print.LineSpread
         lineSpread =
-            if commentsBeforeArguments |> List.all List.isEmpty then
-                argumentPrints
+            Print.lineSpreadMerge
+                (commentsBeforeArguments
+                    |> List.filterMap identity
+                    |> List.map .lineSpread
+                    |> Print.lineSpreadsCombine
+                )
+                (argumentPrints
                     |> List.map Print.lineSpread
                     |> Print.lineSpreadsCombine
-
-            else
-                Print.MultipleLines
+                )
     in
     syntaxReferenceConstruct.start
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.sequence
                     (List.map2
-                        (\argumentPrint commentsBeforeArgument ->
+                        (\argumentPrint maybeCommentsBeforeArgument ->
                             Print.spaceOrLinebreakIndented lineSpread
                                 |> Print.followedBy
-                                    (case commentsBeforeArgument of
-                                        [] ->
+                                    (case maybeCommentsBeforeArgument of
+                                        Nothing ->
                                             Print.empty
 
-                                        comment0 :: comment1Up ->
-                                            comments (comment0 :: comment1Up)
-                                                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
+                                        Just commentsBeforeArgument ->
+                                            commentsBeforeArgument.print
+                                                |> Print.followedBy
+                                                    (Print.spaceOrLinebreakIndented
+                                                        commentsBeforeArgument.lineSpread
+                                                    )
                                     )
                                 |> Print.followedBy argumentPrint
                         )

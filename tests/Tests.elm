@@ -924,29 +924,54 @@ type A
                 (\() ->
                     """module A exposing (..)
 type A
-    = A {- 0 -} Int"""
+    = A {--} Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
 type A
     = A
-        {- 0 -}
+        {--}
         Int
+"""
+                )
+            , Test.test "consecutive collapsible comments before first variant parameter"
+                (\() ->
+                    """module A exposing (..)
+type A
+    = A {- 0 -} {- 1 -}
+        Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A
+    = A {- 0 -} {- 1 -} Int
 """
                 )
             , Test.test "comments between variant parameters"
                 (\() ->
                     """module A exposing (..)
 type A
-    = A Int {- 0 -} Int"""
+    = A Int {--} Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
 type A
     = A
         Int
-        {- 0 -}
+        {--}
         Int
+"""
+                )
+            , Test.test "consecutive collapsible comments between variant parameters"
+                (\() ->
+                    """module A exposing (..)
+type A
+    = A Int {- 0 -} {- 1 -} Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type A
+    = A Int {- 0 -} {- 1 -} Int
 """
                 )
             ]
