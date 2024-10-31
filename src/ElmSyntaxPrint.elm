@@ -2223,12 +2223,10 @@ patternList syntaxComments syntaxList =
                     Print.lineSpreadsCombine
                         [ lineSpreadInRange syntaxList.fullRange
                         , elementPrints
-                            |> List.map Print.lineSpread
-                            |> Print.lineSpreadsCombine
+                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
                         , commentsBeforeElements.reverse
                             |> List.filterMap identity
-                            |> List.map .lineSpread
-                            |> Print.lineSpreadsCombine
+                            |> Print.mapAndLineSpreadsCombine .lineSpread
                         ]
             in
             Print.exactly "["
@@ -2338,11 +2336,10 @@ patternCons syntaxComments syntaxCons =
         lineSpread =
             Print.lineSpreadsCombine
                 [ headPrint |> Print.lineSpread
-                , tailPatternPrints |> List.map Print.lineSpread |> Print.lineSpreadsCombine
+                , tailPatternPrints |> Print.mapAndLineSpreadsCombine Print.lineSpread
                 , tailPatternsCommentsBefore
                     |> List.filterMap identity
-                    |> List.map .lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine .lineSpread
                 ]
     in
     headPrint
@@ -2720,7 +2717,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                 [ lineSpreadInRange syntaxRecordExtension.fullRange
                 , commentsCollapsibleBeforeRecordVariable.lineSpread
                 , commentsBeforeFields.reverse
-                    |> List.map
+                    |> Print.mapAndLineSpreadsCombine
                         (\fieldComments ->
                             Print.lineSpreadMerge
                                 (case fieldComments.beforeName of
@@ -2738,10 +2735,8 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                         commentsBetweenNameAndValue.lineSpread
                                 )
                         )
-                    |> Print.lineSpreadsCombine
                 , fieldValuePrints
-                    |> List.map Print.lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
                 , case commentsAfterFields of
                     [] ->
                         Print.SingleLine
@@ -2945,11 +2940,9 @@ construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxConstr
                 [ syntaxConstruct.start |> Print.lineSpread
                 , commentsBeforeArguments
                     |> List.filterMap identity
-                    |> List.map .lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine .lineSpread
                 , argumentPrints
-                    |> List.map Print.lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
                 ]
     in
     syntaxConstruct.start
@@ -3417,7 +3410,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                     Print.lineSpreadsCombine
                         [ lineSpreadInRange syntaxRecord.fullRange
                         , commentsBeforeFields.reverse
-                            |> List.map
+                            |> Print.mapAndLineSpreadsCombine
                                 (\fieldComments ->
                                     Print.lineSpreadMerge
                                         (case fieldComments.beforeName of
@@ -3435,10 +3428,8 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                                 commentsBetweenNameAndValue.lineSpread
                                         )
                                 )
-                            |> Print.lineSpreadsCombine
                         , fieldValuePrints
-                            |> List.map Print.lineSpread
-                            |> Print.lineSpreadsCombine
+                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
                         , case commentsAfterFields of
                             [] ->
                                 Print.SingleLine
@@ -4388,7 +4379,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
-            Print.lineSpreadsCombine (parameterPrints |> List.map Print.lineSpread)
+            parameterPrints |> Print.mapAndLineSpreadsCombine Print.lineSpread
 
         rangeBetweenParametersAndType : Elm.Syntax.Range.Range
         rangeBetweenParametersAndType =
@@ -4529,7 +4520,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
-            Print.lineSpreadsCombine (parameterPrints.reverse |> List.map Print.lineSpread)
+            parameterPrints.reverse |> Print.mapAndLineSpreadsCombine Print.lineSpread
 
         variantPrints : List Print
         variantPrints =
@@ -4731,12 +4722,10 @@ declarationExpressionImplementation syntaxComments implementation =
             Print.lineSpreadMerge
                 (parameterCommentsBefore.reverse
                     |> List.filterMap identity
-                    |> List.map .lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine .lineSpread
                 )
                 (parameterPrints
-                    |> List.map Print.lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
                 )
 
         commentsBetweenParametersAndResult : List String
@@ -5333,11 +5322,9 @@ expressionCall syntaxComments syntaxCall =
                 , argument0LineSpread
                 , argument1UpCommentsBefore
                     |> List.filterMap identity
-                    |> List.map .lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine .lineSpread
                 , argument1UpPrints
-                    |> List.map Print.lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
                 ]
 
         argument1UpPrints : List Print
@@ -5484,8 +5471,7 @@ expressionOperation syntaxComments syntaxOperation =
                 [ lineSpreadInRange syntaxOperation.fullRange
                 , beforeRightestComments.commentsReverse
                     |> List.filterMap identity
-                    |> List.map .lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine .lineSpread
                 , commentsCollapsibleBeforeRightestExpression.lineSpread
                 ]
 
@@ -5886,12 +5872,10 @@ expressionList syntaxComments syntaxList =
                     Print.lineSpreadsCombine
                         [ lineSpreadInRange syntaxList.fullRange
                         , elementPrints
-                            |> List.map Print.lineSpread
-                            |> Print.lineSpreadsCombine
+                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
                         , commentsBeforeElements.reverse
                             |> List.filterMap identity
-                            |> List.map .lineSpread
-                            |> Print.lineSpreadsCombine
+                            |> Print.mapAndLineSpreadsCombine .lineSpread
                         ]
             in
             Print.exactly "["
@@ -6170,12 +6154,10 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
             Print.lineSpreadMerge
                 (parameterCommentsBefore.reverse
                     |> List.filterMap identity
-                    |> List.map .lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine .lineSpread
                 )
                 (parameterPrints
-                    |> List.map Print.lineSpread
-                    |> Print.lineSpreadsCombine
+                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
                 )
     in
     Print.exactly "\\"

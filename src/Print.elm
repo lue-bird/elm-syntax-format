@@ -3,7 +3,7 @@ module Print exposing
     , exactly, empty, space, linebreak
     , followedBy, sequence
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
-    , LineSpread(..), lineSpreadMerge, lineSpreadsCombine, lineSpread
+    , LineSpread(..), lineSpreadMerge, lineSpreadsCombine, mapAndLineSpreadsCombine, lineSpread
     )
 
 {-| simple pretty printing
@@ -24,7 +24,7 @@ module Print exposing
 ### indent
 
 @docs withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
-@docs LineSpread, lineSpreadMerge, lineSpreadsCombine, lineSpread
+@docs LineSpread, lineSpreadMerge, lineSpreadsCombine, mapAndLineSpreadsCombine, lineSpread
 
 -}
 
@@ -212,6 +212,24 @@ lineSpreadsCombine lineSpreads =
 
                 SingleLine ->
                     lineSpreadsCombine tail
+
+
+{-| Equivalent to `|> List.map ... |>` [`Print.lineSpreadsCombine`](#lineSpreadsCombine)
+but faster
+-}
+mapAndLineSpreadsCombine : (a -> LineSpread) -> (List a -> LineSpread)
+mapAndLineSpreadsCombine elementLineSpread lineSpreads =
+    case lineSpreads of
+        [] ->
+            SingleLine
+
+        head :: tail ->
+            case elementLineSpread head of
+                MultipleLines ->
+                    MultipleLines
+
+                SingleLine ->
+                    mapAndLineSpreadsCombine elementLineSpread tail
 
 
 {-| [`Print.space`](#space) when [`SingleLine`](#LineSpread),
