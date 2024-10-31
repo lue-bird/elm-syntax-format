@@ -2172,14 +2172,29 @@ patternList syntaxComments syntaxList =
 
         element0 :: element1Up ->
             let
-                commentsBeforeElements : { end : Elm.Syntax.Range.Location, reverse : List (List String) }
+                commentsBeforeElements :
+                    { end : Elm.Syntax.Range.Location
+                    , reverse : List (Maybe { lineSpread : Print.LineSpread, print : Print })
+                    }
                 commentsBeforeElements =
                     (element0 :: element1Up)
                         |> List.foldl
                             (\(Elm.Syntax.Node.Node elementRange _) soFar ->
+                                let
+                                    commentsBeforeElement : List String
+                                    commentsBeforeElement =
+                                        commentsInRange { start = soFar.end, end = elementRange.start }
+                                            syntaxComments
+                                in
                                 { end = elementRange.end
                                 , reverse =
-                                    commentsInRange { start = soFar.end, end = elementRange.start } syntaxComments
+                                    (case commentsBeforeElement of
+                                        [] ->
+                                            Nothing
+
+                                        comment0 :: comment1Up ->
+                                            Just (collapsibleComments (comment0 :: comment1Up))
+                                    )
                                         :: soFar.reverse
                                 }
                             )
@@ -2191,39 +2206,53 @@ patternList syntaxComments syntaxList =
                 commentsAfterElements =
                     commentsInRange { start = commentsBeforeElements.end, end = syntaxList.fullRange.end } syntaxComments
 
+                elementPrints : List Print
+                elementPrints =
+                    (element0 :: element1Up)
+                        |> List.map
+                            (\element ->
+                                patternNotParenthesized syntaxComments
+                                    element
+                            )
+
                 lineSpread : Print.LineSpread
                 lineSpread =
-                    if
-                        (commentsBeforeElements.reverse |> List.all List.isEmpty)
-                            && (commentsAfterElements |> List.isEmpty)
-                    then
-                        lineSpreadInRange syntaxList.fullRange
-
-                    else
-                        Print.MultipleLines
+                    Print.lineSpreadsCombine
+                        [ lineSpreadInRange syntaxList.fullRange
+                        , elementPrints
+                            |> List.map Print.lineSpread
+                            |> Print.lineSpreadsCombine
+                        , commentsBeforeElements.reverse
+                            |> List.filterMap identity
+                            |> List.map .lineSpread
+                            |> Print.lineSpreadsCombine
+                        ]
             in
             Print.exactly "["
                 |> Print.followedBy Print.space
                 |> Print.followedBy
                     (Print.sequence
                         (List.map2
-                            (\element commentsBeforeElement ->
+                            (\elementPrint maybeCommentsBeforeElement ->
                                 Print.withIndentIncreasedBy 2
-                                    ((case commentsBeforeElement of
-                                        [] ->
+                                    ((case maybeCommentsBeforeElement of
+                                        Nothing ->
                                             Print.empty
 
-                                        comment0 :: comment1Up ->
-                                            comments (comment0 :: comment1Up)
-                                                |> Print.followedBy Print.linebreakIndented
+                                        Just commentsBeforeElement ->
+                                            commentsBeforeElement.print
+                                                |> Print.followedBy
+                                                    (Print.spaceOrLinebreakIndented
+                                                        (Print.lineSpreadMerge
+                                                            commentsBeforeElement.lineSpread
+                                                            (elementPrint |> Print.lineSpread)
+                                                        )
+                                                    )
                                      )
-                                        |> Print.followedBy
-                                            (patternNotParenthesized syntaxComments
-                                                element
-                                            )
+                                        |> Print.followedBy elementPrint
                                     )
                             )
-                            (element0 :: element1Up)
+                            elementPrints
                             (commentsBeforeElements.reverse |> List.reverse)
                             |> List.intersperse
                                 (Print.emptyOrLinebreakIndented lineSpread
@@ -4931,7 +4960,7 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                 { fullRange = fullRange, fields = fields }
 
         Elm.Syntax.Expression.ListExpr elements ->
-            expressionList expressionNotParenthesized syntaxComments { fullRange = fullRange, elements = elements }
+            expressionList syntaxComments { fullRange = fullRange, elements = elements }
 
         Elm.Syntax.Expression.RecordAccess syntaxRecord (Elm.Syntax.Node.Node _ accessedFieldName) ->
             expressionParenthesizedIfSpaceSeparated syntaxComments syntaxRecord
@@ -5500,14 +5529,13 @@ expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
 
 
 expressionList :
-    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node element -> Print)
-    -> List (Elm.Syntax.Node.Node String)
+    List (Elm.Syntax.Node.Node String)
     ->
-        { elements : List (Elm.Syntax.Node.Node element)
+        { elements : List (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression)
         , fullRange : Elm.Syntax.Range.Range
         }
     -> Print
-expressionList printElementNotParenthesized syntaxComments syntaxList =
+expressionList syntaxComments syntaxList =
     case syntaxList.elements of
         [] ->
             Print.exactly "["
@@ -5567,24 +5595,27 @@ expressionList printElementNotParenthesized syntaxComments syntaxList =
                 commentsAfterElements =
                     commentsInRange { start = commentsBeforeElements.end, end = syntaxList.fullRange.end } syntaxComments
 
-                lineSpread : Print.LineSpread
-                lineSpread =
-                    Print.lineSpreadsCombine
-                        [ lineSpreadInRange syntaxList.fullRange
-                        , commentsBeforeElements.reverse
-                            |> List.filterMap identity
-                            |> List.map .lineSpread
-                            |> Print.lineSpreadsCombine
-                        ]
-
                 elementPrints : List Print
                 elementPrints =
                     (element0 :: element1Up)
                         |> List.map
                             (\element ->
-                                printElementNotParenthesized syntaxComments
+                                expressionNotParenthesized syntaxComments
                                     element
                             )
+
+                lineSpread : Print.LineSpread
+                lineSpread =
+                    Print.lineSpreadsCombine
+                        [ lineSpreadInRange syntaxList.fullRange
+                        , elementPrints
+                            |> List.map Print.lineSpread
+                            |> Print.lineSpreadsCombine
+                        , commentsBeforeElements.reverse
+                            |> List.filterMap identity
+                            |> List.map .lineSpread
+                            |> Print.lineSpreadsCombine
+                        ]
             in
             Print.exactly "["
                 |> Print.followedBy Print.space
@@ -5607,8 +5638,7 @@ expressionList printElementNotParenthesized syntaxComments syntaxList =
                                                         )
                                                     )
                                      )
-                                        |> Print.followedBy
-                                            elementPrint
+                                        |> Print.followedBy elementPrint
                                     )
                             )
                             elementPrints
