@@ -1,18 +1,18 @@
 module Elm.Parser.Layout exposing
     ( endsPositivelyIndented
-    , layoutStrict
-    , layoutStrictFollowedBy
-    , layoutStrictFollowedByComments
-    , layoutStrictFollowedByWithComments
-    , maybeAroundBothSides
-    , maybeLayout
-    , moduleLevelIndentationFollowedBy
+    , moduleLevelIndentedFollowedBy
     , multilineComment
-    , onTopIndentationFollowedBy
-    , optimisticLayout
     , positivelyIndentedFollowedBy
     , positivelyIndentedPlusFollowedBy
     , singleLineComment
+    , surroundedByWhitespaceAndCommentsEndsPositivelyIndented
+    , topIndentedFollowedBy
+    , whitespaceAndComments
+    , whitespaceAndCommentsEndsPositivelyIndented
+    , whitespaceAndCommentsEndsTopIndented
+    , whitespaceAndCommentsEndsTopIndentedFollowedBy
+    , whitespaceAndCommentsEndsTopIndentedFollowedByComments
+    , whitespaceAndCommentsEndsTopIndentedFollowedByWithComments
     )
 
 import Char.Extra
@@ -60,8 +60,8 @@ multiLineCommentNoCheck =
         ( '-', "}" )
 
 
-whitespaceAndCommentsOrEmpty : ParserFast.Parser ParserWithComments.Comments
-whitespaceAndCommentsOrEmpty =
+whitespaceAndComments : ParserFast.Parser ParserWithComments.Comments
+whitespaceAndComments =
     ParserFast.skipWhileWhitespaceBacktrackableFollowedBy
         -- whitespace can't be followed by more whitespace
         --
@@ -122,9 +122,9 @@ whitespaceAndCommentsOrEmptyLoop =
         identity
 
 
-maybeLayout : ParserFast.Parser ParserWithComments.Comments
-maybeLayout =
-    whitespaceAndCommentsOrEmpty |> endsPositivelyIndented
+whitespaceAndCommentsEndsPositivelyIndented : ParserFast.Parser ParserWithComments.Comments
+whitespaceAndCommentsEndsPositivelyIndented =
+    whitespaceAndComments |> endsPositivelyIndented
 
 
 endsPositivelyIndented : ParserFast.Parser a -> ParserFast.Parser a
@@ -161,50 +161,45 @@ positivelyIndentedFollowedBy nextParser =
         )
 
 
-optimisticLayout : ParserFast.Parser ParserWithComments.Comments
-optimisticLayout =
-    whitespaceAndCommentsOrEmpty
-
-
-layoutStrictFollowedByComments : ParserFast.Parser ParserWithComments.Comments -> ParserFast.Parser ParserWithComments.Comments
-layoutStrictFollowedByComments nextParser =
+whitespaceAndCommentsEndsTopIndentedFollowedByComments : ParserFast.Parser ParserWithComments.Comments -> ParserFast.Parser ParserWithComments.Comments
+whitespaceAndCommentsEndsTopIndentedFollowedByComments nextParser =
     ParserFast.map2
         (\commentsBefore afterComments ->
             commentsBefore |> Rope.prependTo afterComments
         )
-        optimisticLayout
-        (onTopIndentationFollowedBy nextParser)
+        whitespaceAndComments
+        (topIndentedFollowedBy nextParser)
 
 
-layoutStrictFollowedByWithComments : ParserFast.Parser (ParserWithComments.WithComments syntax) -> ParserFast.Parser (ParserWithComments.WithComments syntax)
-layoutStrictFollowedByWithComments nextParser =
+whitespaceAndCommentsEndsTopIndentedFollowedByWithComments : ParserFast.Parser (ParserWithComments.WithComments syntax) -> ParserFast.Parser (ParserWithComments.WithComments syntax)
+whitespaceAndCommentsEndsTopIndentedFollowedByWithComments nextParser =
     ParserFast.map2
         (\commentsBefore after ->
             { comments = commentsBefore |> Rope.prependTo after.comments
             , syntax = after.syntax
             }
         )
-        optimisticLayout
-        (onTopIndentationFollowedBy nextParser)
+        whitespaceAndComments
+        (topIndentedFollowedBy nextParser)
 
 
-layoutStrictFollowedBy : ParserFast.Parser syntax -> ParserFast.Parser (ParserWithComments.WithComments syntax)
-layoutStrictFollowedBy nextParser =
+whitespaceAndCommentsEndsTopIndentedFollowedBy : ParserFast.Parser syntax -> ParserFast.Parser (ParserWithComments.WithComments syntax)
+whitespaceAndCommentsEndsTopIndentedFollowedBy nextParser =
     ParserFast.map2
         (\commentsBefore after ->
             { comments = commentsBefore, syntax = after }
         )
-        optimisticLayout
-        (onTopIndentationFollowedBy nextParser)
+        whitespaceAndComments
+        (topIndentedFollowedBy nextParser)
 
 
-layoutStrict : ParserFast.Parser ParserWithComments.Comments
-layoutStrict =
-    optimisticLayout |> endsTopIndented
+whitespaceAndCommentsEndsTopIndented : ParserFast.Parser ParserWithComments.Comments
+whitespaceAndCommentsEndsTopIndented =
+    whitespaceAndComments |> endsTopIndented
 
 
-moduleLevelIndentationFollowedBy : ParserFast.Parser a -> ParserFast.Parser a
-moduleLevelIndentationFollowedBy nextParser =
+moduleLevelIndentedFollowedBy : ParserFast.Parser a -> ParserFast.Parser a
+moduleLevelIndentedFollowedBy nextParser =
     ParserFast.columnAndThen
         (\column ->
             if column == 1 then
@@ -222,8 +217,8 @@ endsTopIndented parser =
         parser
 
 
-onTopIndentationFollowedBy : ParserFast.Parser a -> ParserFast.Parser a
-onTopIndentationFollowedBy nextParser =
+topIndentedFollowedBy : ParserFast.Parser a -> ParserFast.Parser a
+topIndentedFollowedBy nextParser =
     ParserFast.columnIndentAndThen
         (\column indent ->
             if column - indent == 0 then
@@ -234,8 +229,8 @@ onTopIndentationFollowedBy nextParser =
         )
 
 
-maybeAroundBothSides : ParserFast.Parser (ParserWithComments.WithComments b) -> ParserFast.Parser (ParserWithComments.WithComments b)
-maybeAroundBothSides x =
+surroundedByWhitespaceAndCommentsEndsPositivelyIndented : ParserFast.Parser (ParserWithComments.WithComments b) -> ParserFast.Parser (ParserWithComments.WithComments b)
+surroundedByWhitespaceAndCommentsEndsPositivelyIndented x =
     ParserFast.map3
         (\before v after ->
             { comments =
@@ -245,6 +240,6 @@ maybeAroundBothSides x =
             , syntax = v.syntax
             }
         )
-        maybeLayout
+        whitespaceAndCommentsEndsPositivelyIndented
         x
-        maybeLayout
+        whitespaceAndCommentsEndsPositivelyIndented

@@ -130,16 +130,16 @@ module_ =
                     |> Rope.toList
             }
         )
-        (Elm.Parser.Layout.layoutStrictFollowedByWithComments
+        (Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndentedFollowedByWithComments
             moduleHeader
         )
-        (Elm.Parser.Layout.layoutStrictFollowedByComments
+        (Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndentedFollowedByComments
             (ParserFast.map2OrSucceed
                 (\moduleDocumentation commentsAfter ->
                     Rope.one moduleDocumentation |> Rope.filledPrependTo commentsAfter
                 )
                 documentationComment
-                Elm.Parser.Layout.layoutStrict
+                Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented
                 Rope.empty
             )
         )
@@ -172,7 +172,7 @@ exposeDefinition =
             , syntax = Elm.Syntax.Node.Node range exposingListInnerResult.syntax
             }
         )
-        (ParserFast.symbolFollowedBy "exposing" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.symbolFollowedBy "exposing" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         exposing_
 
 
@@ -185,7 +185,7 @@ exposing_ =
                 , syntax = inner.syntax
                 }
             )
-            Elm.Parser.Layout.optimisticLayout
+            Elm.Parser.Layout.whitespaceAndComments
             (ParserFast.oneOf2
                 (ParserFast.map3
                     (\headElement commentsAfterHeadElement tailElements ->
@@ -201,10 +201,10 @@ exposing_ =
                         }
                     )
                     expose
-                    Elm.Parser.Layout.maybeLayout
+                    Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     (ParserWithComments.many
                         (ParserFast.symbolFollowedBy ","
-                            (Elm.Parser.Layout.maybeAroundBothSides expose)
+                            (Elm.Parser.Layout.surroundedByWhitespaceAndCommentsEndsPositivelyIndented expose)
                         )
                     )
                 )
@@ -214,7 +214,7 @@ exposing_ =
                         , syntax = Elm.Syntax.Exposing.All range
                         }
                     )
-                    (ParserFast.symbolFollowedBy ".." Elm.Parser.Layout.maybeLayout)
+                    (ParserFast.symbolFollowedBy ".." Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
                 )
             )
         )
@@ -268,13 +268,13 @@ typeExpose =
                     }
         )
         Elm.Parser.Tokens.typeNameNode
-        Elm.Parser.Layout.optimisticLayout
+        Elm.Parser.Layout.whitespaceAndComments
         (ParserFast.map2WithRangeOrSucceed
             (\range left right ->
                 Just { comments = left |> Rope.prependTo right, syntax = range }
             )
-            (ParserFast.symbolFollowedBy "(" Elm.Parser.Layout.maybeLayout)
-            (ParserFast.symbolFollowedBy ".." Elm.Parser.Layout.maybeLayout
+            (ParserFast.symbolFollowedBy "(" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy ".." Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 |> ParserFast.followedBySymbol ")"
             )
             Nothing
@@ -309,8 +309,8 @@ effectWhereClause =
             }
         )
         Elm.Parser.Tokens.functionName
-        Elm.Parser.Layout.maybeLayout
-        (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.maybeLayout)
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
+        (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         Elm.Parser.Tokens.typeNameNode
 
 
@@ -357,11 +357,11 @@ whereBlock =
                     }
                 }
             )
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             effectWhereClause
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             (ParserWithComments.many
-                (ParserFast.symbolFollowedBy "," (Elm.Parser.Layout.maybeAroundBothSides effectWhereClause))
+                (ParserFast.symbolFollowedBy "," (Elm.Parser.Layout.surroundedByWhitespaceAndCommentsEndsPositivelyIndented effectWhereClause))
             )
         )
         |> ParserFast.followedBySymbol "}"
@@ -375,7 +375,7 @@ effectWhereClauses =
             , syntax = whereResult.syntax
             }
         )
-        (ParserFast.keywordFollowedBy "where" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "where" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         whereBlock
 
 
@@ -401,12 +401,12 @@ effectModuleDefinition =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "effect" Elm.Parser.Layout.maybeLayout)
-        (ParserFast.keywordFollowedBy "module" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "effect" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "module" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         moduleName
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         effectWhereClauses
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         exposeDefinition
 
 
@@ -427,9 +427,9 @@ normalModuleDefinition =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "module" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "module" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         moduleName
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         exposeDefinition
 
 
@@ -447,10 +447,10 @@ portModuleDefinition =
                     (Elm.Syntax.Module.PortModule { moduleName = moduleNameNode, exposingList = exposingList.syntax })
             }
         )
-        (ParserFast.keywordFollowedBy "port" Elm.Parser.Layout.maybeLayout)
-        (ParserFast.keywordFollowedBy "module" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "port" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "module" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         moduleName
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         exposeDefinition
 
 
@@ -530,9 +530,9 @@ import_ =
                                     }
                             }
         )
-        (ParserFast.keywordFollowedBy "import" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "import" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         moduleName
-        Elm.Parser.Layout.optimisticLayout
+        Elm.Parser.Layout.whitespaceAndComments
         (ParserFast.map3OrSucceed
             (\commentsBefore moduleAliasNode commentsAfter ->
                 Just
@@ -540,13 +540,13 @@ import_ =
                     , syntax = moduleAliasNode
                     }
             )
-            (ParserFast.keywordFollowedBy "as" Elm.Parser.Layout.maybeLayout)
+            (ParserFast.keywordFollowedBy "as" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
             (Elm.Parser.Tokens.typeNameMapWithRange
                 (\range moduleAlias ->
                     Elm.Syntax.Node.Node range [ moduleAlias ]
                 )
             )
-            Elm.Parser.Layout.optimisticLayout
+            Elm.Parser.Layout.whitespaceAndComments
             Nothing
         )
         (ParserFast.map2OrSucceed
@@ -557,7 +557,7 @@ import_ =
                     }
             )
             exposeDefinition
-            Elm.Parser.Layout.optimisticLayout
+            Elm.Parser.Layout.whitespaceAndComments
             Nothing
         )
 
@@ -565,7 +565,7 @@ import_ =
 declarations : Parser (ParserWithComments.WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration)))
 declarations =
     ParserWithComments.many
-        (Elm.Parser.Layout.moduleLevelIndentationFollowedBy
+        (Elm.Parser.Layout.moduleLevelIndentedFollowedBy
             (ParserFast.map2
                 (\declarationParsed commentsAfter ->
                     { comments = declarationParsed.comments |> Rope.prependTo commentsAfter
@@ -573,7 +573,7 @@ declarations =
                     }
                 )
                 declaration
-                Elm.Parser.Layout.optimisticLayout
+                Elm.Parser.Layout.whitespaceAndComments
             )
         )
 
@@ -730,7 +730,7 @@ declarationWithDocumentation =
                     }
         )
         documentationComment
-        (Elm.Parser.Layout.layoutStrictFollowedByWithComments
+        (Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndentedFollowedByWithComments
             (ParserFast.oneOf3
                 functionAfterDocumentation
                 typeOrTypeAliasDefinitionAfterDocumentation
@@ -836,7 +836,7 @@ functionAfterDocumentation =
         )
         -- infix declarations itself don't have documentation
         Elm.Parser.Tokens.functionNameNode
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.map4OrSucceed
             (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
                 Just
@@ -851,16 +851,16 @@ functionAfterDocumentation =
                         }
                     }
             )
-            (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.maybeLayout)
+            (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
             type_
-            (Elm.Parser.Layout.layoutStrictFollowedBy
+            (Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndentedFollowedBy
                 Elm.Parser.Tokens.functionNameNode
             )
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             Nothing
         )
         parameterPatternsEqual
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         expressionFollowedByOptimisticLayout
 
 
@@ -920,7 +920,7 @@ functionDeclarationWithoutDocumentation =
                     }
         )
         Elm.Parser.Tokens.functionNameNotInfixNode
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.map4OrSucceed
             (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
                 Just
@@ -933,16 +933,16 @@ functionDeclarationWithoutDocumentation =
                     , typeAnnotation = typeAnnotationResult.syntax
                     }
             )
-            (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.maybeLayout)
+            (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
             type_
-            (Elm.Parser.Layout.layoutStrictFollowedBy
+            (Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndentedFollowedBy
                 Elm.Parser.Tokens.functionNameNode
             )
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             Nothing
         )
         parameterPatternsEqual
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         expressionFollowedByOptimisticLayout
         |> ParserFast.validate
             (\result ->
@@ -984,7 +984,7 @@ parameterPatternsEqual =
                 }
             )
             patternNotSpaceSeparated
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         )
 
 
@@ -1005,11 +1005,11 @@ infixDeclaration =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "infix" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "infix" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         infixDirection
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.integerDecimalMapWithRange Elm.Syntax.Node.Node)
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy "("
             (ParserFast.whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollowedBySymbol
                 (\operatorRange operator ->
@@ -1024,8 +1024,8 @@ infixDeclaration =
                 ")"
             )
         )
-        Elm.Parser.Layout.maybeLayout
-        (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.maybeLayout)
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
+        (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         Elm.Parser.Tokens.functionNameNode
 
 
@@ -1054,10 +1054,10 @@ portDeclarationAfterDocumentation =
                     }
             }
         )
-        (ParserFast.keywordFollowedBy "port" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "port" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         Elm.Parser.Tokens.functionNameNode
-        Elm.Parser.Layout.maybeLayout
-        (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.maybeLayout)
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
+        (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         type_
 
 
@@ -1086,10 +1086,10 @@ portDeclarationWithoutDocumentation =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "port" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "port" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         Elm.Parser.Tokens.functionNameNode
-        Elm.Parser.Layout.maybeLayout
-        (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.maybeLayout)
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
+        (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         type_
 
 
@@ -1101,7 +1101,7 @@ typeOrTypeAliasDefinitionAfterDocumentation =
             , syntax = declarationAfterDocumentation.syntax
             }
         )
-        (ParserFast.keywordFollowedBy "type" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "type" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         (ParserFast.oneOf2
             typeAliasDefinitionAfterDocumentationAfterTypePrefix
             customTypeDefinitionAfterDocumentationAfterTypePrefix
@@ -1126,11 +1126,11 @@ typeAliasDefinitionAfterDocumentationAfterTypePrefix =
                     }
             }
         )
-        (ParserFast.keywordFollowedBy "alias" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "alias" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         Elm.Parser.Tokens.typeNameNode
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         type_
 
 
@@ -1154,9 +1154,9 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
             }
         )
         Elm.Parser.Tokens.typeNameNode
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         valueConstructorOptimisticLayout
         (ParserWithComments.manyWithoutReverse
             (ParserFast.symbolFollowedBy "|"
@@ -1169,7 +1169,7 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
                             , syntax = variantResult.syntax
                             }
                         )
-                        Elm.Parser.Layout.maybeLayout
+                        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                         valueConstructorOptimisticLayout
                     )
                 )
@@ -1234,7 +1234,7 @@ typeOrTypeAliasDefinitionWithoutDocumentation =
                     }
         )
         (ParserFast.keywordFollowedBy "type"
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         )
         (ParserFast.oneOf2
             typeAliasDefinitionWithoutDocumentationAfterTypePrefix
@@ -1260,11 +1260,11 @@ typeAliasDefinitionWithoutDocumentationAfterTypePrefix =
                     }
             }
         )
-        (ParserFast.keywordFollowedBy "alias" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "alias" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         Elm.Parser.Tokens.typeNameNode
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         type_
 
 
@@ -1288,9 +1288,9 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
             }
         )
         Elm.Parser.Tokens.typeNameNode
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         valueConstructorOptimisticLayout
         (ParserWithComments.manyWithoutReverse
             (ParserFast.symbolFollowedBy "|"
@@ -1303,7 +1303,7 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
                             , syntax = variantResult.syntax
                             }
                         )
-                        Elm.Parser.Layout.maybeLayout
+                        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                         valueConstructorOptimisticLayout
                     )
                 )
@@ -1339,7 +1339,7 @@ valueConstructorOptimisticLayout =
             }
         )
         Elm.Parser.Tokens.typeNameNode
-        Elm.Parser.Layout.optimisticLayout
+        Elm.Parser.Layout.whitespaceAndComments
         (ParserWithComments.manyWithoutReverse
             (Elm.Parser.Layout.positivelyIndentedFollowedBy
                 (ParserFast.map2
@@ -1349,7 +1349,7 @@ valueConstructorOptimisticLayout =
                         }
                     )
                     typeNotSpaceSeparated
-                    Elm.Parser.Layout.optimisticLayout
+                    Elm.Parser.Layout.whitespaceAndComments
                 )
             )
         )
@@ -1365,7 +1365,7 @@ typeGenericListEquals =
                 }
             )
             Elm.Parser.Tokens.functionNameNode
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         )
 
 
@@ -1381,7 +1381,7 @@ type_ =
                 }
             )
             (ParserFast.lazy (\() -> typeAnnotationNotFunction))
-            Elm.Parser.Layout.optimisticLayout
+            Elm.Parser.Layout.whitespaceAndComments
         )
         (ParserFast.symbolFollowedBy "->"
             (Elm.Parser.Layout.positivelyIndentedPlusFollowedBy 2
@@ -1394,9 +1394,9 @@ type_ =
                         , syntax = typeAnnotationResult.syntax
                         }
                     )
-                    Elm.Parser.Layout.maybeLayout
+                    Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     (ParserFast.lazy (\() -> typeAnnotationNotFunction))
-                    Elm.Parser.Layout.optimisticLayout
+                    Elm.Parser.Layout.whitespaceAndComments
                 )
             )
         )
@@ -1478,9 +1478,9 @@ parensTypeAnnotation =
                             )
                     }
                 )
-                Elm.Parser.Layout.maybeLayout
+                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 type_
-                Elm.Parser.Layout.maybeLayout
+                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 (ParserFast.oneOf2
                     (ParserFast.symbol ")"
                         { comments = Rope.empty, syntax = Nothing }
@@ -1495,9 +1495,9 @@ parensTypeAnnotation =
                                 , syntax = Just { maybeThirdPart = maybeThirdPartResult.syntax, secondPart = secondPartResult.syntax }
                                 }
                             )
-                            Elm.Parser.Layout.maybeLayout
+                            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                             type_
-                            Elm.Parser.Layout.maybeLayout
+                            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                             (ParserFast.oneOf2
                                 (ParserFast.symbol ")"
                                     { comments = Rope.empty, syntax = Nothing }
@@ -1512,9 +1512,9 @@ parensTypeAnnotation =
                                             , syntax = Just thirdPartResult.syntax
                                             }
                                         )
-                                        Elm.Parser.Layout.maybeLayout
+                                        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                                         type_
-                                        Elm.Parser.Layout.maybeLayout
+                                        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                                         |> ParserFast.followedBySymbol ")"
                                     )
                                 )
@@ -1556,7 +1556,7 @@ recordTypeAnnotation =
                         Elm.Syntax.Node.Node range afterCurlyResult.syntax
                     }
         )
-        (ParserFast.symbolFollowedBy "{" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.symbolFollowedBy "{" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         (ParserFast.oneOf2
             (ParserFast.map3
                 (\firstNameNode commentsAfterFirstName afterFirstName ->
@@ -1574,7 +1574,7 @@ recordTypeAnnotation =
                         }
                 )
                 Elm.Parser.Tokens.functionNameNode
-                Elm.Parser.Layout.maybeLayout
+                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 (ParserFast.oneOf2
                     (ParserFast.symbolFollowedBy "|"
                         (ParserFast.map3WithRange
@@ -1588,7 +1588,7 @@ recordTypeAnnotation =
                                         (Elm.Syntax.Node.Node range (head.syntax :: tail.syntax))
                                 }
                             )
-                            Elm.Parser.Layout.maybeLayout
+                            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                             recordFieldDefinition
                             (ParserWithComments.many
                                 (ParserFast.symbolFollowedBy ","
@@ -1598,7 +1598,7 @@ recordTypeAnnotation =
                                             , syntax = field.syntax
                                             }
                                         )
-                                        Elm.Parser.Layout.maybeLayout
+                                        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                                         recordFieldDefinition
                                     )
                                 )
@@ -1620,9 +1620,9 @@ recordTypeAnnotation =
                                         }
                                 }
                             )
-                            Elm.Parser.Layout.maybeLayout
+                            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                             type_
-                            Elm.Parser.Layout.maybeLayout
+                            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                             (ParserFast.orSucceed
                                 (ParserFast.symbolFollowedBy "," recordFieldsTypeAnnotation)
                                 { comments = Rope.empty, syntax = [] }
@@ -1657,7 +1657,7 @@ recordFieldsTypeAnnotation =
             , syntax = head.syntax :: tail.syntax
             }
         )
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         recordFieldDefinition
         (ParserWithComments.many
             (ParserFast.symbolFollowedBy ","
@@ -1667,7 +1667,7 @@ recordFieldsTypeAnnotation =
                         , syntax = field.syntax
                         }
                     )
-                    Elm.Parser.Layout.maybeLayout
+                    Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     recordFieldDefinition
                 )
             )
@@ -1687,14 +1687,14 @@ recordFieldDefinition =
             , syntax = Elm.Syntax.Node.Node range ( name, value.syntax )
             }
         )
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         Elm.Parser.Tokens.functionNameNode
-        Elm.Parser.Layout.maybeLayout
-        (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.maybeLayout)
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
+        (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         type_
         -- This extra whitespace is just included for compatibility with earlier version
         -- TODO for v8: move to recordFieldsTypeAnnotation
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
 
 
 typedTypeAnnotationWithoutArguments : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
@@ -1778,7 +1778,7 @@ typedTypeAnnotationWithArgumentsOptimisticLayout =
             Elm.Parser.Tokens.typeName
             maybeDotTypeNamesTuple
         )
-        Elm.Parser.Layout.optimisticLayout
+        Elm.Parser.Layout.whitespaceAndComments
         (ParserWithComments.manyWithoutReverse
             (Elm.Parser.Layout.positivelyIndentedFollowedBy
                 (ParserFast.map2
@@ -1790,7 +1790,7 @@ typedTypeAnnotationWithArgumentsOptimisticLayout =
                         }
                     )
                     typeNotSpaceSeparated
-                    Elm.Parser.Layout.optimisticLayout
+                    Elm.Parser.Layout.whitespaceAndComments
                 )
             )
         )
@@ -2047,7 +2047,7 @@ expressionAfterOpeningSquareBracket =
                         elements.syntax
                 }
             )
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             (ParserFast.oneOf2
                 (ParserFast.symbol "]" { comments = Rope.empty, syntax = Elm.Syntax.Expression.ListExpr [] })
                 (ParserFast.map2
@@ -2068,7 +2068,7 @@ expressionAfterOpeningSquareBracket =
                                         , syntax = expressionResult.syntax
                                         }
                                     )
-                                    Elm.Parser.Layout.maybeLayout
+                                    Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                                     expressionFollowedByOptimisticLayout
                                     |> Elm.Parser.Layout.endsPositivelyIndented
                                 )
@@ -2096,7 +2096,7 @@ recordExpressionFollowedByRecordAccess =
                 , syntax = Elm.Syntax.Node.Node (rangeMoveStartLeftByOneColumn range) afterCurly.syntax
                 }
             )
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             recordContentsCurlyEnd
             |> followedByMultiRecordAccess
         )
@@ -2122,7 +2122,7 @@ recordContentsCurlyEnd =
                 }
             )
             Elm.Parser.Tokens.functionNameNode
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             (ParserFast.oneOf2
                 (ParserFast.symbolFollowedBy "|"
                     (ParserFast.map2
@@ -2131,7 +2131,7 @@ recordContentsCurlyEnd =
                             , syntax = RecordUpdateFirstSetter setterResult.syntax
                             }
                         )
-                        Elm.Parser.Layout.maybeLayout
+                        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                         recordSetterNodeWithLayout
                     )
                 )
@@ -2144,14 +2144,14 @@ recordContentsCurlyEnd =
                             , syntax = FieldsFirstValue expressionResult.syntax
                             }
                         )
-                        Elm.Parser.Layout.maybeLayout
+                        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                         expressionFollowedByOptimisticLayout
                         |> Elm.Parser.Layout.endsPositivelyIndented
                     )
                 )
             )
             recordFields
-            (Elm.Parser.Layout.maybeLayout |> ParserFast.followedBySymbol "}")
+            (Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented |> ParserFast.followedBySymbol "}")
         )
         (ParserFast.symbol "}" { comments = Rope.empty, syntax = Elm.Syntax.Expression.RecordExpr [] })
 
@@ -2171,7 +2171,7 @@ recordFields =
                     , syntax = setterResult.syntax
                     }
                 )
-                Elm.Parser.Layout.maybeLayout
+                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 recordSetterNodeWithLayout
             )
         )
@@ -2189,8 +2189,8 @@ recordSetterNodeWithLayout =
             }
         )
         Elm.Parser.Tokens.functionNameNode
-        Elm.Parser.Layout.maybeLayout
-        (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.maybeLayout)
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
+        (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         expressionFollowedByOptimisticLayout
         -- This extra whitespace is just included for compatibility with earlier version
         -- TODO for v8: remove
@@ -2248,9 +2248,9 @@ lambdaExpressionFollowedByOptimisticLayout =
                     )
             }
         )
-        (ParserFast.symbolFollowedBy "\\" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.symbolFollowedBy "\\" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         patternNotSpaceSeparated
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserWithComments.until
             (ParserFast.symbol "->" ())
             (ParserFast.map2
@@ -2262,10 +2262,10 @@ lambdaExpressionFollowedByOptimisticLayout =
                     }
                 )
                 patternNotSpaceSeparated
-                Elm.Parser.Layout.maybeLayout
+                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             )
         )
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         expressionFollowedByOptimisticLayout
 
 
@@ -2308,10 +2308,10 @@ caseExpressionFollowedByOptimisticLayout =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "case" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "case" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         expressionFollowedByOptimisticLayout
         (Elm.Parser.Layout.positivelyIndentedFollowedBy
-            (ParserFast.keywordFollowedBy "of" Elm.Parser.Layout.maybeLayout)
+            (ParserFast.keywordFollowedBy "of" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         )
         (ParserFast.withIndentSetToColumn caseStatementsFollowedByOptimisticLayout)
 
@@ -2333,15 +2333,15 @@ caseStatementsFollowedByOptimisticLayout =
             }
         )
         pattern
-        Elm.Parser.Layout.maybeLayout
-        (ParserFast.symbolFollowedBy "->" Elm.Parser.Layout.maybeLayout)
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
+        (ParserFast.symbolFollowedBy "->" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         expressionFollowedByOptimisticLayout
         (ParserWithComments.manyWithoutReverse caseStatementFollowedByOptimisticLayout)
 
 
 caseStatementFollowedByOptimisticLayout : ParserFast.Parser (ParserWithComments.WithComments Elm.Syntax.Expression.Case)
 caseStatementFollowedByOptimisticLayout =
-    Elm.Parser.Layout.onTopIndentationFollowedBy
+    Elm.Parser.Layout.topIndentedFollowedBy
         (ParserFast.map4
             (\patternResult commentsBeforeArrowRight commentsAfterArrowRight expr ->
                 { comments =
@@ -2353,8 +2353,8 @@ caseStatementFollowedByOptimisticLayout =
                 }
             )
             pattern
-            Elm.Parser.Layout.maybeLayout
-            (ParserFast.symbolFollowedBy "->" Elm.Parser.Layout.maybeLayout)
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
+            (ParserFast.symbolFollowedBy "->" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
             expressionFollowedByOptimisticLayout
         )
 
@@ -2397,21 +2397,21 @@ letExpressionFollowedByOptimisticLayout =
                         , declarations = letDeclarationsResult.syntax
                         }
                     )
-                    Elm.Parser.Layout.maybeLayout
+                    Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     (ParserFast.withIndentSetToColumn letDeclarationsIn)
                 )
             )
         )
         -- checks that the `in` token used as the end parser in letDeclarationsIn is indented correctly
         (Elm.Parser.Layout.positivelyIndentedPlusFollowedBy 2
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         )
         expressionFollowedByOptimisticLayout
 
 
 letDeclarationsIn : ParserFast.Parser (ParserWithComments.WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Expression.LetDeclaration)))
 letDeclarationsIn =
-    Elm.Parser.Layout.onTopIndentationFollowedBy
+    Elm.Parser.Layout.topIndentedFollowedBy
         (ParserFast.map3
             (\headLetResult commentsAfter tailLetResult ->
                 { comments =
@@ -2425,7 +2425,7 @@ letDeclarationsIn =
                 letFunctionFollowedByOptimisticLayout
                 letDestructuringDeclarationFollowedByOptimisticLayout
             )
-            Elm.Parser.Layout.optimisticLayout
+            Elm.Parser.Layout.whitespaceAndComments
             (ParserWithComments.until
                 (ParserFast.keyword "in" ())
                 letBlockElementFollowedByOptimisticLayout
@@ -2435,7 +2435,7 @@ letDeclarationsIn =
 
 letBlockElementFollowedByOptimisticLayout : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.LetDeclaration))
 letBlockElementFollowedByOptimisticLayout =
-    Elm.Parser.Layout.onTopIndentationFollowedBy
+    Elm.Parser.Layout.topIndentedFollowedBy
         (ParserFast.oneOf2
             letFunctionFollowedByOptimisticLayout
             letDestructuringDeclarationFollowedByOptimisticLayout
@@ -2464,8 +2464,8 @@ letDestructuringDeclarationFollowedByOptimisticLayout =
             }
         )
         patternNotSpaceSeparated
-        Elm.Parser.Layout.maybeLayout
-        (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.maybeLayout)
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
+        (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         expressionFollowedByOptimisticLayout
 
 
@@ -2533,7 +2533,7 @@ letFunctionFollowedByOptimisticLayout =
                     }
         )
         Elm.Parser.Tokens.functionNameNode
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.map4OrSucceed
             (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
                 Just
@@ -2546,16 +2546,16 @@ letFunctionFollowedByOptimisticLayout =
                     , typeAnnotation = typeAnnotationResult.syntax
                     }
             )
-            (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.maybeLayout)
+            (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
             type_
-            (Elm.Parser.Layout.layoutStrictFollowedBy
+            (Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndentedFollowedBy
                 Elm.Parser.Tokens.functionNameNode
             )
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             Nothing
         )
         parameterPatternsEqual
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         expressionFollowedByOptimisticLayout
         |> ParserFast.validate
             (\result ->
@@ -2634,14 +2634,14 @@ ifBlockExpressionFollowedByOptimisticLayout =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "if" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.keywordFollowedBy "if" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         expressionFollowedByOptimisticLayout
         (Elm.Parser.Layout.positivelyIndentedFollowedBy
-            (ParserFast.keywordFollowedBy "then" Elm.Parser.Layout.maybeLayout)
+            (ParserFast.keywordFollowedBy "then" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         )
         expressionFollowedByOptimisticLayout
         (Elm.Parser.Layout.positivelyIndentedFollowedBy
-            (ParserFast.keywordFollowedBy "else" Elm.Parser.Layout.maybeLayout)
+            (ParserFast.keywordFollowedBy "else" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         )
         expressionFollowedByOptimisticLayout
 
@@ -2845,7 +2845,7 @@ tupledExpressionInnerAfterOpeningParens =
                             )
             }
         )
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         expressionFollowedByOptimisticLayout
         (Elm.Parser.Layout.positivelyIndentedFollowedBy
             (ParserFast.oneOf2
@@ -2862,7 +2862,7 @@ tupledExpressionInnerAfterOpeningParens =
                             , syntax = TupledTwoOrThree partResult.syntax maybeThirdPart.syntax
                             }
                         )
-                        Elm.Parser.Layout.maybeLayout
+                        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                         expressionFollowedByOptimisticLayout
                         (Elm.Parser.Layout.positivelyIndentedFollowedBy
                             (ParserFast.oneOf2
@@ -2876,7 +2876,7 @@ tupledExpressionInnerAfterOpeningParens =
                                             , syntax = Just partResult.syntax
                                             }
                                         )
-                                        Elm.Parser.Layout.maybeLayout
+                                        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                                         expressionFollowedByOptimisticLayout
                                         |> Elm.Parser.Layout.endsPositivelyIndented
                                         |> ParserFast.followedBySymbol ")"
@@ -2943,7 +2943,7 @@ extensionRightParser extensionRightInfo =
                     }
             }
         )
-        Elm.Parser.Layout.maybeLayout
+        Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.lazy
             (\() -> extendedSubExpressionOptimisticLayout extensionRightInfo)
         )
@@ -3214,7 +3214,7 @@ followedByOptimisticLayout parser =
             }
         )
         parser
-        Elm.Parser.Layout.optimisticLayout
+        Elm.Parser.Layout.whitespaceAndComments
 
 
 recordAccessFunctionExpressionMaybeApplied : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
@@ -3300,7 +3300,7 @@ followedByMultiArgumentApplication appliedExpressionParser =
             }
         )
         appliedExpressionParser
-        Elm.Parser.Layout.optimisticLayout
+        Elm.Parser.Layout.whitespaceAndComments
         (ParserWithComments.manyWithoutReverse
             (Elm.Parser.Layout.positivelyIndentedFollowedBy
                 (ParserFast.map2
@@ -3310,7 +3310,7 @@ followedByMultiArgumentApplication appliedExpressionParser =
                         }
                     )
                     subExpression
-                    Elm.Parser.Layout.optimisticLayout
+                    Elm.Parser.Layout.whitespaceAndComments
                 )
             )
         )
@@ -3438,7 +3438,7 @@ pattern =
                     }
                 )
                 (ParserFast.lazy (\() -> composablePattern))
-                Elm.Parser.Layout.maybeLayout
+                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             )
             (ParserFast.symbolFollowedBy "::"
                 (ParserFast.map3
@@ -3450,9 +3450,9 @@ pattern =
                         , syntax = patternResult.syntax
                         }
                     )
-                    Elm.Parser.Layout.maybeLayout
+                    Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     (ParserFast.lazy (\() -> composablePattern))
-                    Elm.Parser.Layout.maybeLayout
+                    Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 )
             )
             (\consed afterCons ->
@@ -3471,7 +3471,7 @@ pattern =
                             , syntax = name
                             }
                     )
-                    Elm.Parser.Layout.maybeLayout
+                    Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     Elm.Parser.Tokens.functionNameNode
                 )
             )
@@ -3492,7 +3492,7 @@ parensPattern =
                         contentResult.syntax
                 }
             )
-            Elm.Parser.Layout.maybeLayout
+            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             -- yes, (  ) is a valid pattern but not a valid type or expression
             (ParserFast.oneOf2
                 (ParserFast.symbol ")" { comments = Rope.empty, syntax = Elm.Syntax.Pattern.UnitPattern })
@@ -3517,7 +3517,7 @@ parensPattern =
                         }
                     )
                     pattern
-                    Elm.Parser.Layout.maybeLayout
+                    Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     (ParserFast.oneOf2
                         (ParserFast.symbol ")" { comments = Rope.empty, syntax = Nothing })
                         (ParserFast.symbolFollowedBy ","
@@ -3531,9 +3531,9 @@ parensPattern =
                                     , syntax = Just { maybeThirdPart = maybeThirdPart.syntax, secondPart = secondPart.syntax }
                                     }
                                 )
-                                Elm.Parser.Layout.maybeLayout
+                                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                                 pattern
-                                Elm.Parser.Layout.maybeLayout
+                                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                                 (ParserFast.oneOf2
                                     (ParserFast.symbol ")" { comments = Rope.empty, syntax = Nothing })
                                     (ParserFast.symbolFollowedBy ","
@@ -3546,9 +3546,9 @@ parensPattern =
                                                 , syntax = Just thirdPart.syntax
                                                 }
                                             )
-                                            Elm.Parser.Layout.maybeLayout
+                                            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                                             pattern
-                                            Elm.Parser.Layout.maybeLayout
+                                            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                                             |> ParserFast.followedBySymbol ")"
                                         )
                                     )
@@ -3601,7 +3601,7 @@ listPattern =
                     , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.ListPattern elements.syntax)
                     }
         )
-        (ParserFast.symbolFollowedBy "[" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.symbolFollowedBy "[" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         (ParserFast.oneOf2
             (ParserFast.symbol "]" Nothing)
             (ParserFast.map3
@@ -3615,10 +3615,10 @@ listPattern =
                         }
                 )
                 pattern
-                Elm.Parser.Layout.maybeLayout
+                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 (ParserWithComments.many
                     (ParserFast.symbolFollowedBy ","
-                        (Elm.Parser.Layout.maybeAroundBothSides pattern)
+                        (Elm.Parser.Layout.surroundedByWhitespaceAndCommentsEndsPositivelyIndented pattern)
                     )
                 )
                 |> ParserFast.followedBySymbol "]"
@@ -3703,7 +3703,7 @@ qualifiedPatternWithConsumeArgs =
             }
         )
         qualifiedNameRefNode
-        Elm.Parser.Layout.optimisticLayout
+        Elm.Parser.Layout.whitespaceAndComments
         (ParserWithComments.manyWithoutReverse
             (Elm.Parser.Layout.positivelyIndentedFollowedBy
                 (ParserFast.map2
@@ -3713,7 +3713,7 @@ qualifiedPatternWithConsumeArgs =
                         }
                     )
                     patternNotSpaceSeparated
-                    Elm.Parser.Layout.optimisticLayout
+                    Elm.Parser.Layout.whitespaceAndComments
                 )
             )
         )
@@ -3768,7 +3768,7 @@ recordPattern =
                 Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.RecordPattern elements.syntax)
             }
         )
-        (ParserFast.symbolFollowedBy "{" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.symbolFollowedBy "{" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         (ParserFast.oneOf2
             (ParserFast.map3
                 (\head commentsAfterHead tail ->
@@ -3779,7 +3779,7 @@ recordPattern =
                     }
                 )
                 Elm.Parser.Tokens.functionNameNode
-                Elm.Parser.Layout.maybeLayout
+                Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 (ParserWithComments.many
                     (ParserFast.symbolFollowedBy ","
                         (ParserFast.map3
@@ -3788,9 +3788,9 @@ recordPattern =
                                 , syntax = name
                                 }
                             )
-                            Elm.Parser.Layout.maybeLayout
+                            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                             Elm.Parser.Tokens.functionNameNode
-                            Elm.Parser.Layout.maybeLayout
+                            Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                         )
                     )
                 )

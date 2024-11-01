@@ -14,103 +14,103 @@ all =
     Test.describe "LayoutTests"
         [ Test.test "empty"
             (\() ->
-                parse "." (ParserFast.symbolFollowedBy "." Elm.Parser.Layout.maybeLayout)
+                parse "." (ParserFast.symbolFollowedBy "." Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
                     |> Expect.equal (Just ())
             )
         , Test.test "just whitespace"
             (\() ->
-                parse " " Elm.Parser.Layout.maybeLayout
+                parse " " Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     |> Expect.equal (Just ())
             )
         , Test.test "spaces followed by new line"
             (\() ->
-                parse " \n" Elm.Parser.Layout.maybeLayout
+                parse " \n" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     |> Expect.equal Nothing
             )
         , Test.test "with newline and higher indent 2"
             (\() ->
-                parse "\n  " Elm.Parser.Layout.maybeLayout
+                parse "\n  " Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     |> Expect.equal (Just ())
             )
         , Test.test "with newline and higher indent 3"
             (\() ->
-                parse " \n " Elm.Parser.Layout.maybeLayout
+                parse " \n " Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     |> Expect.equal (Just ())
             )
         , Test.test "maybeLayout with multiline comment"
             (\() ->
-                parse "\n--x\n{- foo \n-}\n " Elm.Parser.Layout.maybeLayout
+                parse "\n--x\n{- foo \n-}\n " Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     |> Expect.equal (Just ())
             )
         , Test.test "maybeLayout with documentation comment fails"
             (\() ->
-                parse "\n--x\n{-| foo \n-}\n " Elm.Parser.Layout.maybeLayout
+                parse "\n--x\n{-| foo \n-}\n " Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     |> Expect.equal Nothing
             )
         , Test.test "with newline and higher indent 4"
             (\() ->
-                parse " \n  " Elm.Parser.Layout.maybeLayout
+                parse " \n  " Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     |> Expect.equal (Just ())
             )
         , Test.test "newlines spaces and single line comments"
             (\() ->
-                parse "\n\n      --time\n  " Elm.Parser.Layout.maybeLayout
+                parse "\n\n      --time\n  " Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                     |> Expect.equal (Just ())
             )
-        , Test.test "layoutStrict"
+        , Test.test "whitespaceAndCommentsEndsTopIndented"
             (\() ->
-                parse " \n" Elm.Parser.Layout.layoutStrict
+                parse " \n" Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented
                     |> Expect.equal (Just ())
             )
-        , Test.test "layoutStrict multi line"
+        , Test.test "whitespaceAndCommentsEndsTopIndented multi line"
             (\() ->
-                parse " \n      \n" Elm.Parser.Layout.layoutStrict
+                parse " \n      \n" Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented
                     |> Expect.equal (Just ())
             )
-        , Test.test "layoutStrict too much"
+        , Test.test "whitespaceAndCommentsEndsTopIndented too much"
             (\() ->
-                parse " \n " Elm.Parser.Layout.layoutStrict
+                parse " \n " Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented
                     |> Expect.equal Nothing
             )
-        , Test.test "layoutStrict with comments"
+        , Test.test "whitespaceAndCommentsEndsTopIndented with comments"
             (\() ->
-                parse "-- foo\n  --bar\n" Elm.Parser.Layout.layoutStrict
+                parse "-- foo\n  --bar\n" Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented
                     |> Expect.equal (Just ())
             )
-        , Test.test "layoutStrict with comments 2"
+        , Test.test "whitespaceAndCommentsEndsTopIndented with comments 2"
             (\() ->
-                parse "\n--x\n{- foo \n-}\n" Elm.Parser.Layout.layoutStrict
+                parse "\n--x\n{- foo \n-}\n" Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented
                     |> Expect.equal (Just ())
             )
-        , Test.test "layoutStrict with documentation comment fails"
+        , Test.test "whitespaceAndCommentsEndsTopIndented with documentation comment fails"
             (\() ->
-                parse "\n--x\n{-| foo \n-}\n" Elm.Parser.Layout.layoutStrict
+                parse "\n--x\n{-| foo \n-}\n" Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented
                     |> Expect.equal Nothing
             )
-        , Test.test "layoutStrict some"
+        , Test.test "whitespaceAndCommentsEndsTopIndented some"
             (\() ->
                 parse "..\n  \n  "
                     (ParserFast.symbolFollowedBy ".."
-                        (ParserFast.withIndentSetToColumn Elm.Parser.Layout.layoutStrict)
+                        (ParserFast.withIndentSetToColumn Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented)
                     )
                     |> Expect.equal (Just ())
             )
-        , Test.test "layoutStrict with comments multi empty line preceding"
+        , Test.test "whitespaceAndCommentsEndsTopIndented with comments multi empty line preceding"
             (\() ->
-                parse "\n\n --bar\n" Elm.Parser.Layout.layoutStrict
+                parse "\n\n --bar\n" Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented
                     |> Expect.equal (Just ())
             )
-        , Test.test "layoutStrict with multiple new lines"
+        , Test.test "whitespaceAndCommentsEndsTopIndented with multiple new lines"
             (\() ->
                 parse "..\n  \n    \n\n  "
                     (ParserFast.symbolFollowedBy ".."
-                        (ParserFast.withIndentSetToColumn Elm.Parser.Layout.layoutStrict)
+                        (ParserFast.withIndentSetToColumn Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented)
                     )
                     |> Expect.equal (Just ())
             )
-        , Test.test "layoutStrict with multiline comment plus trailing whitespace"
+        , Test.test "whitespaceAndCommentsEndsTopIndented with multiline comment plus trailing whitespace"
             (\() ->
-                parse "\n{- some note -}    \n" Elm.Parser.Layout.layoutStrict
+                parse "\n{- some note -}    \n" Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndented
                     |> Expect.equal (Just ())
             )
         , Test.describe "comment"

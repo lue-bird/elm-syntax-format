@@ -178,5 +178,5 @@ exposeDefinition =
             , syntax = Elm.Syntax.Node.Node range exposingListInnerResult.syntax
             }
         )
-        (ParserFast.symbolFollowedBy "exposing" Elm.Parser.Layout.maybeLayout)
+        (ParserFast.symbolFollowedBy "exposing" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         ElmSyntaxParserLenient.exposing_
