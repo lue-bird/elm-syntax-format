@@ -243,7 +243,7 @@ infixExpose =
                 (\c -> c /= ')' && c /= '\n' && c /= ' ')
             )
         )
-        Elm.Parser.Tokens.parensEnd
+        (ParserFast.symbol ")" ())
 
 
 typeExpose : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose))
@@ -976,7 +976,7 @@ functionDeclarationWithoutDocumentation =
 
 parameterPatternsEqual : Parser (ParserWithComments.WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern)))
 parameterPatternsEqual =
-    ParserWithComments.until Elm.Parser.Tokens.equal
+    ParserWithComments.until (ParserFast.symbol "=" ())
         (ParserFast.map2
             (\patternResult commentsAfterPattern ->
                 { comments = patternResult.comments |> Rope.prependTo commentsAfterPattern
@@ -1357,7 +1357,7 @@ valueConstructorOptimisticLayout =
 
 typeGenericListEquals : Parser (ParserWithComments.WithComments (List (Elm.Syntax.Node.Node String)))
 typeGenericListEquals =
-    ParserWithComments.until Elm.Parser.Tokens.equal
+    ParserWithComments.until (ParserFast.symbol "=" ())
         (ParserFast.map2
             (\name commentsAfterName ->
                 { comments = commentsAfterName
@@ -2426,7 +2426,10 @@ letDeclarationsIn =
                 letDestructuringDeclarationFollowedByOptimisticLayout
             )
             Elm.Parser.Layout.optimisticLayout
-            (ParserWithComments.until Elm.Parser.Tokens.inToken letBlockElementFollowedByOptimisticLayout)
+            (ParserWithComments.until
+                (ParserFast.keyword "in" ())
+                letBlockElementFollowedByOptimisticLayout
+            )
         )
 
 

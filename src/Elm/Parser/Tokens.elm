@@ -1,16 +1,11 @@
 module Elm.Parser.Tokens exposing
-    ( inToken
-    , equal, parensEnd
-    , isAllowedOperatorToken, isOperatorSymbolCharAsString
+    ( isAllowedOperatorToken, isOperatorSymbolCharAsString
     , characterLiteralMapWithRange, singleOrTripleQuotedStringLiteralMapWithRange
     , functionName, functionNameNode, functionNameMapWithRange, functionNameNotInfixNode, typeName, typeNameNode, typeNameMapWithRange
     )
 
 {-|
 
-@docs inToken
-
-@docs equal, parensEnd
 @docs isAllowedOperatorToken, isOperatorSymbolCharAsString
 
 @docs characterLiteralMapWithRange, singleOrTripleQuotedStringLiteralMapWithRange
@@ -76,11 +71,6 @@ isNotReserved name =
 
         _ ->
             True
-
-
-inToken : ParserFast.Parser ()
-inToken =
-    ParserFast.keyword "in" ()
 
 
 escapedCharValueMap : (Char -> res) -> ParserFast.Parser res
@@ -444,13 +434,3 @@ isOperatorSymbolCharAsString c =
 
         _ ->
             False
-
-
-equal : ParserFast.Parser ()
-equal =
-    ParserFast.symbol "=" ()
-
-
-parensEnd : ParserFast.Parser ()
-parensEnd =
-    ParserFast.symbol ")" ()
