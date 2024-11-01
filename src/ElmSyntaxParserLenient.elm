@@ -1,6 +1,6 @@
 module ElmSyntaxParserLenient exposing
     ( Parser, run, module_
-    , moduleName, expose, exposing_
+    , moduleName, functionName, typeName, expose, exposing_
     , moduleHeader, documentationComment, import_, declarations, declaration
     , type_, pattern, expressionFollowedByOptimisticLayout
     )
@@ -77,14 +77,14 @@ Sometimes it's useful to parse only some part of the syntax,
 to, say, display only an expression in an article
 or reparse only the touched declarations on save.
 
-@docs moduleName, expose, exposing_
+@docs moduleName, functionName, typeName, expose, exposing_
 @docs moduleHeader, documentationComment, import_, declarations, declaration
 @docs type_, pattern, expressionFollowedByOptimisticLayout
 
 -}
 
+import Char.Extra
 import Elm.Parser.Layout
-import Elm.Parser.Tokens
 import Elm.Syntax.Declaration
 import Elm.Syntax.Documentation
 import Elm.Syntax.Exposing
@@ -153,9 +153,9 @@ moduleName =
         (\range head tail ->
             Elm.Syntax.Node.Node range (head :: tail)
         )
-        Elm.Parser.Tokens.typeName
+        typeName
         (ParserFast.loopWhileSucceedsRightToLeftStackUnsafe
-            (ParserFast.symbolFollowedBy "." Elm.Parser.Tokens.typeName)
+            (ParserFast.symbolFollowedBy "." typeName)
             []
             (::)
         )
@@ -249,12 +249,12 @@ infixExpose =
 typeExpose : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose))
 typeExpose =
     ParserFast.map3
-        (\(Elm.Syntax.Node.Node typeNameRange typeName) commentsBeforeMaybeOpen maybeOpen ->
+        (\(Elm.Syntax.Node.Node typeNameRange typeExposeName) commentsBeforeMaybeOpen maybeOpen ->
             case maybeOpen of
                 Nothing ->
                     { comments = commentsBeforeMaybeOpen
                     , syntax =
-                        Elm.Syntax.Node.Node typeNameRange (Elm.Syntax.Exposing.TypeOrAliasExpose typeName)
+                        Elm.Syntax.Node.Node typeNameRange (Elm.Syntax.Exposing.TypeOrAliasExpose typeExposeName)
                     }
 
                 Just open ->
@@ -264,10 +264,10 @@ typeExpose =
                             { start = typeNameRange.start
                             , end = open.syntax.end
                             }
-                            (Elm.Syntax.Exposing.TypeExpose { name = typeName, open = Just open.syntax })
+                            (Elm.Syntax.Exposing.TypeExpose { name = typeExposeName, open = Just open.syntax })
                     }
         )
-        Elm.Parser.Tokens.typeNameNode
+        typeNameNode
         Elm.Parser.Layout.whitespaceAndComments
         (ParserFast.map2WithRangeOrSucceed
             (\range left right ->
@@ -283,7 +283,7 @@ typeExpose =
 
 functionExpose : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose))
 functionExpose =
-    Elm.Parser.Tokens.functionNameMapWithRange
+    functionNameMapWithRange
         (\range name ->
             { comments = Rope.empty
             , syntax =
@@ -303,15 +303,15 @@ moduleHeader =
 effectWhereClause : Parser (ParserWithComments.WithComments ( String, Elm.Syntax.Node.Node String ))
 effectWhereClause =
     ParserFast.map4
-        (\fnName commentsAfterFnName commentsAfterEqual typeName ->
+        (\fnName commentsAfterFnName commentsAfterEqual fnTypeName ->
             { comments = commentsAfterFnName |> Rope.prependTo commentsAfterEqual
-            , syntax = ( fnName, typeName )
+            , syntax = ( fnName, fnTypeName )
             }
         )
-        Elm.Parser.Tokens.functionName
+        functionName
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
-        Elm.Parser.Tokens.typeNameNode
+        typeNameNode
 
 
 whereBlock : Parser (ParserWithComments.WithComments { command : Maybe (Elm.Syntax.Node.Node String), subscription : Maybe (Elm.Syntax.Node.Node String) })
@@ -541,7 +541,7 @@ import_ =
                     }
             )
             (ParserFast.keywordFollowedBy "as" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
-            (Elm.Parser.Tokens.typeNameMapWithRange
+            (typeNameMapWithRange
                 (\range moduleAlias ->
                     Elm.Syntax.Node.Node range [ moduleAlias ]
                 )
@@ -835,7 +835,7 @@ functionAfterDocumentation =
             }
         )
         -- infix declarations itself don't have documentation
-        Elm.Parser.Tokens.functionNameNode
+        functionNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.map4OrSucceed
             (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
@@ -854,7 +854,7 @@ functionAfterDocumentation =
             (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
             type_
             (Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndentedFollowedBy
-                Elm.Parser.Tokens.functionNameNode
+                functionNameNode
             )
             Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             Nothing
@@ -919,7 +919,7 @@ functionDeclarationWithoutDocumentation =
                             )
                     }
         )
-        Elm.Parser.Tokens.functionNameNotInfixNode
+        functionNameNotInfixNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.map4OrSucceed
             (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
@@ -936,7 +936,7 @@ functionDeclarationWithoutDocumentation =
             (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
             type_
             (Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndentedFollowedBy
-                Elm.Parser.Tokens.functionNameNode
+                functionNameNode
             )
             Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             Nothing
@@ -1019,14 +1019,14 @@ infixDeclaration =
                         }
                         operator
                 )
-                Elm.Parser.Tokens.isOperatorSymbolCharAsString
-                Elm.Parser.Tokens.isAllowedOperatorToken
+                isOperatorSymbolCharAsString
+                isAllowedOperatorToken
                 ")"
             )
         )
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
-        Elm.Parser.Tokens.functionNameNode
+        functionNameNode
 
 
 infixDirection : Parser (Elm.Syntax.Node.Node Elm.Syntax.Infix.InfixDirection)
@@ -1055,7 +1055,7 @@ portDeclarationAfterDocumentation =
             }
         )
         (ParserFast.keywordFollowedBy "port" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
-        Elm.Parser.Tokens.functionNameNode
+        functionNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         type_
@@ -1087,7 +1087,7 @@ portDeclarationWithoutDocumentation =
             }
         )
         (ParserFast.keywordFollowedBy "port" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
-        Elm.Parser.Tokens.functionNameNode
+        functionNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         type_
@@ -1127,7 +1127,7 @@ typeAliasDefinitionAfterDocumentationAfterTypePrefix =
             }
         )
         (ParserFast.keywordFollowedBy "alias" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
-        Elm.Parser.Tokens.typeNameNode
+        typeNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
@@ -1153,7 +1153,7 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
                     }
             }
         )
-        Elm.Parser.Tokens.typeNameNode
+        typeNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
@@ -1261,7 +1261,7 @@ typeAliasDefinitionWithoutDocumentationAfterTypePrefix =
             }
         )
         (ParserFast.keywordFollowedBy "alias" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
-        Elm.Parser.Tokens.typeNameNode
+        typeNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
@@ -1287,7 +1287,7 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
                     }
             }
         )
-        Elm.Parser.Tokens.typeNameNode
+        typeNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
@@ -1338,7 +1338,7 @@ valueConstructorOptimisticLayout =
                     }
             }
         )
-        Elm.Parser.Tokens.typeNameNode
+        typeNameNode
         Elm.Parser.Layout.whitespaceAndComments
         (ParserWithComments.manyWithoutReverse
             (Elm.Parser.Layout.positivelyIndentedFollowedBy
@@ -1364,7 +1364,7 @@ typeGenericListEquals =
                 , syntax = name
                 }
             )
-            Elm.Parser.Tokens.functionNameNode
+            functionNameNode
             Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         )
 
@@ -1528,7 +1528,7 @@ parensTypeAnnotation =
 
 genericTypeAnnotation : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
 genericTypeAnnotation =
-    Elm.Parser.Tokens.functionNameMapWithRange
+    functionNameMapWithRange
         (\range var ->
             { comments = Rope.empty
             , syntax =
@@ -1573,7 +1573,7 @@ recordTypeAnnotation =
                                     Elm.Syntax.TypeAnnotation.Record (Elm.Syntax.Node.combine Tuple.pair firstNameNode fieldsAfterName.firstFieldValue :: fieldsAfterName.tailFields)
                         }
                 )
-                Elm.Parser.Tokens.functionNameNode
+                functionNameNode
                 Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 (ParserFast.oneOf2
                     (ParserFast.symbolFollowedBy "|"
@@ -1688,7 +1688,7 @@ recordFieldDefinition =
             }
         )
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
-        Elm.Parser.Tokens.functionNameNode
+        functionNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         type_
@@ -1717,7 +1717,7 @@ typedTypeAnnotationWithoutArguments =
                     (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node range name) [])
             }
         )
-        Elm.Parser.Tokens.typeName
+        typeName
         maybeDotTypeNamesTuple
 
 
@@ -1732,7 +1732,7 @@ maybeDotTypeNamesTuple =
                 Just ( qualificationAfter, unqualified ) ->
                     Just ( firstName :: qualificationAfter, unqualified )
         )
-        (ParserFast.symbolFollowedBy "." Elm.Parser.Tokens.typeName)
+        (ParserFast.symbolFollowedBy "." typeName)
         (ParserFast.lazy (\() -> maybeDotTypeNamesTuple))
         Nothing
 
@@ -1775,7 +1775,7 @@ typedTypeAnnotationWithArgumentsOptimisticLayout =
                 in
                 Elm.Syntax.Node.Node range name
             )
-            Elm.Parser.Tokens.typeName
+            typeName
             maybeDotTypeNamesTuple
         )
         Elm.Parser.Layout.whitespaceAndComments
@@ -1841,7 +1841,7 @@ referenceOrNumberExpression =
 followedByMultiRecordAccess : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression)) -> ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 followedByMultiRecordAccess beforeRecordAccesses =
     ParserFast.loopWhileSucceedsOntoResultFromParser
-        (ParserFast.symbolFollowedBy "." Elm.Parser.Tokens.functionNameNode)
+        (ParserFast.symbolFollowedBy "." functionNameNode)
         beforeRecordAccesses
         (\fieldNode leftResult ->
             let
@@ -2121,7 +2121,7 @@ recordContentsCurlyEnd =
                             Elm.Syntax.Expression.RecordExpr (Elm.Syntax.Node.combine Tuple.pair nameNode firstFieldValue :: tailFields.syntax)
                 }
             )
-            Elm.Parser.Tokens.functionNameNode
+            functionNameNode
             Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             (ParserFast.oneOf2
                 (ParserFast.symbolFollowedBy "|"
@@ -2188,7 +2188,7 @@ recordSetterNodeWithLayout =
             , syntax = Elm.Syntax.Node.Node range ( name, expressionResult.syntax )
             }
         )
-        Elm.Parser.Tokens.functionNameNode
+        functionNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy "=" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
         expressionFollowedByOptimisticLayout
@@ -2199,7 +2199,7 @@ recordSetterNodeWithLayout =
 
 literalExpression : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 literalExpression =
-    Elm.Parser.Tokens.singleOrTripleQuotedStringLiteralMapWithRange
+    singleOrTripleQuotedStringLiteralMapWithRange
         (\range string ->
             { comments = Rope.empty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Expression.Literal string)
@@ -2209,7 +2209,7 @@ literalExpression =
 
 charLiteralExpression : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 charLiteralExpression =
-    Elm.Parser.Tokens.characterLiteralMapWithRange
+    characterLiteralMapWithRange
         (\range char ->
             { comments = Rope.empty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Expression.CharLiteral char)
@@ -2532,7 +2532,7 @@ letFunctionFollowedByOptimisticLayout =
                             )
                     }
         )
-        Elm.Parser.Tokens.functionNameNode
+        functionNameNode
         Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.map4OrSucceed
             (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
@@ -2549,7 +2549,7 @@ letFunctionFollowedByOptimisticLayout =
             (ParserFast.symbolFollowedBy ":" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
             type_
             (Elm.Parser.Layout.whitespaceAndCommentsEndsTopIndentedFollowedBy
-                Elm.Parser.Tokens.functionNameNode
+                functionNameNode
             )
             Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
             Nothing
@@ -2715,7 +2715,7 @@ qualifiedOrVariantOrRecordConstructorReferenceExpressionFollowedByRecordAccess =
                     )
             }
         )
-        Elm.Parser.Tokens.typeName
+        typeName
         maybeDotReferenceExpressionTuple
         |> followedByMultiRecordAccess
 
@@ -2735,11 +2735,11 @@ maybeDotReferenceExpressionTuple =
                             Just ( qualificationAfter, unqualified ) ->
                                 ( firstName :: qualificationAfter, unqualified )
                     )
-                    Elm.Parser.Tokens.typeName
+                    typeName
                     (ParserFast.lazy (\() -> maybeDotReferenceExpressionTuple))
                 )
                 (\name -> Just ( [], name ))
-                Elm.Parser.Tokens.functionName
+                functionName
             )
         )
         Nothing
@@ -2747,7 +2747,7 @@ maybeDotReferenceExpressionTuple =
 
 unqualifiedFunctionReferenceExpressionFollowedByRecordAccess : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 unqualifiedFunctionReferenceExpressionFollowedByRecordAccess =
-    Elm.Parser.Tokens.functionNameMapWithRange
+    functionNameMapWithRange
         (\range unqualified ->
             { comments = Rope.empty
             , syntax =
@@ -2760,7 +2760,7 @@ unqualifiedFunctionReferenceExpressionFollowedByRecordAccess =
 recordAccessFunctionExpression : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 recordAccessFunctionExpression =
     ParserFast.symbolFollowedBy "."
-        (Elm.Parser.Tokens.functionNameMapWithRange
+        (functionNameMapWithRange
             (\range field ->
                 { comments = Rope.empty
                 , syntax =
@@ -2809,8 +2809,8 @@ allowedPrefixOperatorFollowedByClosingParensOneOf =
                     (Elm.Syntax.Expression.PrefixOperator operator)
             }
         )
-        Elm.Parser.Tokens.isOperatorSymbolCharAsString
-        Elm.Parser.Tokens.isAllowedOperatorToken
+        isOperatorSymbolCharAsString
+        isAllowedOperatorToken
         ")"
 
 
@@ -3058,7 +3058,7 @@ infixOperatorAndThen extensionRightConstraints =
             toResult precedence8Pow
     in
     ParserFast.whileAtMost3WithoutLinebreakAnd2PartUtf16ToResultAndThen
-        Elm.Parser.Tokens.isOperatorSymbolCharAsString
+        isOperatorSymbolCharAsString
         (\operator ->
             case operator of
                 "|>" ->
@@ -3472,7 +3472,7 @@ pattern =
                             }
                     )
                     Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
-                    Elm.Parser.Tokens.functionNameNode
+                    functionNameNode
                 )
             )
             Nothing
@@ -3563,7 +3563,7 @@ parensPattern =
 
 varPattern : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
 varPattern =
-    Elm.Parser.Tokens.functionNameMapWithRange
+    functionNameMapWithRange
         (\range var ->
             { comments = Rope.empty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.VarPattern var)
@@ -3580,7 +3580,7 @@ numberPart =
 
 charPattern : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
 charPattern =
-    Elm.Parser.Tokens.characterLiteralMapWithRange
+    characterLiteralMapWithRange
         (\range char ->
             { comments = Rope.empty, syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.CharPattern char) }
         )
@@ -3671,7 +3671,7 @@ allPattern =
 
 stringPattern : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
 stringPattern =
-    Elm.Parser.Tokens.singleOrTripleQuotedStringLiteralMapWithRange
+    singleOrTripleQuotedStringLiteralMapWithRange
         (\range string ->
             { comments = Rope.empty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.StringPattern string)
@@ -3732,7 +3732,7 @@ qualifiedNameRefNode =
                         { moduleName = firstName :: qualificationAfter, name = unqualified }
                 )
         )
-        Elm.Parser.Tokens.typeName
+        typeName
         maybeDotTypeNamesTuple
 
 
@@ -3755,7 +3755,7 @@ qualifiedPatternWithoutConsumeArgs =
                     )
             }
         )
-        Elm.Parser.Tokens.typeName
+        typeName
         maybeDotTypeNamesTuple
 
 
@@ -3778,7 +3778,7 @@ recordPattern =
                     , syntax = head :: tail.syntax
                     }
                 )
-                Elm.Parser.Tokens.functionNameNode
+                functionNameNode
                 Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                 (ParserWithComments.many
                     (ParserFast.symbolFollowedBy ","
@@ -3789,7 +3789,7 @@ recordPattern =
                                 }
                             )
                             Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
-                            Elm.Parser.Tokens.functionNameNode
+                            functionNameNode
                             Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented
                         )
                     )
@@ -3798,3 +3798,419 @@ recordPattern =
             )
             (ParserFast.symbol "}" { comments = Rope.empty, syntax = [] })
         )
+
+
+isNotReserved : String -> Bool
+isNotReserved name =
+    case name of
+        "module" ->
+            False
+
+        "exposing" ->
+            False
+
+        "import" ->
+            False
+
+        "as" ->
+            False
+
+        "if" ->
+            False
+
+        "then" ->
+            False
+
+        "else" ->
+            False
+
+        "let" ->
+            False
+
+        "in" ->
+            False
+
+        "case" ->
+            False
+
+        "of" ->
+            False
+
+        "port" ->
+            False
+
+        --"infixr"
+        --"infixl"
+        "type" ->
+            False
+
+        -- "infix" Apparently this is not a reserved keyword
+        -- "alias" Apparently this is not a reserved keyword
+        "where" ->
+            False
+
+        _ ->
+            True
+
+
+escapedCharValueMap : (Char -> res) -> ParserFast.Parser res
+escapedCharValueMap charToRes =
+    ParserFast.oneOf7
+        (ParserFast.symbol "'" (charToRes '\''))
+        (ParserFast.symbol "\"" (charToRes '"'))
+        (ParserFast.symbol "n" (charToRes '\n'))
+        (ParserFast.symbol "t" (charToRes '\t'))
+        -- even though elm-format will change \r to a unicode version. When you don't use elm-format, this will not happen.
+        (ParserFast.symbol "r" (charToRes '\u{000D}'))
+        (ParserFast.symbol "\\" (charToRes '\\'))
+        (ParserFast.symbolFollowedBy "u{"
+            (ParserFast.ifFollowedByWhileMapWithoutLinebreak
+                (\hex ->
+                    charToRes (Char.fromCode (hexStringToInt hex))
+                )
+                Char.isHexDigit
+                Char.isHexDigit
+                |> ParserFast.followedBySymbol "}"
+            )
+        )
+
+
+hexStringToInt : String -> Int
+hexStringToInt string =
+    String.foldr
+        (\c soFar ->
+            { exponent = soFar.exponent + 1
+            , result = soFar.result + 16 ^ soFar.exponent * charToHex c
+            }
+        )
+        { exponent = 0, result = 0 }
+        string
+        |> .result
+
+
+charToHex : Char -> Int
+charToHex c =
+    case c of
+        '0' ->
+            0
+
+        '1' ->
+            1
+
+        '2' ->
+            2
+
+        '3' ->
+            3
+
+        '4' ->
+            4
+
+        '5' ->
+            5
+
+        '6' ->
+            6
+
+        '7' ->
+            7
+
+        '8' ->
+            8
+
+        '9' ->
+            9
+
+        'a' ->
+            10
+
+        'b' ->
+            11
+
+        'c' ->
+            12
+
+        'd' ->
+            13
+
+        'e' ->
+            14
+
+        'f' ->
+            15
+
+        'A' ->
+            10
+
+        'B' ->
+            11
+
+        'C' ->
+            12
+
+        'D' ->
+            13
+
+        'E' ->
+            14
+
+        -- 'F'
+        _ ->
+            15
+
+
+characterLiteralMapWithRange : (Elm.Syntax.Range.Range -> Char -> res) -> ParserFast.Parser res
+characterLiteralMapWithRange rangeAndCharToRes =
+    ParserFast.symbolFollowedBy "'"
+        (ParserFast.oneOf2MapWithStartRowColumnAndEndRowColumn
+            (\startRow startColumn char endRow endColumn ->
+                rangeAndCharToRes
+                    { start = { row = startRow, column = startColumn - 1 }
+                    , end = { row = endRow, column = endColumn + 1 }
+                    }
+                    char
+            )
+            (ParserFast.symbolFollowedBy "\\" (escapedCharValueMap identity))
+            (\startRow startColumn char endRow endColumn ->
+                rangeAndCharToRes
+                    { start = { row = startRow, column = startColumn - 1 }
+                    , end = { row = endRow, column = endColumn + 1 }
+                    }
+                    char
+            )
+            ParserFast.anyChar
+            |> ParserFast.followedBySymbol "'"
+        )
+
+
+singleOrTripleQuotedStringLiteralMapWithRange : (Elm.Syntax.Range.Range -> String -> res) -> ParserFast.Parser res
+singleOrTripleQuotedStringLiteralMapWithRange rangeAndStringToRes =
+    ParserFast.symbolFollowedBy "\""
+        (ParserFast.oneOf2MapWithStartRowColumnAndEndRowColumn
+            (\startRow startColumn string endRow endColumn ->
+                rangeAndStringToRes
+                    { start = { row = startRow, column = startColumn - 1 }
+                    , end = { row = endRow, column = endColumn }
+                    }
+                    string
+            )
+            (ParserFast.symbolFollowedBy "\"\""
+                tripleQuotedStringLiteralOfterTripleDoubleQuote
+            )
+            (\startRow startColumn string endRow endColumn ->
+                rangeAndStringToRes
+                    { start = { row = startRow, column = startColumn - 1 }
+                    , end = { row = endRow, column = endColumn }
+                    }
+                    string
+            )
+            singleQuotedStringLiteralAfterDoubleQuote
+        )
+
+
+singleQuotedStringLiteralAfterDoubleQuote : ParserFast.Parser String
+singleQuotedStringLiteralAfterDoubleQuote =
+    ParserFast.loopUntil (ParserFast.symbol "\"" ())
+        (ParserFast.oneOf2
+            (ParserFast.whileAtLeast1WithoutLinebreak (\c -> c /= '"' && c /= '\\' && not (Char.Extra.isUtf16Surrogate c)))
+            (ParserFast.symbolFollowedBy "\\" (escapedCharValueMap String.fromChar))
+        )
+        ""
+        (\extension soFar ->
+            soFar ++ extension ++ ""
+        )
+        identity
+
+
+tripleQuotedStringLiteralOfterTripleDoubleQuote : ParserFast.Parser String
+tripleQuotedStringLiteralOfterTripleDoubleQuote =
+    ParserFast.loopUntil (ParserFast.symbol "\"\"\"" ())
+        (ParserFast.oneOf3
+            (ParserFast.symbol "\"" "\"")
+            (ParserFast.symbolFollowedBy "\\" (escapedCharValueMap String.fromChar))
+            (ParserFast.while (\c -> c /= '"' && c /= '\\' && not (Char.Extra.isUtf16Surrogate c)))
+        )
+        ""
+        (\extension soFar ->
+            soFar ++ extension ++ ""
+        )
+        identity
+
+
+functionName : ParserFast.Parser String
+functionName =
+    ParserFast.ifFollowedByWhileValidateWithoutLinebreak
+        Char.Extra.unicodeIsLowerFast
+        Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
+        isNotReserved
+
+
+functionNameNode : ParserFast.Parser (Elm.Syntax.Node.Node String)
+functionNameNode =
+    ParserFast.ifFollowedByWhileValidateMapWithRangeWithoutLinebreak Elm.Syntax.Node.Node
+        Char.Extra.unicodeIsLowerFast
+        Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
+        isNotReserved
+
+
+functionNameMapWithRange : (Elm.Syntax.Range.Range -> String -> res) -> ParserFast.Parser res
+functionNameMapWithRange rangeAndNameToResult =
+    ParserFast.ifFollowedByWhileValidateMapWithRangeWithoutLinebreak
+        rangeAndNameToResult
+        Char.Extra.unicodeIsLowerFast
+        Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
+        isNotReserved
+
+
+functionNameNotInfixNode : ParserFast.Parser (Elm.Syntax.Node.Node String)
+functionNameNotInfixNode =
+    ParserFast.ifFollowedByWhileValidateMapWithRangeWithoutLinebreak Elm.Syntax.Node.Node
+        Char.Extra.unicodeIsLowerFast
+        Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
+        (\name -> name /= "infix" && isNotReserved name)
+
+
+typeName : ParserFast.Parser String
+typeName =
+    ParserFast.ifFollowedByWhileWithoutLinebreak
+        Char.Extra.unicodeIsUpperFast
+        Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
+
+
+typeNameMapWithRange : (Elm.Syntax.Range.Range -> String -> res) -> ParserFast.Parser res
+typeNameMapWithRange rangeAndNameToRes =
+    ParserFast.ifFollowedByWhileMapWithRangeWithoutLinebreak rangeAndNameToRes
+        Char.Extra.unicodeIsUpperFast
+        Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
+
+
+typeNameNode : ParserFast.Parser (Elm.Syntax.Node.Node String)
+typeNameNode =
+    ParserFast.ifFollowedByWhileMapWithRangeWithoutLinebreak Elm.Syntax.Node.Node
+        Char.Extra.unicodeIsUpperFast
+        Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
+
+
+isAllowedOperatorToken : String -> Bool
+isAllowedOperatorToken operatorCandidateToValidate =
+    case operatorCandidateToValidate of
+        "==" ->
+            True
+
+        "/=" ->
+            True
+
+        "::" ->
+            True
+
+        "++" ->
+            True
+
+        "+" ->
+            True
+
+        "*" ->
+            True
+
+        "<|" ->
+            True
+
+        "|>" ->
+            True
+
+        "||" ->
+            True
+
+        "<=" ->
+            True
+
+        ">=" ->
+            True
+
+        "|=" ->
+            True
+
+        "|." ->
+            True
+
+        "//" ->
+            True
+
+        "</>" ->
+            True
+
+        "<?>" ->
+            True
+
+        "^" ->
+            True
+
+        "<<" ->
+            True
+
+        ">>" ->
+            True
+
+        "<" ->
+            True
+
+        ">" ->
+            True
+
+        "/" ->
+            True
+
+        "&&" ->
+            True
+
+        "-" ->
+            True
+
+        _ ->
+            False
+
+
+isOperatorSymbolCharAsString : String -> Bool
+isOperatorSymbolCharAsString c =
+    case c of
+        "|" ->
+            True
+
+        "+" ->
+            True
+
+        "<" ->
+            True
+
+        ">" ->
+            True
+
+        "=" ->
+            True
+
+        "*" ->
+            True
+
+        ":" ->
+            True
+
+        "-" ->
+            True
+
+        "/" ->
+            True
+
+        "&" ->
+            True
+
+        "." ->
+            True
+
+        "?" ->
+            True
+
+        "^" ->
+            True
+
+        _ ->
+            False
