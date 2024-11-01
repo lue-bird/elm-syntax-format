@@ -2701,6 +2701,14 @@ a = 1
   b"""
                         |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
                 )
+            , Test.test "glsl block"
+                (\() ->
+                    "[glsl| precision mediump float; |]"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 37 } }
+                                (Elm.Syntax.Expression.GLSLExpression " precision mediump float; ")
+                            )
+                )
             ]
         , Test.describe "pattern"
             [ Test.test "Unit"
