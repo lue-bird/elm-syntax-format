@@ -19,8 +19,8 @@ import Test exposing (..)
 all : Test
 all =
     describe "ModuleTests"
-        [ test "formatted moduleDefinition" <|
-            \() ->
+        [ test "formatted moduleDefinition"
+            (\() ->
                 "module Foo exposing (Bar)"
                     |> expectAst
                         (NormalModule
@@ -33,8 +33,9 @@ all =
                                     )
                             }
                         )
-        , test "port moduleDefinition" <|
-            \() ->
+            )
+        , test "port moduleDefinition"
+            (\() ->
                 "port module Foo exposing (Bar)"
                     |> expectAst
                         (PortModule
@@ -46,8 +47,9 @@ all =
                                     )
                             }
                         )
-        , test "port moduleDefinition with spacing" <|
-            \() ->
+            )
+        , test "port moduleDefinition with spacing"
+            (\() ->
                 "port module Foo exposing ( Bar )"
                     |> expectAst
                         (PortModule
@@ -59,8 +61,9 @@ all =
                                     )
                             }
                         )
-        , test "effect moduleDefinition" <|
-            \() ->
+            )
+        , test "effect moduleDefinition"
+            (\() ->
                 "effect module Foo where {command = MyCmd, subscription = MySub } exposing (Bar)"
                     |> expectAst
                         (EffectModule
@@ -70,8 +73,9 @@ all =
                             , subscription = Just (Node { start = { row = 1, column = 58 }, end = { row = 1, column = 63 } } "MySub")
                             }
                         )
-        , test "unformatted" <|
-            \() ->
+            )
+        , test "unformatted"
+            (\() ->
                 "module \n Foo \n exposing  (..)"
                     |> expectAst
                         (NormalModule
@@ -81,12 +85,14 @@ all =
                                     (All { start = { row = 3, column = 13 }, end = { row = 3, column = 15 } })
                             }
                         )
-        , test "unformatted wrong" <|
-            \() ->
+            )
+        , test "unformatted wrong"
+            (\() ->
                 parse "module \nFoo \n exposing  (..)" Parser.moduleDefinition
                     |> Expect.equal Nothing
-        , test "exposing all" <|
-            \() ->
+            )
+        , test "exposing all"
+            (\() ->
                 "module Foo exposing (..)"
                     |> expectAst
                         (NormalModule
@@ -96,8 +102,9 @@ all =
                                     (All { start = { row = 1, column = 22 }, end = { row = 1, column = 24 } })
                             }
                         )
-        , test "module name with _" <|
-            \() ->
+            )
+        , test "module name with _"
+            (\() ->
                 "module I_en_gb exposing (..)"
                     |> expectAst
                         (NormalModule
@@ -107,8 +114,9 @@ all =
                                     (All { start = { row = 1, column = 26 }, end = { row = 1, column = 28 } })
                             }
                         )
-        , test "Regression test for Incorrect range in if expression" <|
-            \() ->
+            )
+        , test "Regression test for Incorrect range in if expression"
+            (\() ->
                 parseCore
                     (String.filter ((/=) '\u{000D}') """module TestModule exposing (..)
 
@@ -199,8 +207,9 @@ b = 3
                             , comments = []
                             }
                         )
-        , test "Simple module range test" <|
-            \() ->
+            )
+        , test "Simple module range test"
+            (\() ->
                 parseCore
                     (String.filter ((/=) '\u{000D}') """module TestModule exposing (..)
 
@@ -275,8 +284,9 @@ b = 3
                             , comments = []
                             }
                         )
-        , test "File with multiple imports" <|
-            \() ->
+            )
+        , test "File with multiple imports"
+            (\() ->
                 parseCore
                     """module TestModule exposing (..)
 import A
@@ -325,8 +335,9 @@ a = 1
                             , comments = []
                             }
                         )
-        , test "File with multiple declarations" <|
-            \() ->
+            )
+        , test "File with multiple declarations"
+            (\() ->
                 parseCore
                     """module TestModule exposing (..)
 type A = B | C
@@ -408,23 +419,26 @@ b = 2
                             , comments = []
                             }
                         )
-        , test "should fail to parse two signatures in a row" <|
-            \() ->
+            )
+        , test "should fail to parse two signatures in a row"
+            (\() ->
                 """module TestModule exposing (..)
 a : Int
 b : Int
 b = 2
 """
                     |> expectInvalid
-        , test "should fail to parse signature for a different function" <|
-            \() ->
+            )
+        , test "should fail to parse signature for a different function"
+            (\() ->
                 """module TestModule exposing (..)
 a : Int
 b = 2
 """
                     |> expectInvalid
-        , test "trailing comments at the end of declarations" <|
-            \() ->
+            )
+        , test "trailing comments at the end of declarations"
+            (\() ->
                 parseCore """module A exposing (fun1, fun2)
 
 fun1 n =
@@ -492,6 +506,7 @@ fun2 n =
                             , comments = [ Node { start = { row = 5, column = 13 }, end = { row = 5, column = 17 } } "-- a", Node { start = { row = 8, column = 13 }, end = { row = 8, column = 17 } } "-- b" ]
                             }
                         )
+            )
         ]
 
 

@@ -13,8 +13,8 @@ import Test exposing (..)
 all : Test
 all =
     describe "LetExpressionTests"
-        [ test "let expression with multiple declarations" <|
-            \() ->
+        [ test "let expression with multiple declarations"
+            (\() ->
                 """let
   foo = bar
 
@@ -52,8 +52,9 @@ all =
                                 }
                             )
                         )
-        , test "Let with `in` indented more than the body and let declarations" <|
-            \() ->
+            )
+        , test "Let with `in` indented more than the body and let declarations"
+            (\() ->
                 """let
   bar = 1
             in
@@ -79,23 +80,26 @@ all =
                                 }
                             )
                         )
-        , test "should fail to parse if declaration is indented as much as `let`" <|
-            \() ->
+            )
+        , test "should fail to parse if declaration is indented as much as `let`"
+            (\() ->
                 """  let
   bar = 1
   in
   bar"""
                     |> expectInvalid
-        , test "should fail to parse if declarations are not indented the same way" <|
-            \() ->
+            )
+        , test "should fail to parse if declarations are not indented the same way"
+            (\() ->
                 """  let
     bar = 1
       foo = 2
   in
   bar"""
                     |> expectInvalid
-        , test "let with deindented expression in in" <|
-            \() ->
+            )
+        , test "let with deindented expression in in"
+            (\() ->
                 """let
   bar = 1
  in
@@ -121,8 +125,9 @@ all =
                                 }
                             )
                         )
-        , test "Let function with type annotation" <|
-            \() ->
+            )
+        , test "Let function with type annotation"
+            (\() ->
                 """let
     bar : Int
     bar = 1
@@ -157,8 +162,9 @@ all =
                                 }
                             )
                         )
-        , test "Let function with type annotation (separated by a few lines)" <|
-            \() ->
+            )
+        , test "Let function with type annotation (separated by a few lines)"
+            (\() ->
                 """let
     bar : Int
 
@@ -193,31 +199,35 @@ all =
                                 }
                             )
                         )
-        , test "should fail to parse when type annotation and declaration are not aligned (annotation earlier)" <|
-            \() ->
+            )
+        , test "should fail to parse when type annotation and declaration are not aligned (annotation earlier)"
+            (\() ->
                 """let
     bar : Int
       bar = 1
   in
   bar"""
                     |> expectInvalid
-        , test "should fail to parse when type annotation and declaration are not aligned (annotation later)" <|
-            \() ->
+            )
+        , test "should fail to parse when type annotation and declaration are not aligned (annotation later)"
+            (\() ->
                 """let
        bar : Int
     bar = 1
   in
   bar"""
                     |> expectInvalid
-        , test "should fail to parse `as` pattern not surrounded by parentheses" <|
-            \() ->
+            )
+        , test "should fail to parse `as` pattern not surrounded by parentheses"
+            (\() ->
                 """let
           bar n as m = 1
         in
         bar"""
                     |> expectInvalid
-        , test "correctly parse variant + args pattern not surrounded by parentheses" <|
-            \() ->
+            )
+        , test "correctly parse variant + args pattern not surrounded by parentheses"
+            (\() ->
                 """let
           bar Bar m = 1
         in
@@ -246,53 +256,60 @@ all =
                                 }
                             )
                         )
-        , test "should not parse let destructuring with a type annotation" <|
-            \() ->
+            )
+        , test "should not parse let destructuring with a type annotation"
+            (\() ->
                 """let
     bar : Int
     (bar) = 1
   in
   bar"""
                     |> expectInvalid
-        , test "should not parse let destructuring with `as` not surrounded by parentheses" <|
-            \() ->
+            )
+        , test "should not parse let destructuring with `as` not surrounded by parentheses"
+            (\() ->
                 """let
     foo as bar = 1
   in
   bar"""
                     |> expectInvalid
-        , test "should not parse let destructuring with variant + arguments not surrounded by parentheses" <|
-            \() ->
+            )
+        , test "should not parse let destructuring with variant + arguments not surrounded by parentheses"
+            (\() ->
                 """let
     Foo bar = 1
   in
   bar"""
                     |> expectInvalid
-        , test "should not parse let destructuring with non-positive layout before =" <|
-            \() ->
+            )
+        , test "should not parse let destructuring with non-positive layout before ="
+            (\() ->
                 """let
     (bar)
     =     1
   in
   bar"""
                     |> expectInvalid
-        , test "should not parse let destructuring with non-positive layout before expression" <|
-            \() ->
+            )
+        , test "should not parse let destructuring with non-positive layout before expression"
+            (\() ->
                 """let
     (bar) =
     1
   in
   bar"""
                     |> expectInvalid
-        , test "should not parse let type annotation without a declaration" <|
-            \() ->
+            )
+        , test "should not parse let type annotation without a declaration"
+            (\() ->
                 """let
     bar : Int
   in
   bar"""
                     |> expectInvalid
-        , test "Using destructuring" <|
-            \() ->
+            )
+        , test "Using destructuring"
+            (\() ->
                 """let
     _ = b
     {a} = b
@@ -338,8 +355,9 @@ all =
                                 }
                             )
                         )
-        , test "On one line" <|
-            \() ->
+            )
+        , test "On one line"
+            (\() ->
                 "let indent = String.length s in indent"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 39 } }
@@ -368,8 +386,9 @@ all =
                                 }
                             )
                         )
-        , test "let with list after in without space" <|
-            \() ->
+            )
+        , test "let with list after in without space"
+            (\() ->
                 """let
         a = 1
     in[]"""
@@ -394,8 +413,9 @@ all =
                                 }
                             )
                         )
-        , test "let with record after in without space" <|
-            \() ->
+            )
+        , test "let with record after in without space"
+            (\() ->
                 """let
         a = 1
     in{}"""
@@ -420,8 +440,9 @@ all =
                                 }
                             )
                         )
-        , test "let with lambda after in without space" <|
-            \() ->
+            )
+        , test "let with lambda after in without space"
+            (\() ->
                 """let
         a = 1
     in\\_ -> 1"""
@@ -448,11 +469,13 @@ all =
                                 }
                             )
                         )
-        , test "let is not confused by a variable name starting with let" <|
-            \() ->
+            )
+        , test "let is not confused by a variable name starting with let"
+            (\() ->
                 "letterbox"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (FunctionOrValue [] "letterbox"))
+            )
         ]
 
 

@@ -10,14 +10,16 @@ import Test exposing (Test, describe, test)
 all : Test
 all =
     describe "BaseTest"
-        [ test "moduleName" <|
-            \() ->
+        [ test "moduleName"
+            (\() ->
                 TestUtil.parseToResult "Foo" Parser.moduleName
                     |> Maybe.map Node.value
                     |> Expect.equal (Just [ "Foo" ])
-        , test "moduleNameDir" <|
-            \() ->
+            )
+        , test "moduleNameDir"
+            (\() ->
                 TestUtil.parseToResult "Foo.Bar" Parser.moduleName
                     |> Maybe.map Node.value
                     |> Expect.equal (Just [ "Foo", "Bar" ])
+            )
         ]

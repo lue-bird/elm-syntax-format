@@ -11,13 +11,14 @@ import Test exposing (..)
 all : Test
 all =
     describe "GlslTests"
-        [ test "case block" <|
-            \() ->
+        [ test "case block"
+            (\() ->
                 "[glsl| precision mediump float; |]"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 37 } }
                             (GLSLExpression " precision mediump float; ")
                         )
+            )
         ]
 
 

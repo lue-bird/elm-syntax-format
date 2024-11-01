@@ -11,13 +11,14 @@ import Test exposing (..)
 all : Test
 all =
     describe "PatternTests"
-        [ test "Unit" <|
-            \() ->
+        [ test "Unit"
+            (\() ->
                 "()"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } UnitPattern)
-        , test "Unit with inner layout" <|
-            \() ->
+            )
+        , test "Unit with inner layout"
+            (\() ->
                 """(
    -- comment
    )"""
@@ -25,20 +26,24 @@ all =
                         { ast = Node { start = { row = 1, column = 1 }, end = { row = 3, column = 5 } } UnitPattern
                         , comments = [ Node { start = { row = 2, column = 4 }, end = { row = 2, column = 14 } } "-- comment" ]
                         }
-        , test "String" <|
-            \() ->
+            )
+        , test "String"
+            (\() ->
                 "\"Foo\""
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (StringPattern "Foo"))
-        , test "Char" <|
-            \() ->
+            )
+        , test "Char"
+            (\() ->
                 "'f'"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (CharPattern 'f'))
-        , test "Wildcard" <|
-            \() ->
+            )
+        , test "Wildcard"
+            (\() ->
                 "_"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } AllPattern)
-        , test "Parenthesized" <|
-            \() ->
+            )
+        , test "Parenthesized"
+            (\() ->
                 "(x)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
@@ -46,26 +51,30 @@ all =
                                 (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (VarPattern "x"))
                             )
                         )
-        , test "Int" <|
-            \() ->
+            )
+        , test "Int"
+            (\() ->
                 "1"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } <| IntPattern 1)
-        , test "Hex int" <|
-            \() ->
+                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (IntPattern 1))
+            )
+        , test "Hex int"
+            (\() ->
                 "0x1"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } <| HexPattern 1)
-        , test "Float should not be valid" <|
-            \() -> expectInvalid "1.0"
-        , test "Uncons" <|
-            \() ->
+                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (HexPattern 1))
+            )
+        , test "Float should not be valid" (\() -> expectInvalid "1.0")
+        , test "Uncons"
+            (\() ->
                 "n :: tail"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } <|
-                            UnConsPattern (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } <| VarPattern "n")
-                                (Node { start = { row = 1, column = 6 }, end = { row = 1, column = 10 } } <| VarPattern "tail")
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
+                            (UnConsPattern (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (VarPattern "n"))
+                                (Node { start = { row = 1, column = 6 }, end = { row = 1, column = 10 } } (VarPattern "tail"))
+                            )
                         )
-        , test "Uncons multiple" <|
-            \() ->
+            )
+        , test "Uncons multiple"
+            (\() ->
                 "a :: b :: cUp"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
@@ -78,61 +87,67 @@ all =
                                 )
                             )
                         )
-        , test "Uncons with parens" <|
-            \() ->
+            )
+        , test "Uncons with parens"
+            (\() ->
                 "(X x) :: xs"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } <|
-                            UnConsPattern
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } <|
-                                    ParenthesizedPattern
-                                        (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } } <|
-                                            NamedPattern (QualifiedNameRef [] "X")
-                                                [ Node { start = { row = 1, column = 4 }, end = { row = 1, column = 5 } } <| VarPattern "x" ]
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
+                            (UnConsPattern
+                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
+                                    (ParenthesizedPattern
+                                        (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } }
+                                            (NamedPattern (QualifiedNameRef [] "X")
+                                                [ Node { start = { row = 1, column = 4 }, end = { row = 1, column = 5 } } (VarPattern "x") ]
+                                            )
                                         )
+                                    )
                                 )
-                                (Node { start = { row = 1, column = 10 }, end = { row = 1, column = 12 } } <| VarPattern "xs")
+                                (Node { start = { row = 1, column = 10 }, end = { row = 1, column = 12 } } (VarPattern "xs"))
+                            )
                         )
-        , test "Empty list" <|
-            \() ->
+            )
+        , test "Empty list"
+            (\() ->
                 "[]"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } (ListPattern []))
-        , test "Empty list pattern with whitespace" <|
-            \() ->
+            )
+        , test "Empty list pattern with whitespace"
+            (\() ->
                 "[ ]"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (ListPattern []))
-        , test "Single element list" <|
-            \() ->
+            )
+        , test "Single element list"
+            (\() ->
                 "[1]"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } <|
-                            ListPattern [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } <| IntPattern 1 ]
-                        )
-        , test "Single element list with trailing whitespace" <|
-            \() ->
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (ListPattern [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (IntPattern 1) ]))
+            )
+        , test "Single element list with trailing whitespace"
+            (\() ->
                 "[1 ]"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } <|
-                            ListPattern [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } <| IntPattern 1 ]
-                        )
-        , test "Single element list with leading whitespace" <|
-            \() ->
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (ListPattern [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (IntPattern 1) ]))
+            )
+        , test "Single element list with leading whitespace"
+            (\() ->
                 "[ 1]"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } <|
-                            ListPattern [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } <| IntPattern 1 ]
-                        )
-        , test "Empty record" <|
-            \() ->
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (ListPattern [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (IntPattern 1) ]))
+            )
+        , test "Empty record"
+            (\() ->
                 "{}"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } (RecordPattern []))
-        , test "Empty record with whitespace" <|
-            \() ->
+            )
+        , test "Empty record with whitespace"
+            (\() ->
                 "{ }"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (RecordPattern []))
-        , test "Record" <|
-            \() ->
+            )
+        , test "Record"
+            (\() ->
                 "{a,b}"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
@@ -142,8 +157,9 @@ all =
                                 ]
                             )
                         )
-        , test "Record pattern with whitespace" <|
-            \() ->
+            )
+        , test "Record pattern with whitespace"
+            (\() ->
                 "{a , b}"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
@@ -153,8 +169,9 @@ all =
                                 ]
                             )
                         )
-        , test "Record pattern with trailing whitespace" <|
-            \() ->
+            )
+        , test "Record pattern with trailing whitespace"
+            (\() ->
                 "{a }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } }
@@ -162,8 +179,9 @@ all =
                                 [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } "a" ]
                             )
                         )
-        , test "Record pattern with leading whitespace" <|
-            \() ->
+            )
+        , test "Record pattern with leading whitespace"
+            (\() ->
                 "{ a}"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } }
@@ -171,26 +189,30 @@ all =
                                 [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } "a" ]
                             )
                         )
-        , test "Named" <|
-            \() ->
+            )
+        , test "Named"
+            (\() ->
                 "True"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } }
                             (NamedPattern { moduleName = [], name = "True" } [])
                         )
-        , test "Named pattern without and with spacing should parse to the same" <|
-            \() ->
+            )
+        , test "Named pattern without and with spacing should parse to the same"
+            (\() ->
                 parse "Bar " Parser.pattern
                     |> Expect.equal (parse "Bar" Parser.pattern)
-        , test "Qualified named" <|
-            \() ->
+            )
+        , test "Qualified named"
+            (\() ->
                 "Basics.True"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                             (NamedPattern { moduleName = [ "Basics" ], name = "True" } [])
                         )
-        , test "Named pattern with data" <|
-            \() ->
+            )
+        , test "Named pattern with data"
+            (\() ->
                 "Set x"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
@@ -199,8 +221,9 @@ all =
                                 [ Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } } (VarPattern "x") ]
                             )
                         )
-        , test "Qualified named pattern with data" <|
-            \() ->
+            )
+        , test "Qualified named pattern with data"
+            (\() ->
                 "Set.Set x"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
@@ -209,8 +232,9 @@ all =
                                 [ Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (VarPattern "x") ]
                             )
                         )
-        , test "Tuple" <|
-            \() ->
+            )
+        , test "Tuple"
+            (\() ->
                 "(model, cmd)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
@@ -220,12 +244,14 @@ all =
                                 ]
                             )
                         )
-        , test "4-tuple pattern is invalid" <|
-            \() ->
+            )
+        , test "4-tuple pattern is invalid"
+            (\() ->
                 "(1,2,3,4)"
                     |> expectInvalid
-        , test "Nested tuple" <|
-            \() ->
+            )
+        , test "Nested tuple"
+            (\() ->
                 "(a,{b,c},())"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
@@ -236,8 +262,9 @@ all =
                                 ]
                             )
                         )
-        , test "As pattern" <|
-            \() ->
+            )
+        , test "As pattern"
+            (\() ->
                 "x as y"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
@@ -246,46 +273,56 @@ all =
                                 (Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } "y")
                             )
                         )
-        , test "should fail to parse when right side is not a direct variable name" <|
-            \() ->
+            )
+        , test "should fail to parse when right side is not a direct variable name"
+            (\() ->
                 "x as (y)"
                     |> expectInvalid
-        , test "should fail to parse consecutive as" <|
-            \() ->
+            )
+        , test "should fail to parse consecutive as"
+            (\() ->
                 "x as y as z"
                     |> expectInvalid
-        , test "should fail to parse :: after as" <|
-            \() ->
+            )
+        , test "should fail to parse :: after as"
+            (\() ->
                 "x as y :: z"
                     |> expectInvalid
-        , test "should fail to parse :: after as even when :: was already used before" <|
-            \() ->
+            )
+        , test "should fail to parse :: after as even when :: was already used before"
+            (\() ->
                 "w :: x as y :: z"
                     |> expectInvalid
-        , test "should fail to parse when right side is an invalid variable name" <|
-            \() ->
+            )
+        , test "should fail to parse when right side is an invalid variable name"
+            (\() ->
                 "x as _y"
                     |> expectInvalid
-        , test "should fail to parse when right side is not a variable name" <|
-            \() ->
+            )
+        , test "should fail to parse when right side is not a variable name"
+            (\() ->
                 "x as 1"
                     |> expectInvalid
-        , test "Record as" <|
-            \() ->
+            )
+        , test "Record as"
+            (\() ->
                 "{model,context} as appState"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } } <|
-                            AsPattern
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } } <|
-                                    RecordPattern
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
+                            (AsPattern
+                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
+                                    (RecordPattern
                                         [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } "model"
                                         , Node { start = { row = 1, column = 8 }, end = { row = 1, column = 15 } } "context"
                                         ]
+                                    )
                                 )
                                 (Node { start = { row = 1, column = 20 }, end = { row = 1, column = 28 } } "appState")
+                            )
                         )
-        , test "Complex" <|
-            \() ->
+            )
+        , test "Complex"
+            (\() ->
                 "(Index irec as index, docVector)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 33 } }
@@ -303,8 +340,9 @@ all =
                                 ]
                             )
                         )
-        , test "Complex pattern 2" <|
-            \() ->
+            )
+        , test "Complex pattern 2"
+            (\() ->
                 "RBNode_elm_builtin col (RBNode_elm_builtin Red  (RBNode_elm_builtin Red xv))"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 77 } }
@@ -323,6 +361,7 @@ all =
                                 ]
                             )
                         )
+            )
         ]
 
 

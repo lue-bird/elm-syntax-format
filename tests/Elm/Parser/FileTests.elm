@@ -20,19 +20,21 @@ import Test exposing (..)
 all : Test
 all =
     Test.concat
-        [ describe "FileTests" <|
-            List.map
+        [ describe "FileTests"
+            (List.map
                 (\( n, s ) ->
-                    test ("sample " ++ String.fromInt n) <|
-                        \() ->
+                    test ("sample " ++ String.fromInt n)
+                        (\() ->
                             case ParserFast.run Parser.file s of
                                 Nothing ->
                                     Expect.fail "failed to parse"
 
                                 Just _ ->
                                     Expect.pass
+                        )
                 )
                 Samples.allSamples
+            )
 
         -- , describe "Error messages" <|
         --     [ test "failure on module name" <|
@@ -49,8 +51,8 @@ all =
         --             Parser.parse "module Foo exposing (..) \nx = \n  x + _"
         --                 |> Expect.equal (Err [ "Could not continue parsing on location (2,6)" ])
         --     ]
-        , test "Comments ordering" <|
-            \() ->
+        , test "Comments ordering"
+            (\() ->
                 let
                     input : String
                     input =
@@ -89,8 +91,9 @@ f =
                             , Node { start = { row = 20, column = 1 }, end = { row = 20, column = 8 } } "{- 6 -}"
                             ]
                         )
-        , test "declarations with comments" <|
-            \() ->
+            )
+        , test "declarations with comments"
+            (\() ->
                 """module Foo exposing (b, fn)
 
 fn a =
@@ -117,8 +120,9 @@ b =
                             , Node { start = { row = 13, column = 1 }, end = { row = 13, column = 5 } } "-- 2"
                             ]
                         )
-        , test "function declaration with a case and trailing whitespace" <|
-            \() ->
+            )
+        , test "function declaration with a case and trailing whitespace"
+            (\() ->
                 """
 module Trailing.Whitespace exposing (..)
 
@@ -178,8 +182,9 @@ caseWhitespace f = case f   of
                             , comments = [ Node { start = { row = 13, column = 4 }, end = { row = 13, column = 18 } } "--some comment" ]
                             }
                         )
-        , test "function declaration with lambda and trailing whitespace" <|
-            \() ->
+            )
+        , test "function declaration with lambda and trailing whitespace"
+            (\() ->
                 """
 module Trailing.Whitespace exposing (..)
 
@@ -238,8 +243,9 @@ lambdaWhitespace =   \\ a b ->    a
                             , comments = [ Node { start = { row = 11, column = 1 }, end = { row = 11, column = 15 } } "--some comment" ]
                             }
                         )
-        , test "function declaration with let and trailing whitespace" <|
-            \() ->
+            )
+        , test "function declaration with let and trailing whitespace"
+            (\() ->
                 """
 module Trailing.Whitespace exposing (..)
 
@@ -302,8 +308,9 @@ letWhitespace = let
                             , comments = [ Node { start = { row = 11, column = 1 }, end = { row = 11, column = 15 } } "--some comment" ]
                             }
                         )
-        , test "type declaration with documentation after imports" <|
-            \() ->
+            )
+        , test "type declaration with documentation after imports"
+            (\() ->
                 """
 module Foo exposing (..)
 
@@ -351,8 +358,9 @@ type Configuration
                             , comments = []
                             }
                         )
-        , test "module documentation formatted like a type documentation" <|
-            \() ->
+            )
+        , test "module documentation formatted like a type documentation"
+            (\() ->
                 """
 module Foo exposing (..)
 
@@ -392,8 +400,9 @@ type Configuration
                             , comments = [ Node { start = { row = 4, column = 1 }, end = { row = 5, column = 3 } } "{-| actually module doc\n-}" ]
                             }
                         )
-        , test "documentation on a port declaration is treated as a normal comment" <|
-            \() ->
+            )
+        , test "documentation on a port declaration is treated as a normal comment"
+            (\() ->
                 """
 port module Foo exposing (..)
 
@@ -444,8 +453,9 @@ port sendResponse : String -> Cmd msg
                             , comments = [ Node { start = { row = 6, column = 1 }, end = { row = 7, column = 3 } } "{-| foo\n-}" ]
                             }
                         )
-        , test "A file with a large number of comments should not create a stack overflow" <|
-            \() ->
+            )
+        , test "A file with a large number of comments should not create a stack overflow"
+            (\() ->
                 let
                     comments : String
                     comments =
@@ -457,4 +467,5 @@ a = 1
                     |> Elm.Parser.parseToFile
                     |> Result.map (\ast -> List.length ast.comments)
                     |> Expect.equal (Ok 3000)
+            )
         ]

@@ -14,28 +14,33 @@ import Test exposing (Test, describe, test)
 all : Test
 all =
     describe "ExpressionTests"
-        [ test "empty" <|
-            \() ->
+        [ test "empty"
+            (\() ->
                 "a = "
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "Integer literal" <|
-            \() ->
+            )
+        , test "Integer literal"
+            (\() ->
                 "101"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Integer 101))
-        , test "Hex integer literal" <|
-            \() ->
+            )
+        , test "Hex integer literal"
+            (\() ->
                 "0x56"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Hex 86))
-        , test "String literal" <|
-            \() ->
+            )
+        , test "String literal"
+            (\() ->
                 "\"Bar\""
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Literal "Bar"))
-        , test "character literal" <|
-            \() ->
+            )
+        , test "character literal"
+            (\() ->
                 "'c'"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (CharLiteral 'c'))
-        , test "tuple expression" <|
-            \() ->
+            )
+        , test "tuple expression"
+            (\() ->
                 "(1,2)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
@@ -45,8 +50,9 @@ all =
                                 ]
                             )
                         )
-        , test "triple expression" <|
-            \() ->
+            )
+        , test "triple expression"
+            (\() ->
                 "(1,2,3)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
@@ -57,8 +63,9 @@ all =
                                 ]
                             )
                         )
-        , test "tuple expression with spaces" <|
-            \() ->
+            )
+        , test "tuple expression with spaces"
+            (\() ->
                 "( 1  ,  2 )"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
@@ -68,40 +75,49 @@ all =
                                 ]
                             )
                         )
-        , test "4-tuple expression is invalid" <|
-            \() ->
+            )
+        , test "4-tuple expression is invalid"
+            (\() ->
                 "a = (1,2,3,4)"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "String literal multiline" <|
-            \() ->
+            )
+        , test "String literal multiline"
+            (\() ->
                 "\"\"\"Bar foo \n a\"\"\""
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } (Literal "Bar foo \n a"))
-        , test "Regression test for multiline strings with backslashes" <|
-            \() ->
+            )
+        , test "Regression test for multiline strings with backslashes"
+            (\() ->
                 "a = \"\"\"\\{\\}\"\"\""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "Regression test 2 for multiline strings with backslashes" <|
-            \() ->
+            )
+        , test "Regression test 2 for multiline strings with backslashes"
+            (\() ->
                 "\"\"\"\\\\{\\\\}\"\"\""
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Literal "\\{\\}"))
-        , test "Regression test 3 for multiline strings with backslashes" <|
-            \() ->
+            )
+        , test "Regression test 3 for multiline strings with backslashes"
+            (\() ->
                 "\"\"\"\\\\a-blablabla-\\\\b\"\"\""
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } } (Literal "\\a-blablabla-\\b"))
-        , test "Type expression for upper case" <|
-            \() ->
+            )
+        , test "Type expression for upper case"
+            (\() ->
                 "Bar"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "Bar"))
-        , test "Type expression for lower case" <|
-            \() ->
+            )
+        , test "Type expression for lower case"
+            (\() ->
                 "bar"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "bar"))
-        , test "Type expression for lower case but qualified" <|
-            \() ->
+            )
+        , test "Type expression for lower case but qualified"
+            (\() ->
                 "Bar.foo"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (FunctionOrValue [ "Bar" ] "foo"))
-        , test "parenthesizedExpression" <|
-            \() ->
+            )
+        , test "parenthesizedExpression"
+            (\() ->
                 "(bar)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
@@ -109,8 +125,9 @@ all =
                                 (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } } (FunctionOrValue [] "bar"))
                             )
                         )
-        , test "parenthesized expression starting with a negation" <|
-            \() ->
+            )
+        , test "parenthesized expression starting with a negation"
+            (\() ->
                 "(-1 * sign)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
@@ -126,28 +143,33 @@ all =
                                 )
                             )
                         )
-        , test "application expression" <|
-            \() ->
+            )
+        , test "application expression"
+            (\() ->
                 "List.concat []"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } } <|
-                            Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } <| FunctionOrValue [ "List" ] "concat"
-                                , Node { start = { row = 1, column = 13 }, end = { row = 1, column = 15 } } <| ListExpr []
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
+                            (Application
+                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (FunctionOrValue [ "List" ] "concat")
+                                , Node { start = { row = 1, column = 13 }, end = { row = 1, column = 15 } } (ListExpr [])
                                 ]
+                            )
                         )
-        , test "Binary operation" <|
-            \() ->
+            )
+        , test "Binary operation"
+            (\() ->
                 "model + 1"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } <|
-                            OperatorApplication "+"
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
+                            (OperatorApplication "+"
                                 Infix.Left
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } <| FunctionOrValue [] "model")
-                                (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } <| Integer 1)
+                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (FunctionOrValue [] "model"))
+                                (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Integer 1))
+                            )
                         )
-        , test "Nested binary operations (+ and ==)" <|
-            \() ->
+            )
+        , test "Nested binary operations (+ and ==)"
+            (\() ->
                 "count + 1 == 1"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
@@ -163,8 +185,9 @@ all =
                                 (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (Integer 1))
                             )
                         )
-        , test "Nested binary operations (+ and /=)" <|
-            \() ->
+            )
+        , test "Nested binary operations (+ and /=)"
+            (\() ->
                 "count + 1 /= 1"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
@@ -180,8 +203,9 @@ all =
                                 (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (Integer 1))
                             )
                         )
-        , test "Nested binary operations (+ and //)" <|
-            \() ->
+            )
+        , test "Nested binary operations (+ and //)"
+            (\() ->
                 "count + 1 // 2"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
@@ -197,8 +221,9 @@ all =
                                 )
                             )
                         )
-        , test "Nested binary operations (&& and <|)" <|
-            \() ->
+            )
+        , test "Nested binary operations (&& and <|)"
+            (\() ->
                 "condition && condition <| f"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
@@ -214,43 +239,49 @@ all =
                                 (Node { start = { row = 1, column = 27 }, end = { row = 1, column = 28 } } (FunctionOrValue [] "f"))
                             )
                         )
-        , test "application expression 2" <|
-            \() ->
+            )
+        , test "application expression 2"
+            (\() ->
                 "(\"\", always (List.concat [ [ fileName ], [] ]))"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 48 } } <|
-                            TupledExpression
-                                [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } <| Literal ""
-                                , Node { start = { row = 1, column = 6 }, end = { row = 1, column = 47 } } <|
-                                    Application
-                                        [ Node { start = { row = 1, column = 6 }, end = { row = 1, column = 12 } } <| FunctionOrValue [] "always"
-                                        , Node { start = { row = 1, column = 13 }, end = { row = 1, column = 47 } } <|
-                                            ParenthesizedExpression
-                                                (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 46 } } <|
-                                                    Application
-                                                        [ Node { start = { row = 1, column = 14 }, end = { row = 1, column = 25 } } <|
-                                                            FunctionOrValue [ "List" ] "concat"
-                                                        , Node { start = { row = 1, column = 26 }, end = { row = 1, column = 46 } } <|
-                                                            ListExpr
-                                                                [ Node { start = { row = 1, column = 28 }, end = { row = 1, column = 40 } } <|
-                                                                    ListExpr
-                                                                        [ Node { start = { row = 1, column = 30 }, end = { row = 1, column = 38 } } <|
-                                                                            FunctionOrValue [] "fileName"
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 48 } }
+                            (TupledExpression
+                                [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } (Literal "")
+                                , Node { start = { row = 1, column = 6 }, end = { row = 1, column = 47 } }
+                                    (Application
+                                        [ Node { start = { row = 1, column = 6 }, end = { row = 1, column = 12 } } (FunctionOrValue [] "always")
+                                        , Node { start = { row = 1, column = 13 }, end = { row = 1, column = 47 } }
+                                            (ParenthesizedExpression
+                                                (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 46 } }
+                                                    (Application
+                                                        [ Node { start = { row = 1, column = 14 }, end = { row = 1, column = 25 } } (FunctionOrValue [ "List" ] "concat")
+                                                        , Node { start = { row = 1, column = 26 }, end = { row = 1, column = 46 } }
+                                                            (ListExpr
+                                                                [ Node { start = { row = 1, column = 28 }, end = { row = 1, column = 40 } }
+                                                                    (ListExpr
+                                                                        [ Node { start = { row = 1, column = 30 }, end = { row = 1, column = 38 } } (FunctionOrValue [] "fileName")
                                                                         ]
-                                                                , Node { start = { row = 1, column = 42 }, end = { row = 1, column = 44 } } <|
-                                                                    ListExpr []
+                                                                    )
+                                                                , Node { start = { row = 1, column = 42 }, end = { row = 1, column = 44 } } (ListExpr [])
                                                                 ]
+                                                            )
                                                         ]
+                                                    )
                                                 )
+                                            )
                                         ]
+                                    )
                                 ]
+                            )
                         )
-        , test "expressionNotApplication simple" <|
-            \() ->
+            )
+        , test "expressionNotApplication simple"
+            (\() ->
                 "foo"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "foo"))
-        , test "unit application" <|
-            \() ->
+            )
+        , test "unit application"
+            (\() ->
                 "Task.succeed ()"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
@@ -260,8 +291,9 @@ all =
                                 ]
                             )
                         )
-        , test "Function call" <|
-            \() ->
+            )
+        , test "Function call"
+            (\() ->
                 "foo bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
@@ -271,12 +303,14 @@ all =
                                 ]
                             )
                         )
-        , test "Function call with argument badly indented" <|
-            \() ->
+            )
+        , test "Function call with argument badly indented"
+            (\() ->
                 "a = foo\nbar"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "ifBlockExpression" <|
-            \() ->
+            )
+        , test "ifBlockExpression"
+            (\() ->
                 "if True then foo else bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 26 } }
@@ -286,8 +320,9 @@ all =
                                 (Node { start = { row = 1, column = 23 }, end = { row = 1, column = 26 } } (FunctionOrValue [] "bar"))
                             )
                         )
-        , test "nestedIfExpression" <|
-            \() ->
+            )
+        , test "nestedIfExpression"
+            (\() ->
                 "if True then if False then foo else baz else bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 49 } }
@@ -303,8 +338,9 @@ all =
                                 (Node { start = { row = 1, column = 46 }, end = { row = 1, column = 49 } } (FunctionOrValue [] "bar"))
                             )
                         )
-        , test "recordExpression" <|
-            \() ->
+            )
+        , test "recordExpression"
+            (\() ->
                 "{ model = 0, view = view, update = update }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 44 } }
@@ -324,8 +360,9 @@ all =
                                 ]
                             )
                         )
-        , test "recordExpression with comment" <|
-            \() ->
+            )
+        , test "recordExpression with comment"
+            (\() ->
                 "{ foo = 1 -- bar\n , baz = 2 }"
                     |> expectAstWithComments
                         { ast =
@@ -343,8 +380,9 @@ all =
                                 )
                         , comments = [ Node { start = { row = 1, column = 11 }, end = { row = 1, column = 17 } } "-- bar" ]
                         }
-        , test "listExpression" <|
-            \() ->
+            )
+        , test "listExpression"
+            (\() ->
                 "[ class \"a\", text \"Foo\"]"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
@@ -364,8 +402,9 @@ all =
                                 ]
                             )
                         )
-        , test "listExpression singleton with comment" <|
-            \() ->
+            )
+        , test "listExpression singleton with comment"
+            (\() ->
                 "[ 1 {- Foo-} ]"
                     |> expectAstWithComments
                         { ast =
@@ -376,19 +415,22 @@ all =
                                 )
                         , comments = [ Node { start = { row = 1, column = 5 }, end = { row = 1, column = 13 } } "{- Foo-}" ]
                         }
-        , test "listExpression empty with comment" <|
-            \() ->
+            )
+        , test "listExpression empty with comment"
+            (\() ->
                 "[{- Foo -}]"
                     |> expectAstWithComments
                         { ast = Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (ListExpr [])
                         , comments = [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 11 } } "{- Foo -}" ]
                         }
-        , test "qualified expression" <|
-            \() ->
+            )
+        , test "qualified expression"
+            (\() ->
                 "Html.text"
                     |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (FunctionOrValue [ "Html" ] "text"))
-        , test "record access" <|
-            \() ->
+            )
+        , test "record access"
+            (\() ->
                 "foo.bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
@@ -397,8 +439,9 @@ all =
                                 (Node { start = { row = 1, column = 5 }, end = { row = 1, column = 8 } } "bar")
                             )
                         )
-        , test "multiple record access operations" <|
-            \() ->
+            )
+        , test "multiple record access operations"
+            (\() ->
                 "foo.bar.baz"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
@@ -412,8 +455,9 @@ all =
                                 (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } "baz")
                             )
                         )
-        , test "multiple record access operations with module name" <|
-            \() ->
+            )
+        , test "multiple record access operations with module name"
+            (\() ->
                 "A.B.foo.bar.baz"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
@@ -427,8 +471,9 @@ all =
                                 (Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } "baz")
                             )
                         )
-        , test "record update" <|
-            \() ->
+            )
+        , test "record update"
+            (\() ->
                 "{ model | count = 1, loading = True }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
@@ -445,8 +490,9 @@ all =
                                 ]
                             )
                         )
-        , test "record update no spacing" <|
-            \() ->
+            )
+        , test "record update no spacing"
+            (\() ->
                 "{model| count = 1, loading = True }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 36 } }
@@ -463,8 +509,9 @@ all =
                                 ]
                             )
                         )
-        , test "record access as function" <|
-            \() ->
+            )
+        , test "record access as function"
+            (\() ->
                 "List.map .name people"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 22 } }
@@ -475,8 +522,9 @@ all =
                                 ]
                             )
                         )
-        , test "record access direct" <|
-            \() ->
+            )
+        , test "record access direct"
+            (\() ->
                 "(.spaceEvenly Internal.Style.classes)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
@@ -490,42 +538,52 @@ all =
                                 )
                             )
                         )
-        , test "positive integer should be invalid" <|
-            \() ->
+            )
+        , test "positive integer should be invalid"
+            (\() ->
                 "a = +1"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "expression ending with an operator should not be valid" <|
-            \() ->
+            )
+        , test "expression ending with an operator should not be valid"
+            (\() ->
                 "a = 1++"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "multiple < in a row should not be valid" <|
-            \() ->
+            )
+        , test "multiple < in a row should not be valid"
+            (\() ->
                 "z = a < b < c"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "multiple > in a row should not be valid" <|
-            \() ->
+            )
+        , test "multiple > in a row should not be valid"
+            (\() ->
                 "z = a > b > c"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "multiple == in a row should not be valid" <|
-            \() ->
+            )
+        , test "multiple == in a row should not be valid"
+            (\() ->
                 "z = a == b == c"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "multiple /= in a row should not be valid" <|
-            \() ->
+            )
+        , test "multiple /= in a row should not be valid"
+            (\() ->
                 "z = a /= b /= c"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "multiple >= in a row should not be valid" <|
-            \() ->
+            )
+        , test "multiple >= in a row should not be valid"
+            (\() ->
                 "z = a >= b >= c"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "multiple <= in a row should not be valid" <|
-            \() ->
+            )
+        , test "multiple <= in a row should not be valid"
+            (\() ->
                 "z = a <= b <= c"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "mixing comparison operators without parenthesis should not be valid" <|
-            \() ->
+            )
+        , test "mixing comparison operators without parenthesis should not be valid"
+            (\() ->
                 "z = a < b == c"
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+            )
 
         -- TODO introduce validation step for
         -- , test "<| followed by |> operation without parenthesis should not be valid" <|
@@ -544,8 +602,8 @@ all =
         --     \() ->
         --         "z = a >> b << c"
         --             |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "prefix notation" <|
-            \() ->
+        , test "prefix notation"
+            (\() ->
                 "(::) x"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
@@ -555,8 +613,9 @@ all =
                                 ]
                             )
                         )
-        , test "subtraction without spaces" <|
-            \() ->
+            )
+        , test "subtraction without spaces"
+            (\() ->
                 "2-1"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
@@ -566,15 +625,17 @@ all =
                                 (Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Integer 1))
                             )
                         )
-        , test "negated expression for value" <|
-            \() ->
+            )
+        , test "negated expression for value"
+            (\() ->
                 "-x"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } }
                             (Negation (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (FunctionOrValue [] "x")))
                         )
-        , test "negated expression in application" <|
-            \() ->
+            )
+        , test "negated expression in application"
+            (\() ->
                 "toFloat -5"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
@@ -585,8 +646,9 @@ all =
                                 ]
                             )
                         )
-        , test "negated expression for parenthesized" <|
-            \() ->
+            )
+        , test "negated expression for parenthesized"
+            (\() ->
                 "-(x - y)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } }
@@ -604,8 +666,9 @@ all =
                                 )
                             )
                         )
-        , test "negated expression with other operations" <|
-            \() ->
+            )
+        , test "negated expression with other operations"
+            (\() ->
                 "-1 + -10 * -100^2 == -100001"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 29 } }
@@ -643,8 +706,9 @@ all =
                                 )
                             )
                         )
-        , test "plus and minus in the same expression" <|
-            \() ->
+            )
+        , test "plus and minus in the same expression"
+            (\() ->
                 "1 + 2 - 3"
                     |> expectAst
                         (Node
@@ -661,8 +725,9 @@ all =
                                 (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Integer 3))
                             )
                         )
-        , test "pipe operation" <|
-            \() ->
+            )
+        , test "pipe operation"
+            (\() ->
                 "a |> b"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
@@ -672,8 +737,9 @@ all =
                                 (Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (FunctionOrValue [] "b"))
                             )
                         )
-        , test "function with higher order" <|
-            \() ->
+            )
+        , test "function with higher order"
+            (\() ->
                 "chompWhile (\\c -> c == ' ' || c == '\\n' || c == '\\r')"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 54 } }
@@ -726,8 +792,9 @@ all =
                                 ]
                             )
                         )
-        , test "application should be lower-priority than field access" <|
-            \() ->
+            )
+        , test "application should be lower-priority than field access"
+            (\() ->
                 "foo { d | b = f x y }.b"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
@@ -755,8 +822,9 @@ all =
                                 ]
                             )
                         )
-        , test "should not consider a negative number parameter as the start of a new application" <|
-            \() ->
+            )
+        , test "should not consider a negative number parameter as the start of a new application"
+            (\() ->
                 "Random.list -1 generator"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
@@ -772,8 +840,9 @@ all =
                                 ]
                             )
                         )
-        , test "negation can be applied on record access" <|
-            \() ->
+            )
+        , test "negation can be applied on record access"
+            (\() ->
                 "1 + -{x = 10}.x"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
@@ -800,8 +869,9 @@ all =
                                 )
                             )
                         )
-        , test "fail if condition not positively indented" <|
-            \() ->
+            )
+        , test "fail if condition not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -810,8 +880,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if `then` not positively indented" <|
-            \() ->
+            )
+        , test "fail if `then` not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -820,8 +891,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if if-true-branch not positively indented" <|
-            \() ->
+            )
+        , test "fail if if-true-branch not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -830,8 +902,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if `else` not positively indented" <|
-            \() ->
+            )
+        , test "fail if `else` not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -840,8 +913,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if if-false-branch not positively indented" <|
-            \() ->
+            )
+        , test "fail if if-false-branch not positively indented"
+            (\() ->
                 """ a =
     let
         x =
@@ -850,8 +924,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if record closing curly not positively indented" <|
-            \() ->
+            )
+        , test "fail if record closing curly not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -860,8 +935,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if record field value not positively indented" <|
-            \() ->
+            )
+        , test "fail if record field value not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -870,8 +946,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if record field name not positively indented" <|
-            \() ->
+            )
+        , test "fail if record field name not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -880,8 +957,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if record field `=` not positively indented" <|
-            \() ->
+            )
+        , test "fail if record field `=` not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -890,8 +968,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if tuple closing parens not positively indented" <|
-            \() ->
+            )
+        , test "fail if tuple closing parens not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -900,8 +979,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if first tuple part not positively indented" <|
-            \() ->
+            )
+        , test "fail if first tuple part not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -911,8 +991,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if second tuple part not positively indented" <|
-            \() ->
+            )
+        , test "fail if second tuple part not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -921,8 +1002,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if operator not positively indented" <|
-            \() ->
+            )
+        , test "fail if operator not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -931,8 +1013,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if function call argument not positively indented" <|
-            \() ->
+            )
+        , test "fail if function call argument not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -941,8 +1024,9 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if lambda result not positively indented" <|
-            \() ->
+            )
+        , test "fail if lambda result not positively indented"
+            (\() ->
                 """a =
     let
         x =
@@ -951,13 +1035,15 @@ all =
     in
     x"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "fail if case branch result call argument not positively indented" <|
-            \() ->
+            )
+        , test "fail if case branch result call argument not positively indented"
+            (\() ->
                 """foo = 
     case Nothing of
         Nothing -> a
   b"""
                     |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+            )
         ]
 
 

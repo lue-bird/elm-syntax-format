@@ -15,8 +15,8 @@ import Test exposing (..)
 all : Test
 all =
     describe "DeclarationTests"
-        [ test "function declaration" <|
-            \() ->
+        [ test "function declaration"
+            (\() ->
                 "foo = bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
@@ -32,8 +32,9 @@ all =
                                 }
                             )
                         )
-        , test "function declaration with documentation" <|
-            \() ->
+            )
+        , test "function declaration with documentation"
+            (\() ->
                 """{-| Foo does bar -}
 foo = bar"""
                     |> expectAst
@@ -50,8 +51,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "function declaration with empty record" <|
-            \() ->
+            )
+        , test "function declaration with empty record"
+            (\() ->
                 "foo = {}"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } }
@@ -67,8 +69,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "function with case in let" <|
-            \() ->
+            )
+        , test "function with case in let"
+            (\() ->
                 """inc x =
   let
     y =
@@ -131,8 +134,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "function declaration with args" <|
-            \() ->
+            )
+        , test "function declaration with args"
+            (\() ->
                 "inc x = x + 1"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
@@ -154,8 +158,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "function declaration with let" <|
-            \() ->
+            )
+        , test "function declaration with let"
+            (\() ->
                 """foo =
  let
   b = 1
@@ -194,16 +199,18 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "documentation comment inside a let is invalid" <|
-            \() ->
+            )
+        , test "documentation comment inside a let is invalid"
+            (\() ->
                 expectInvalid """foo =
  let
   {-| b is one -}
   b = 1
  in
   b"""
-        , test "let destructuring with no spaces around '='" <|
-            \() ->
+            )
+        , test "let destructuring with no spaces around '='"
+            (\() ->
                 """foo =
  let
   (b, c)=(1, 2)
@@ -247,8 +254,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "declaration with record" <|
-            \() ->
+            )
+        , test "declaration with record"
+            (\() ->
                 """main =
   beginnerProgram { model = 0, view = view, update = update }"""
                     |> expectAst
@@ -286,8 +294,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "update function" <|
-            \() ->
+            )
+        , test "update function"
+            (\() ->
                 """update msg model =
   case msg of
     Increment ->
@@ -335,8 +344,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "port declaration for command" <|
-            \() ->
+            )
+        , test "port declaration for command"
+            (\() ->
                 "port parseResponse : ( String, String ) -> Cmd msg"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 51 } }
@@ -366,8 +376,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "port declaration for subscription" <|
-            \() ->
+            )
+        , test "port declaration for subscription"
+            (\() ->
                 "port scroll : (Move -> msg) -> Sub msg"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 39 } }
@@ -394,12 +405,14 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "should fail to parse destructuring declaration at the top-level" <|
-            \() ->
+            )
+        , test "should fail to parse destructuring declaration at the top-level"
+            (\() ->
                 "_ = b"
                     |> expectInvalid
-        , test "declaration" <|
-            \() ->
+            )
+        , test "declaration"
+            (\() ->
                 """main =
   text "Hello, World!\""""
                     |> expectAst
@@ -422,8 +435,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "function" <|
-            \() ->
+            )
+        , test "function"
+            (\() ->
                 """main =
   text "Hello, World!\""""
                     |> expectAst
@@ -446,8 +460,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "function starting with multi line comment" <|
-            \() ->
+            )
+        , test "function starting with multi line comment"
+            (\() ->
                 """main =
   {- y -} x"""
                     |> expectAstWithComments
@@ -466,8 +481,9 @@ foo = bar"""
                                 )
                         , comments = [ Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } } "{- y -}" ]
                         }
-        , test "function with a lot of symbols" <|
-            \() ->
+            )
+        , test "function with a lot of symbols"
+            (\() ->
                 "updateState update sendPort = curry <| (uncurry update) >> batchStateCmds sendPort"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 83 } }
@@ -511,8 +527,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "Some function" <|
-            \() ->
+            )
+        , test "Some function"
+            (\() ->
                 """update msg model =
   case msg of
     Increment ->
@@ -560,8 +577,9 @@ foo = bar"""
                                 }
                             )
                         )
-        , test "some other function" <|
-            \() ->
+            )
+        , test "some other function"
+            (\() ->
                 """update : Model
 update msg model =
     msg"""
@@ -588,8 +606,9 @@ update msg model =
                                 }
                             )
                         )
-        , test "type alias" <|
-            \() ->
+            )
+        , test "type alias"
+            (\() ->
                 "type alias Foo = {color: String }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 34 } }
@@ -610,8 +629,9 @@ update msg model =
                                 }
                             )
                         )
-        , test "type alias with documentation" <|
-            \() ->
+            )
+        , test "type alias with documentation"
+            (\() ->
                 """{-| Foo is colorful -}
 type alias Foo = {color: String }"""
                     |> expectAst
@@ -633,8 +653,9 @@ type alias Foo = {color: String }"""
                                 }
                             )
                         )
-        , test "type alias without spacings around '='" <|
-            \() ->
+            )
+        , test "type alias without spacings around '='"
+            (\() ->
                 "type alias Foo={color: String }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
@@ -655,8 +676,9 @@ type alias Foo = {color: String }"""
                                 }
                             )
                         )
-        , test "type alias with GenericType " <|
-            \() ->
+            )
+        , test "type alias with GenericType "
+            (\() ->
                 "type alias Foo a = {some : a }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 31 } }
@@ -676,8 +698,9 @@ type alias Foo = {color: String }"""
                                 }
                             )
                         )
-        , test "type" <|
-            \() ->
+            )
+        , test "type"
+            (\() ->
                 "type Color = Blue String | Red | Green"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 39 } }
@@ -705,8 +728,9 @@ type alias Foo = {color: String }"""
                                 }
                             )
                         )
-        , test "type with documentation" <|
-            \() ->
+            )
+        , test "type with documentation"
+            (\() ->
                 """{-| Classic RGB -}
 type Color = Blue String | Red | Green"""
                     |> expectAst
@@ -738,8 +762,9 @@ type Color = Blue String | Red | Green"""
                                 }
                             )
                         )
-        , test "type with multiple args" <|
-            \() ->
+            )
+        , test "type with multiple args"
+            (\() ->
                 "type D = C a B"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
@@ -760,8 +785,9 @@ type Color = Blue String | Red | Green"""
                                 }
                             )
                         )
-        , test "type with multiple args and correct distribution of args" <|
-            \() ->
+            )
+        , test "type with multiple args and correct distribution of args"
+            (\() ->
                 "type D = C B a"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
@@ -782,12 +808,14 @@ type Color = Blue String | Red | Green"""
                                 }
                             )
                         )
-        , test "type args should not continue on next line" <|
-            \() ->
+            )
+        , test "type args should not continue on next line"
+            (\() ->
                 "type D = C B\na"
                     |> expectInvalid
-        , test "type with GenericType" <|
-            \() ->
+            )
+        , test "type with GenericType"
+            (\() ->
                 "type Maybe a = Just a | Nothing"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
@@ -808,28 +836,34 @@ type Color = Blue String | Red | Green"""
                                 }
                             )
                         )
-        , test "type with value on next line " <|
-            \() ->
+            )
+        , test "type with value on next line "
+            (\() ->
                 parse "type Maybe a = Just a |\nNothing" Elm.Parser.Declarations.declaration
                     |> Expect.equal Nothing
-        , test "fail if declarations not on module-level" <|
-            \() ->
+            )
+        , test "fail if declarations not on module-level"
+            (\() ->
                 """a = f
     3
     b = 4"""
                     |> expectInvalid
-        , test "fail if function declaration argument is `as` without parenthesis" <|
-            \() ->
+            )
+        , test "fail if function declaration argument is `as` without parenthesis"
+            (\() ->
                 """a foo as bar = f3"""
                     |> expectInvalid
-        , test "regression test for disallowing ( +)" <|
-            \() ->
+            )
+        , test "regression test for disallowing ( +)"
+            (\() ->
                 "a = ( +)"
                     |> expectInvalid
-        , test "regression test for disallowing (+ )" <|
-            \() ->
+            )
+        , test "regression test for disallowing (+ )"
+            (\() ->
                 "a = (+ )"
                     |> expectInvalid
+            )
         ]
 
 

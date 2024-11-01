@@ -10,20 +10,22 @@ all : Test
 all =
     describe "NumbersTests"
         [ describe "integerDecimalOrHexadecimalMapWithRange"
-            [ test "hex" <|
-                \() ->
+            [ test "hex"
+                (\() ->
                     parseToResult "0x03FFFFFF" (ParserFast.integerDecimalOrHexadecimalMapWithRange (\_ _ -> -1) (\_ n -> n))
                         |> Expect.equal
                             (Just 67108863)
-            , test "hex - 2" <|
-                \() ->
+                )
+            , test "hex - 2"
+                (\() ->
                     parseToResult "0xFF" (ParserFast.integerDecimalOrHexadecimalMapWithRange (\_ _ -> -1) (\_ n -> n))
                         |> Expect.equal
                             (Just 255)
+                )
             ]
         , describe "floatOrIntegerDecimalOrHexadecimalMapWithRange"
-            [ test "hex" <|
-                \() ->
+            [ test "hex"
+                (\() ->
                     parseToResult "0x2A"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ _ -> -1)
@@ -32,8 +34,9 @@ all =
                         )
                         |> Expect.equal
                             (Just 42)
-            , test "float" <|
-                \() ->
+                )
+            , test "float"
+                (\() ->
                     parseToResult "2.0"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
@@ -42,8 +45,9 @@ all =
                         )
                         |> Expect.equal
                             (Just 2.0)
-            , test "integer with negative exponent" <|
-                \() ->
+                )
+            , test "integer with negative exponent"
+                (\() ->
                     parseToResult "2e-2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
@@ -52,8 +56,9 @@ all =
                         )
                         |> Expect.equal
                             (Just 2.0e-2)
-            , test "integer with negative exponent (uppercase E)" <|
-                \() ->
+                )
+            , test "integer with negative exponent (uppercase E)"
+                (\() ->
                     parseToResult "2E-2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
@@ -62,8 +67,9 @@ all =
                         )
                         |> Expect.equal
                             (Just 2.0e-2)
-            , test "integer with positive exponent" <|
-                \() ->
+                )
+            , test "integer with positive exponent"
+                (\() ->
                     parseToResult "2e+2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
@@ -72,8 +78,9 @@ all =
                         )
                         |> Expect.equal
                             (Just 2.0e2)
-            , test "float with negative exponent" <|
-                \() ->
+                )
+            , test "float with negative exponent"
+                (\() ->
                     parseToResult "2.0e-2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
@@ -82,8 +89,9 @@ all =
                         )
                         |> Expect.equal
                             (Just 2.0e-2)
-            , test "float with negative exponent (uppercase E)" <|
-                \() ->
+                )
+            , test "float with negative exponent (uppercase E)"
+                (\() ->
                     parseToResult "2.0E-2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
@@ -92,8 +100,9 @@ all =
                         )
                         |> Expect.equal
                             (Just 2.0e-2)
-            , test "float with positive exponent" <|
-                \() ->
+                )
+            , test "float with positive exponent"
+                (\() ->
                     parseToResult "2.0e+2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
@@ -102,6 +111,7 @@ all =
                         )
                         |> Expect.equal
                             (Just 2.0e2)
+                )
 
             -- TODO handling overflow like elm-format / the elm compiler
             -- would technically be a breaking change and maybe somewhat difficult to implement

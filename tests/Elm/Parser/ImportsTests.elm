@@ -12,8 +12,8 @@ import Test exposing (..)
 all : Test
 all =
     describe "ImportTest"
-        [ test "import with explicits" <|
-            \() ->
+        [ test "import with explicits"
+            (\() ->
                 "import Foo exposing (Model, Msg(..))"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 37 } }
@@ -28,8 +28,9 @@ all =
                                     )
                             }
                         )
-        , test "import with explicits 2" <|
-            \() ->
+            )
+        , test "import with explicits 2"
+            (\() ->
                 "import Html exposing (text)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
@@ -44,8 +45,9 @@ all =
                                     )
                             }
                         )
-        , test "import minimal" <|
-            \() ->
+            )
+        , test "import minimal"
+            (\() ->
                 "import Foo"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
@@ -54,8 +56,9 @@ all =
                             , exposingList = Nothing
                             }
                         )
-        , test "import with alias" <|
-            \() ->
+            )
+        , test "import with alias"
+            (\() ->
                 "import Foo as Bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 18 } }
@@ -64,8 +67,9 @@ all =
                             , exposingList = Nothing
                             }
                         )
-        , test "import with alias and exposing all" <|
-            \() ->
+            )
+        , test "import with alias and exposing all"
+            (\() ->
                 "import Foo as Bar exposing (..)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
@@ -78,10 +82,12 @@ all =
                                     )
                             }
                         )
-        , test "import with invalid alias containing ." <|
-            \() ->
+            )
+        , test "import with invalid alias containing ."
+            (\() ->
                 "import Foo as Bar.Buzz"
                     |> ParserWithCommentsUtil.expectInvalid Parser.importDefinition
+            )
         ]
 
 

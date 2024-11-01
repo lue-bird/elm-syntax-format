@@ -13,8 +13,8 @@ import Test exposing (..)
 all : Test
 all =
     describe "LambdaExpressionTests"
-        [ test "unit lambda" <|
-            \() ->
+        [ test "unit lambda"
+            (\() ->
                 "\\() -> foo"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
@@ -24,8 +24,9 @@ all =
                                 }
                             )
                         )
-        , test "record lambda" <|
-            \() ->
+            )
+        , test "record lambda"
+            (\() ->
                 "\\{foo} -> foo"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
@@ -35,8 +36,9 @@ all =
                                 }
                             )
                         )
-        , test "empty record lambda" <|
-            \() ->
+            )
+        , test "empty record lambda"
+            (\() ->
                 "\\{} -> foo"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
@@ -46,8 +48,9 @@ all =
                                 }
                             )
                         )
-        , test "args lambda" <|
-            \() ->
+            )
+        , test "args lambda"
+            (\() ->
                 "\\a b -> a + b"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
@@ -66,8 +69,9 @@ all =
                                 }
                             )
                         )
-        , test "tuple lambda" <|
-            \() ->
+            )
+        , test "tuple lambda"
+            (\() ->
                 "\\(a,b) -> a + b"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
@@ -90,6 +94,7 @@ all =
                                 }
                             )
                         )
+            )
         ]
 
 

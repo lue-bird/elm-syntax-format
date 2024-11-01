@@ -11,17 +11,19 @@ import Test exposing (..)
 all : Test
 all =
     describe "TypeAnnotationTests"
-        [ test "unitTypeReference" <|
-            \() ->
+        [ test "unitTypeReference"
+            (\() ->
                 "()"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } Unit)
-        , test "unitTypeReference with spaces" <|
-            \() ->
+            )
+        , test "unitTypeReference with spaces"
+            (\() ->
                 "( )"
                     |> expectInvalid
-        , test "tupledTypeReference" <|
-            \() ->
+            )
+        , test "tupledTypeReference"
+            (\() ->
                 "( (), ())"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
@@ -31,18 +33,21 @@ all =
                                 ]
                             )
                         )
-        , test "4-tuple type annotation is invalid" <|
-            \() ->
+            )
+        , test "4-tuple type annotation is invalid"
+            (\() ->
                 "(Int,String,(),a)"
                     |> expectInvalid
-        , test "tupledTypeReference 2" <|
-            \() ->
+            )
+        , test "tupledTypeReference 2"
+            (\() ->
                 -- TODO This feels incorrect, there should be a Parenthesized type for this
                 "( () )"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } } Unit)
-        , test "tupledTypeReference 3" <|
-            \() ->
+            )
+        , test "tupledTypeReference 3"
+            (\() ->
                 "( () , Maybe m )"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 17 } }
@@ -56,22 +61,25 @@ all =
                                 ]
                             )
                         )
-        , test "qualified type reference" <|
-            \() ->
+            )
+        , test "qualified type reference"
+            (\() ->
                 "Foo.Bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                             (Typed (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } ( [ "Foo" ], "Bar" )) [])
                         )
-        , test "typeAnnotationNoFn" <|
-            \() ->
+            )
+        , test "typeAnnotationNoFn"
+            (\() ->
                 "Bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
                             (Typed (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } ( [], "Bar" )) [])
                         )
-        , test "typedTypeReference 1" <|
-            \() ->
+            )
+        , test "typedTypeReference 1"
+            (\() ->
                 "Foo () a Bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
@@ -83,8 +91,9 @@ all =
                                 ]
                             )
                         )
-        , test "typedTypeReference 2" <|
-            \() ->
+            )
+        , test "typedTypeReference 2"
+            (\() ->
                 "Foo () a Bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
@@ -96,13 +105,15 @@ all =
                                 ]
                             )
                         )
-        , test "recordTypeReference empty" <|
-            \() ->
+            )
+        , test "recordTypeReference empty"
+            (\() ->
                 "{}"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } (Record []))
-        , test "recordTypeReference one field" <|
-            \() ->
+            )
+        , test "recordTypeReference one field"
+            (\() ->
                 "{color: String }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 17 } }
@@ -115,8 +126,9 @@ all =
                                 ]
                             )
                         )
-        , test "record with generic" <|
-            \() ->
+            )
+        , test "record with generic"
+            (\() ->
                 "{ attr | position : Vec2, texture : Vec2 }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 43 } }
@@ -136,12 +148,14 @@ all =
                                 )
                             )
                         )
-        , test "generic record with no fields" <|
-            \() ->
+            )
+        , test "generic record with no fields"
+            (\() ->
                 "{ attr |}"
                     |> expectInvalid
-        , test "recordTypeReference nested record" <|
-            \() ->
+            )
+        , test "recordTypeReference nested record"
+            (\() ->
                 "{color: {r : Int, g :Int, b: Int } }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 37 } }
@@ -171,31 +185,31 @@ all =
                                 ]
                             )
                         )
-        , test "record field ranges" <|
-            \() ->
+            )
+        , test "record field ranges"
+            (\() ->
                 "{ foo : Int, bar : Int, baz : Int }"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 36 } } <|
-                            Record
+                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 36 } }
+                            (Record
                                 [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
                                     ( Node { start = { row = 1, column = 3 }, end = { row = 1, column = 6 } } "foo"
-                                    , Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } <|
-                                        Typed (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } ( [], "Int" )) []
+                                    , Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } (Typed (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } ( [], "Int" )) [])
                                     )
                                 , Node { start = { row = 1, column = 14 }, end = { row = 1, column = 23 } }
                                     ( Node { start = { row = 1, column = 14 }, end = { row = 1, column = 17 } } "bar"
-                                    , Node { start = { row = 1, column = 20 }, end = { row = 1, column = 23 } } <|
-                                        Typed (Node { start = { row = 1, column = 20 }, end = { row = 1, column = 23 } } ( [], "Int" )) []
+                                    , Node { start = { row = 1, column = 20 }, end = { row = 1, column = 23 } } (Typed (Node { start = { row = 1, column = 20 }, end = { row = 1, column = 23 } } ( [], "Int" )) [])
                                     )
                                 , Node { start = { row = 1, column = 25 }, end = { row = 1, column = 35 } }
                                     ( Node { start = { row = 1, column = 25 }, end = { row = 1, column = 28 } } "baz"
-                                    , Node { start = { row = 1, column = 31 }, end = { row = 1, column = 34 } } <|
-                                        Typed (Node { start = { row = 1, column = 31 }, end = { row = 1, column = 34 } } ( [], "Int" )) []
+                                    , Node { start = { row = 1, column = 31 }, end = { row = 1, column = 34 } } (Typed (Node { start = { row = 1, column = 31 }, end = { row = 1, column = 34 } } ( [], "Int" )) [])
                                     )
                                 ]
+                            )
                         )
-        , test "recordTypeReference with generic" <|
-            \() ->
+            )
+        , test "recordTypeReference with generic"
+            (\() ->
                 "{color: s }"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
@@ -207,8 +221,9 @@ all =
                                 ]
                             )
                         )
-        , test "function type reference" <|
-            \() ->
+            )
+        , test "function type reference"
+            (\() ->
                 "Foo -> Bar"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
@@ -221,8 +236,9 @@ all =
                                 )
                             )
                         )
-        , test "function type reference multiple" <|
-            \() ->
+            )
+        , test "function type reference multiple"
+            (\() ->
                 "Foo -> Bar -> baz"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 18 } }
@@ -240,8 +256,9 @@ all =
                                 )
                             )
                         )
-        , test "function type reference generics" <|
-            \() ->
+            )
+        , test "function type reference generics"
+            (\() ->
                 "cMsg -> cModel -> a"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 20 } }
@@ -255,8 +272,9 @@ all =
                                 )
                             )
                         )
-        , test "annotation with parens" <|
-            \() ->
+            )
+        , test "annotation with parens"
+            (\() ->
                 "Msg -> Model -> (Model, Cmd Msg)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 33 } }
@@ -286,8 +304,9 @@ all =
                                 )
                             )
                         )
-        , test "function as argument" <|
-            \() ->
+            )
+        , test "function as argument"
+            (\() ->
                 "( cMsg -> cModel -> a ) -> b"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 29 } }
@@ -305,8 +324,9 @@ all =
                                 (Node { start = { row = 1, column = 28 }, end = { row = 1, column = 29 } } (GenericType "b"))
                             )
                         )
-        , test "type with params" <|
-            \() ->
+            )
+        , test "type with params"
+            (\() ->
                 "(Foo -> Bar)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
@@ -325,8 +345,9 @@ all =
                                 )
                             )
                         )
-        , test "function type reference multiple and parens" <|
-            \() ->
+            )
+        , test "function type reference multiple and parens"
+            (\() ->
                 "(Foo -> Bar) -> baz"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 20 } }
@@ -350,12 +371,14 @@ all =
                                 (Node { start = { row = 1, column = 17 }, end = { row = 1, column = 20 } } (GenericType "baz"))
                             )
                         )
-        , test "parseTypeWith wrong indent" <|
-            \() ->
+            )
+        , test "parseTypeWith wrong indent"
+            (\() ->
                 "Maybe\na"
                     |> expectInvalid
-        , test "parseTypeWith good indent" <|
-            \() ->
+            )
+        , test "parseTypeWith good indent"
+            (\() ->
                 "Maybe\n a"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 2, column = 3 } }
@@ -364,8 +387,9 @@ all =
                                 [ Node { start = { row = 2, column = 2 }, end = { row = 2, column = 3 } } (GenericType "a") ]
                             )
                         )
-        , test "issue #5 - no spaces between type and generic with parens" <|
-            \() ->
+            )
+        , test "issue #5 - no spaces between type and generic with parens"
+            (\() ->
                 "List(String)"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
@@ -379,8 +403,9 @@ all =
                                 ]
                             )
                         )
-        , test "parse type with multiple params" <|
-            \() ->
+            )
+        , test "parse type with multiple params"
+            (\() ->
                 "Dict String Int"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
@@ -396,6 +421,7 @@ all =
                                 ]
                             )
                         )
+            )
         ]
 
 

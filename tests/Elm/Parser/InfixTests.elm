@@ -12,8 +12,8 @@ import Test exposing (..)
 all : Test
 all =
     describe "InfixTests"
-        [ test "right infix" <|
-            \() ->
+        [ test "right infix"
+            (\() ->
                 "infix right 7 (</>) = slash"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
@@ -25,8 +25,9 @@ all =
                                 }
                             )
                         )
-        , test "left infix" <|
-            \() ->
+            )
+        , test "left infix"
+            (\() ->
                 "infix left  8 (<?>) = questionMark"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 35 } }
@@ -38,8 +39,9 @@ all =
                                 }
                             )
                         )
-        , test "non infix" <|
-            \() ->
+            )
+        , test "non infix"
+            (\() ->
                 "infix non   4 (==) = eq"
                     |> expectAst
                         (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
@@ -51,6 +53,7 @@ all =
                                 }
                             )
                         )
+            )
         ]
 
 

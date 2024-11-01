@@ -12,32 +12,36 @@ import Test
 all : Test.Test
 all =
     Test.describe "CaseExpressionTests"
-        [ Test.test "should fail to parse when the matched expression has the wrong indentation" <|
-            \() ->
+        [ Test.test "should fail to parse when the matched expression has the wrong indentation"
+            (\() ->
                 """case
 True
   of
     A -> 1"""
                     |> expectInvalid
-        , Test.test "should fail to parse when the `of` keyword has the wrong indentation" <|
-            \() ->
+            )
+        , Test.test "should fail to parse when the `of` keyword has the wrong indentation"
+            (\() ->
                 """case True
 of
                A -> 1"""
                     |> expectInvalid
-        , Test.test "should fail to parse a branch at the start of a line" <|
-            \() ->
+            )
+        , Test.test "should fail to parse a branch at the start of a line"
+            (\() ->
                 """case True of
 True -> 1"""
                     |> expectInvalid
-        , Test.test "should fail to parse when branch body starts at the start of a line" <|
-            \() ->
+            )
+        , Test.test "should fail to parse when branch body starts at the start of a line"
+            (\() ->
                 """case f of
   True ->
 1"""
                     |> expectInvalid
-        , Test.test "case expression" <|
-            \() ->
+            )
+        , Test.test "case expression"
+            (\() ->
                 """case f of
   True -> 1
   False -> 2"""
@@ -45,65 +49,57 @@ True -> 1"""
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 13 } }
                             (Elm.Syntax.Expression.CaseExpression
                                 { expression =
-                                    Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } <|
-                                        Elm.Syntax.Expression.FunctionOrValue [] "f"
+                                    Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "f")
                                 , cases =
-                                    [ ( Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 7 } } <|
-                                            Elm.Syntax.Pattern.NamedPattern (Elm.Syntax.Pattern.QualifiedNameRef [] "True") []
-                                      , Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 12 } } <|
-                                            Elm.Syntax.Expression.Integer 1
+                                    [ ( Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 7 } } (Elm.Syntax.Pattern.NamedPattern (Elm.Syntax.Pattern.QualifiedNameRef [] "True") [])
+                                      , Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 12 } } (Elm.Syntax.Expression.Integer 1)
                                       )
-                                    , ( Elm.Syntax.Node.Node { start = { row = 3, column = 3 }, end = { row = 3, column = 8 } } <|
-                                            Elm.Syntax.Pattern.NamedPattern (Elm.Syntax.Pattern.QualifiedNameRef [] "False") []
-                                      , Elm.Syntax.Node.Node { start = { row = 3, column = 12 }, end = { row = 3, column = 13 } } <|
-                                            Elm.Syntax.Expression.Integer 2
+                                    , ( Elm.Syntax.Node.Node { start = { row = 3, column = 3 }, end = { row = 3, column = 8 } } (Elm.Syntax.Pattern.NamedPattern (Elm.Syntax.Pattern.QualifiedNameRef [] "False") [])
+                                      , Elm.Syntax.Node.Node { start = { row = 3, column = 12 }, end = { row = 3, column = 13 } } (Elm.Syntax.Expression.Integer 2)
                                       )
                                     ]
                                 }
                             )
                         )
-        , Test.test "case expression with qualified imports" <|
-            \() ->
+            )
+        , Test.test "case expression with qualified imports"
+            (\() ->
                 """case f of
   Foo.Bar -> 1"""
                     |> expectAst
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 15 } }
                             (Elm.Syntax.Expression.CaseExpression
                                 { expression =
-                                    Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } <|
-                                        Elm.Syntax.Expression.FunctionOrValue [] "f"
+                                    Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "f")
                                 , cases =
-                                    [ ( Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } } <|
-                                            Elm.Syntax.Pattern.NamedPattern (Elm.Syntax.Pattern.QualifiedNameRef [ "Foo" ] "Bar") []
-                                      , Elm.Syntax.Node.Node { start = { row = 2, column = 14 }, end = { row = 2, column = 15 } } <|
-                                            Elm.Syntax.Expression.Integer 1
+                                    [ ( Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } } (Elm.Syntax.Pattern.NamedPattern (Elm.Syntax.Pattern.QualifiedNameRef [ "Foo" ] "Bar") [])
+                                      , Elm.Syntax.Node.Node { start = { row = 2, column = 14 }, end = { row = 2, column = 15 } } (Elm.Syntax.Expression.Integer 1)
                                       )
                                     ]
                                 }
                             )
                         )
-        , Test.test "case expression with no space between pattern and value" <|
-            \() ->
+            )
+        , Test.test "case expression with no space between pattern and value"
+            (\() ->
                 """case f of
   x->1"""
                     |> expectAst
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 7 } }
                             (Elm.Syntax.Expression.CaseExpression
                                 { expression =
-                                    Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } <|
-                                        Elm.Syntax.Expression.FunctionOrValue [] "f"
+                                    Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "f")
                                 , cases =
-                                    [ ( Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 4 } } <|
-                                            Elm.Syntax.Pattern.VarPattern "x"
-                                      , Elm.Syntax.Node.Node { start = { row = 2, column = 6 }, end = { row = 2, column = 7 } } <|
-                                            Elm.Syntax.Expression.Integer 1
+                                    [ ( Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 4 } } (Elm.Syntax.Pattern.VarPattern "x")
+                                      , Elm.Syntax.Node.Node { start = { row = 2, column = 6 }, end = { row = 2, column = 7 } } (Elm.Syntax.Expression.Integer 1)
                                       )
                                     ]
                                 }
                             )
                         )
-        , Test.test "should parse case expression with first branch on the same line as case of" <|
-            \() ->
+            )
+        , Test.test "should parse case expression with first branch on the same line as case of"
+            (\() ->
                 """case x of True -> 1
           False -> 2"""
                     |> expectAst
@@ -121,8 +117,9 @@ True -> 1"""
                                 }
                             )
                         )
-        , Test.test "should parse case expression with a multiline pattern" <|
-            \() ->
+            )
+        , Test.test "should parse case expression with a multiline pattern"
+            (\() ->
                 """case x of
         \"\"\"single line triple quote\"\"\" ->
             1
@@ -153,20 +150,23 @@ True -> 1"""
                                 }
                             )
                         )
-        , Test.test "should fail to parse case expression with second branch indented differently than the first line (before)" <|
-            \() ->
+            )
+        , Test.test "should fail to parse case expression with second branch indented differently than the first line (before)"
+            (\() ->
                 expectInvalid """case f of
   True -> 1
  False -> 2"""
-        , Test.test "should fail to parse case expression with second branch indented differently than the first line (after)" <|
-            \() ->
+            )
+        , Test.test "should fail to parse case expression with second branch indented differently than the first line (after)"
+            (\() ->
                 """case f of
   True -> 1
    False -> 2
 """
                     |> expectInvalid
-        , Test.test "should parse case expression when " <|
-            \() ->
+            )
+        , Test.test "should parse case expression when "
+            (\() ->
                 """case msg of
   Increment ->
     1
@@ -188,6 +188,7 @@ True -> 1"""
                                 }
                             )
                         )
+            )
         ]
 
 
