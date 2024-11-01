@@ -1,6 +1,5 @@
 module Elm.Parser.DeclarationsTests exposing (all)
 
-import Elm.Parser.Declarations
 import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Syntax.Declaration
 import Elm.Syntax.Expression
@@ -8,6 +7,7 @@ import Elm.Syntax.Infix
 import Elm.Syntax.Node
 import Elm.Syntax.Pattern
 import Elm.Syntax.TypeAnnotation
+import ElmSyntaxParserLenient
 import Expect
 import Test
 
@@ -839,7 +839,7 @@ type Color = Blue String | Red | Green"""
             )
         , Test.test "type with value on next line "
             (\() ->
-                Elm.Parser.ParserWithCommentsTestUtil.parse "type Maybe a = Just a |\nNothing" Elm.Parser.Declarations.declaration
+                Elm.Parser.ParserWithCommentsTestUtil.parse "type Maybe a = Just a |\nNothing" ElmSyntaxParserLenient.declaration
                     |> Expect.equal Nothing
             )
         , Test.test "fail if declarations not on module-level"
@@ -869,14 +869,14 @@ type Color = Blue String | Red | Green"""
 
 expectAst : Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration -> String -> Expect.Expectation
 expectAst =
-    Elm.Parser.ParserWithCommentsTestUtil.expectAstWithIndent1 Elm.Parser.Declarations.declaration
+    Elm.Parser.ParserWithCommentsTestUtil.expectAstWithIndent1 ElmSyntaxParserLenient.declaration
 
 
 expectAstWithComments : { ast : Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration, comments : List (Elm.Syntax.Node.Node String) } -> String -> Expect.Expectation
 expectAstWithComments =
-    Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments Elm.Parser.Declarations.declaration
+    Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.declaration
 
 
 expectInvalid : String -> Expect.Expectation
 expectInvalid =
-    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
+    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration

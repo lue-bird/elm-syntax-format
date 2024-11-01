@@ -1,8 +1,8 @@
 module Elm.Parser.TokenTests exposing (all)
 
-import Elm.Parser.Declarations
 import Elm.Parser.TestUtil
 import Elm.Parser.Tokens
+import ElmSyntaxParserLenient
 import Expect
 import Test
 
@@ -82,17 +82,17 @@ all =
             )
         , Test.test "operatorToken 11 -- is not an operator"
             (\() ->
-                Elm.Parser.TestUtil.parse "a = (--)" Elm.Parser.Declarations.declaration
+                Elm.Parser.TestUtil.parse "a = (--)" ElmSyntaxParserLenient.declaration
                     |> Expect.equal Nothing
             )
         , Test.test "operatorToken 14"
             (\() ->
-                Elm.Parser.TestUtil.parse "a = (=)" Elm.Parser.Declarations.declaration
+                Elm.Parser.TestUtil.parse "a = (=)" ElmSyntaxParserLenient.declaration
                     |> Expect.equal Nothing
             )
         , Test.test "operatorToken 15"
             (\() ->
-                Elm.Parser.TestUtil.parse "a = (?)" Elm.Parser.Declarations.declaration
+                Elm.Parser.TestUtil.parse "a = (?)" ElmSyntaxParserLenient.declaration
                     |> Expect.equal Nothing
             )
         , Test.test "multiline string"

@@ -1,10 +1,10 @@
 module Elm.Parser.InfixTests exposing (all)
 
-import Elm.Parser.Declarations
 import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Syntax.Declaration
 import Elm.Syntax.Infix
 import Elm.Syntax.Node
+import ElmSyntaxParserLenient
 import Expect
 import Test
 
@@ -59,4 +59,4 @@ all =
 
 expectAst : Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration -> String -> Expect.Expectation
 expectAst =
-    Elm.Parser.ParserWithCommentsTestUtil.expectAst Elm.Parser.Declarations.declaration
+    Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.declaration
