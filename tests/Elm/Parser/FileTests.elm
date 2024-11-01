@@ -3,6 +3,7 @@ module Elm.Parser.FileTests exposing (all)
 import Elm.Parser
 import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Parser.Samples
+import Elm.Parser.TestUtil
 import Elm.Syntax.Declaration
 import Elm.Syntax.Exposing
 import Elm.Syntax.Expression
@@ -52,6 +53,18 @@ all =
         --             Parser.parse "module Foo exposing (..) \nx = \n  x + _"
         --                 |> Expect.equal (Err [ "Could not continue parsing on location (2,6)" ])
         --     ]
+        , Test.test "moduleName"
+            (\() ->
+                Elm.Parser.TestUtil.parseToResult "Foo" ElmSyntaxParserLenient.moduleName
+                    |> Maybe.map Elm.Syntax.Node.value
+                    |> Expect.equal (Just [ "Foo" ])
+            )
+        , Test.test "moduleNameDir"
+            (\() ->
+                Elm.Parser.TestUtil.parseToResult "Foo.Bar" ElmSyntaxParserLenient.moduleName
+                    |> Maybe.map Elm.Syntax.Node.value
+                    |> Expect.equal (Just [ "Foo", "Bar" ])
+            )
         , Test.describe "module header"
             [ Test.test "formatted moduleDefinition"
                 (\() ->

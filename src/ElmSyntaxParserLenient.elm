@@ -1,12 +1,14 @@
 module ElmSyntaxParserLenient exposing
     ( Parser, run, module_
-    , moduleHeader, documentationComment, import_, declarations, declaration
+    , moduleName, moduleHeader, documentationComment, import_, declarations, declaration
     )
 
 {-| Like [`Elm.Syntax.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser)
 but able to parse badly indented code (TODO) similar to elm.format.
 
 Some additional lenient parsing (TODO):
+
+  - merge consecutive commas
 
   -     function parameters : Type = result
 
@@ -55,6 +57,16 @@ Some additional lenient parsing (TODO):
             Just n ->
                 n
 
+  -     type A =
+            | A
+            | B
+
+    →
+
+        type A
+            = A
+            | B
+
 @docs Parser, run, module_
 
 That's all you'll need most of the time.
@@ -63,11 +75,10 @@ Sometimes it's useful to parse only some part of the syntax,
 to, say, display only an expression in an article
 or reparse only the touched declarations on save.
 
-@docs moduleHeader, documentationComment, import_, declarations, declaration
+@docs moduleName, moduleHeader, documentationComment, import_, declarations, declaration
 
 -}
 
-import Elm.Parser.Base
 import Elm.Parser.Expose
 import Elm.Parser.Expression
 import Elm.Parser.Layout
@@ -81,6 +92,7 @@ import Elm.Syntax.File
 import Elm.Syntax.Import
 import Elm.Syntax.Infix
 import Elm.Syntax.Module
+import Elm.Syntax.ModuleName
 import Elm.Syntax.Node
 import Elm.Syntax.Pattern
 import Elm.Syntax.Range
@@ -132,6 +144,20 @@ module_ =
         )
         (ParserWithComments.many import_)
         declarations
+
+
+moduleName : ParserFast.Parser (Elm.Syntax.Node.Node Elm.Syntax.ModuleName.ModuleName)
+moduleName =
+    ParserFast.map2WithRange
+        (\range head tail ->
+            Elm.Syntax.Node.Node range (head :: tail)
+        )
+        Elm.Parser.Tokens.typeName
+        (ParserFast.loopWhileSucceedsRightToLeftStackUnsafe
+            (ParserFast.symbolFollowedBy "." Elm.Parser.Tokens.typeName)
+            []
+            (::)
+        )
 
 
 moduleHeader : Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Module.Module))
@@ -245,7 +271,7 @@ effectModuleDefinition =
         )
         (ParserFast.keywordFollowedBy "effect" Elm.Parser.Layout.maybeLayout)
         (ParserFast.keywordFollowedBy "module" Elm.Parser.Layout.maybeLayout)
-        Elm.Parser.Base.moduleName
+        moduleName
         Elm.Parser.Layout.maybeLayout
         effectWhereClauses
         Elm.Parser.Layout.maybeLayout
@@ -255,7 +281,7 @@ effectModuleDefinition =
 normalModuleDefinition : Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Module.Module))
 normalModuleDefinition =
     ParserFast.map4WithRange
-        (\range commentsAfterModule moduleName commentsAfterModuleName exposingList ->
+        (\range commentsAfterModule moduleNameNode commentsAfterModuleName exposingList ->
             { comments =
                 commentsAfterModule
                     |> Rope.prependTo commentsAfterModuleName
@@ -263,14 +289,14 @@ normalModuleDefinition =
             , syntax =
                 Elm.Syntax.Node.Node range
                     (Elm.Syntax.Module.NormalModule
-                        { moduleName = moduleName
+                        { moduleName = moduleNameNode
                         , exposingList = exposingList.syntax
                         }
                     )
             }
         )
         (ParserFast.keywordFollowedBy "module" Elm.Parser.Layout.maybeLayout)
-        Elm.Parser.Base.moduleName
+        moduleName
         Elm.Parser.Layout.maybeLayout
         Elm.Parser.Expose.exposeDefinition
 
@@ -278,7 +304,7 @@ normalModuleDefinition =
 portModuleDefinition : Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Module.Module))
 portModuleDefinition =
     ParserFast.map5WithRange
-        (\range commentsAfterPort commentsAfterModule moduleName commentsAfterModuleName exposingList ->
+        (\range commentsAfterPort commentsAfterModule moduleNameNode commentsAfterModuleName exposingList ->
             { comments =
                 commentsAfterPort
                     |> Rope.prependTo commentsAfterModule
@@ -286,12 +312,12 @@ portModuleDefinition =
                     |> Rope.prependTo exposingList.comments
             , syntax =
                 Elm.Syntax.Node.Node range
-                    (Elm.Syntax.Module.PortModule { moduleName = moduleName, exposingList = exposingList.syntax })
+                    (Elm.Syntax.Module.PortModule { moduleName = moduleNameNode, exposingList = exposingList.syntax })
             }
         )
         (ParserFast.keywordFollowedBy "port" Elm.Parser.Layout.maybeLayout)
         (ParserFast.keywordFollowedBy "module" Elm.Parser.Layout.maybeLayout)
-        Elm.Parser.Base.moduleName
+        moduleName
         Elm.Parser.Layout.maybeLayout
         Elm.Parser.Expose.exposeDefinition
 
@@ -373,7 +399,7 @@ import_ =
                             }
         )
         (ParserFast.keywordFollowedBy "import" Elm.Parser.Layout.maybeLayout)
-        Elm.Parser.Base.moduleName
+        moduleName
         Elm.Parser.Layout.optimisticLayout
         (ParserFast.map3OrSucceed
             (\commentsBefore moduleAliasNode commentsAfter ->
