@@ -1622,6 +1622,87 @@ type alias A r =
     }
 """
                 )
+            , Test.test "single-line construct"
+                (\() ->
+                    """module A exposing (..)
+type alias A = List Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    List Int
+"""
+                )
+            , Test.test "multi-line construct"
+                (\() ->
+                    """module A exposing (..)
+type alias A = List
+               Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    List
+        Int
+"""
+                )
+            , Test.test "construct written in single line with consecutive comments before argument"
+                (\() ->
+                    """module A exposing (..)
+type alias A = List {--}{--} Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    List
+        {--}
+        {--}
+        Int
+"""
+                )
+            , Test.test "single-line construct with comments collapsible before argument"
+                (\() ->
+                    """module A exposing (..)
+type alias A = List {- 0 -} Int"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    List {- 0 -} Int
+"""
+                )
+            , Test.test "construct with consecutive comments collapsible before multi-line argument"
+                (\() ->
+                    """module A exposing (..)
+type alias A = List {- 0 -}{- 1 -} (List
+                             Int)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    List
+        {- 0 -} {- 1 -}
+        (List
+            Int
+        )
+"""
+                )
+            , Test.test "multi-line construct with consecutive comments collapsible before single-line argument"
+                (\() ->
+                    """module A exposing (..)
+type alias A = Result {- 0 -}{- 1 -} Int (List
+                                          Int)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    Result
+        {- 0 -} {- 1 -} Int
+        (List
+            Int
+        )
+"""
+                )
             ]
         , Test.describe "expression"
             [ Test.test "if-then-else with single-line condition"

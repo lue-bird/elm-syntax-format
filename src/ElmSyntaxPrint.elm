@@ -2129,11 +2129,18 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
                 { fullRange = fullRange, elements = elementPatterns }
 
         Elm.Syntax.Pattern.NamedPattern syntaxQualifiedNameRef argumentPatterns ->
-            referenceConstruct patternParenthesizedIfSpaceSeparated
+            construct
+                { printArgumentParenthesizedIfSpaceSeparated =
+                    patternParenthesizedIfSpaceSeparated
+                , lineSpreadMinimum = Print.SingleLine
+                }
                 syntaxComments
                 { fullRange = fullRange
-                , referenceQualification = syntaxQualifiedNameRef.moduleName
-                , referenceUnqualified = syntaxQualifiedNameRef.name
+                , start =
+                    qualifiedReference
+                        { qualification = syntaxQualifiedNameRef.moduleName
+                        , unqualified = syntaxQualifiedNameRef.name
+                        }
                 , arguments = argumentPatterns
                 }
 
@@ -2860,31 +2867,11 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
         |> Print.followedBy (Print.exactly "}")
 
 
-referenceConstruct :
-    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node argument -> Print)
-    -> List (Elm.Syntax.Node.Node String)
-    ->
-        { fullRange : Elm.Syntax.Range.Range
-        , referenceQualification : List String
-        , referenceUnqualified : String
-        , arguments : List (Elm.Syntax.Node.Node argument)
-        }
-    -> Print
-referenceConstruct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxReferenceConstruct =
-    construct printArgumentParenthesizedIfSpaceSeparated
-        syntaxComments
-        { start =
-            qualifiedReference
-                { qualification = syntaxReferenceConstruct.referenceQualification
-                , unqualified = syntaxReferenceConstruct.referenceUnqualified
-                }
-        , fullRange = syntaxReferenceConstruct.fullRange
-        , arguments = syntaxReferenceConstruct.arguments
-        }
-
-
 construct :
-    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node a -> Print)
+    { printArgumentParenthesizedIfSpaceSeparated :
+        List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node a -> Print
+    , lineSpreadMinimum : Print.LineSpread
+    }
     -> List (Elm.Syntax.Node.Node String)
     ->
         { arguments : List (Elm.Syntax.Node.Node a)
@@ -2892,7 +2879,7 @@ construct :
         , start : Print.Print
         }
     -> Print
-construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxConstruct =
+construct specific syntaxComments syntaxConstruct =
     let
         commentsBeforeArguments : List (Maybe { print : Print, lineSpread : Print.LineSpread })
         commentsBeforeArguments =
@@ -2931,13 +2918,15 @@ construct printArgumentParenthesizedIfSpaceSeparated syntaxComments syntaxConstr
             syntaxConstruct.arguments
                 |> List.map
                     (\argument ->
-                        printArgumentParenthesizedIfSpaceSeparated syntaxComments argument
+                        specific.printArgumentParenthesizedIfSpaceSeparated syntaxComments
+                            argument
                     )
 
         lineSpread : Print.LineSpread
         lineSpread =
             Print.lineSpreadsCombine
-                [ syntaxConstruct.start |> Print.lineSpread
+                [ specific.lineSpreadMinimum
+                , syntaxConstruct.start |> Print.lineSpread
                 , commentsBeforeArguments
                     |> List.filterMap identity
                     |> Print.mapAndLineSpreadsCombine .lineSpread
@@ -3926,11 +3915,18 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
             Print.exactly name
 
         Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node _ ( referenceQualification, referenceUnqualified )) arguments ->
-            referenceConstruct typeParenthesizedIfSpaceSeparated
+            construct
+                { printArgumentParenthesizedIfSpaceSeparated =
+                    typeParenthesizedIfSpaceSeparated
+                , lineSpreadMinimum = lineSpreadInRange fullRange
+                }
                 syntaxComments
                 { fullRange = fullRange
-                , referenceQualification = referenceQualification
-                , referenceUnqualified = referenceUnqualified
+                , start =
+                    qualifiedReference
+                        { qualification = referenceQualification
+                        , unqualified = referenceUnqualified
+                        }
                 , arguments = arguments
                 }
 
@@ -4530,7 +4526,11 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                         let
                             variantPrint : Print
                             variantPrint =
-                                construct typeParenthesizedIfSpaceSeparated
+                                construct
+                                    { printArgumentParenthesizedIfSpaceSeparated =
+                                        typeParenthesizedIfSpaceSeparated
+                                    , lineSpreadMinimum = Print.SingleLine
+                                    }
                                     syntaxComments
                                     { start = Print.exactly (variant.name |> Elm.Syntax.Node.value)
                                     , fullRange = variantRange
