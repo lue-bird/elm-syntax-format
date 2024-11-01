@@ -1,11 +1,11 @@
 module Elm.Parser.LetExpressionTests exposing (all)
 
-import Elm.Parser.Expression
 import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Syntax.Expression
 import Elm.Syntax.Node
 import Elm.Syntax.Pattern
 import Elm.Syntax.TypeAnnotation
+import ElmSyntaxParserLenient
 import Expect
 import Test
 
@@ -481,9 +481,9 @@ all =
 
 expectAst : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> String -> Expect.Expectation
 expectAst =
-    Elm.Parser.ParserWithCommentsTestUtil.expectAst Elm.Parser.Expression.expressionFollowedByOptimisticLayout
+    Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
 
 
 expectInvalid : String -> Expect.Expectation
 expectInvalid =
-    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Expression.expressionFollowedByOptimisticLayout
+    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
