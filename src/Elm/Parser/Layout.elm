@@ -7,16 +7,57 @@ module Elm.Parser.Layout exposing
     , maybeAroundBothSides
     , maybeLayout
     , moduleLevelIndentationFollowedBy
+    , multilineComment
     , onTopIndentationFollowedBy
     , optimisticLayout
     , positivelyIndentedFollowedBy
     , positivelyIndentedPlusFollowedBy
+    , singleLineComment
     )
 
-import Elm.Parser.Comments
+import Char.Extra
+import Elm.Syntax.Node
 import ParserFast
 import ParserWithComments
 import Rope
+
+
+singleLineComment : ParserFast.Parser (Elm.Syntax.Node.Node String)
+singleLineComment =
+    ParserFast.symbolFollowedBy "--"
+        (ParserFast.whileMapWithRange
+            (\c -> c /= '\u{000D}' && c /= '\n' && not (Char.Extra.isUtf16Surrogate c))
+            (\range content ->
+                Elm.Syntax.Node.Node
+                    { start = { row = range.start.row, column = range.start.column - 2 }
+                    , end =
+                        { row = range.start.row
+                        , column = range.end.column
+                        }
+                    }
+                    ("--" ++ content)
+            )
+        )
+
+
+multilineComment : ParserFast.Parser (Elm.Syntax.Node.Node String)
+multilineComment =
+    ParserFast.offsetSourceAndThen
+        (\offset source ->
+            case String.slice (offset + 2) (offset + 3) source of
+                "|" ->
+                    ParserFast.problem
+
+                _ ->
+                    multiLineCommentNoCheck
+        )
+
+
+multiLineCommentNoCheck : ParserFast.Parser (Elm.Syntax.Node.Node String)
+multiLineCommentNoCheck =
+    ParserFast.nestableMultiCommentMapWithRange Elm.Syntax.Node.Node
+        ( '{', "-" )
+        ( '-', "}" )
 
 
 whitespaceAndCommentsOrEmpty : ParserFast.Parser ParserWithComments.Comments
@@ -49,7 +90,7 @@ fromMultilineCommentNodeOrEmptyOnProblem =
         (\comment commentsAfter ->
             Rope.one comment |> Rope.filledPrependTo commentsAfter
         )
-        (Elm.Parser.Comments.multilineComment
+        (multilineComment
             |> ParserFast.followedBySkipWhileWhitespace
         )
         whitespaceAndCommentsOrEmptyLoop
@@ -62,7 +103,7 @@ fromSingleLineCommentNode =
         (\content commentsAfter ->
             Rope.one content |> Rope.filledPrependTo commentsAfter
         )
-        (Elm.Parser.Comments.singleLineComment
+        (singleLineComment
             |> ParserFast.followedBySkipWhileWhitespace
         )
         whitespaceAndCommentsOrEmptyLoop
@@ -72,8 +113,8 @@ whitespaceAndCommentsOrEmptyLoop : ParserFast.Parser ParserWithComments.Comments
 whitespaceAndCommentsOrEmptyLoop =
     ParserFast.loopWhileSucceeds
         (ParserFast.oneOf2
-            Elm.Parser.Comments.singleLineComment
-            Elm.Parser.Comments.multilineComment
+            singleLineComment
+            multilineComment
             |> ParserFast.followedBySkipWhileWhitespace
         )
         Rope.empty

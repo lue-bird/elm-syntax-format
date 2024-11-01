@@ -161,7 +161,7 @@ declarationWithDocumentation =
                             )
                     }
         )
-        Elm.Parser.Comments.declarationDocumentation
+        Elm.Parser.Comments.documentationComment
         (Elm.Parser.Layout.layoutStrictFollowedByWithComments
             (ParserFast.oneOf3
                 functionAfterDocumentation

@@ -36,7 +36,7 @@ file =
                 (\moduleDocumentation commentsAfter ->
                     Rope.one moduleDocumentation |> Rope.filledPrependTo commentsAfter
                 )
-                Elm.Parser.Comments.moduleDocumentation
+                Elm.Parser.Comments.documentationComment
                 Elm.Parser.Layout.layoutStrict
                 Rope.empty
             )

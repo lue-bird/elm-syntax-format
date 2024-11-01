@@ -1,122 +1,196 @@
 module Elm.Parser.LayoutTests exposing (all)
 
-import Elm.Parser.Layout as Layout
-import Elm.Parser.ParserWithCommentsTestUtil exposing (parseWithState)
+import Elm.Parser.Layout
+import Elm.Parser.ParserWithCommentsTestUtil
+import Elm.Syntax.Node
 import Expect
 import ParserFast
-import ParserWithComments exposing (Comments)
-import Test exposing (..)
+import ParserWithComments
+import Test
 
 
-all : Test
+all : Test.Test
 all =
-    describe "LayoutTests"
-        [ test "empty"
+    Test.describe "LayoutTests"
+        [ Test.test "empty"
             (\() ->
-                parse "." (ParserFast.symbolFollowedBy "." Layout.maybeLayout)
+                parse "." (ParserFast.symbolFollowedBy "." Elm.Parser.Layout.maybeLayout)
                     |> Expect.equal (Just ())
             )
-        , test "just whitespace"
+        , Test.test "just whitespace"
             (\() ->
-                parse " " Layout.maybeLayout
+                parse " " Elm.Parser.Layout.maybeLayout
                     |> Expect.equal (Just ())
             )
-        , test "spaces followed by new line"
+        , Test.test "spaces followed by new line"
             (\() ->
-                parse " \n" Layout.maybeLayout
+                parse " \n" Elm.Parser.Layout.maybeLayout
                     |> Expect.equal Nothing
             )
-        , test "with newline and higher indent 2"
+        , Test.test "with newline and higher indent 2"
             (\() ->
-                parse "\n  " Layout.maybeLayout
+                parse "\n  " Elm.Parser.Layout.maybeLayout
                     |> Expect.equal (Just ())
             )
-        , test "with newline and higher indent 3"
+        , Test.test "with newline and higher indent 3"
             (\() ->
-                parse " \n " Layout.maybeLayout
+                parse " \n " Elm.Parser.Layout.maybeLayout
                     |> Expect.equal (Just ())
             )
-        , test "maybeLayout with multiline comment"
+        , Test.test "maybeLayout with multiline comment"
             (\() ->
-                parse "\n--x\n{- foo \n-}\n " Layout.maybeLayout
+                parse "\n--x\n{- foo \n-}\n " Elm.Parser.Layout.maybeLayout
                     |> Expect.equal (Just ())
             )
-        , test "maybeLayout with documentation comment fails"
+        , Test.test "maybeLayout with documentation comment fails"
             (\() ->
-                parse "\n--x\n{-| foo \n-}\n " Layout.maybeLayout
+                parse "\n--x\n{-| foo \n-}\n " Elm.Parser.Layout.maybeLayout
                     |> Expect.equal Nothing
             )
-        , test "with newline and higher indent 4"
+        , Test.test "with newline and higher indent 4"
             (\() ->
-                parse " \n  " Layout.maybeLayout
+                parse " \n  " Elm.Parser.Layout.maybeLayout
                     |> Expect.equal (Just ())
             )
-        , test "newlines spaces and single line comments"
+        , Test.test "newlines spaces and single line comments"
             (\() ->
-                parse "\n\n      --time\n  " Layout.maybeLayout
+                parse "\n\n      --time\n  " Elm.Parser.Layout.maybeLayout
                     |> Expect.equal (Just ())
             )
-        , test "layoutStrict"
+        , Test.test "layoutStrict"
             (\() ->
-                parse " \n" Layout.layoutStrict
+                parse " \n" Elm.Parser.Layout.layoutStrict
                     |> Expect.equal (Just ())
             )
-        , test "layoutStrict multi line"
+        , Test.test "layoutStrict multi line"
             (\() ->
-                parse " \n      \n" Layout.layoutStrict
+                parse " \n      \n" Elm.Parser.Layout.layoutStrict
                     |> Expect.equal (Just ())
             )
-        , test "layoutStrict too much"
+        , Test.test "layoutStrict too much"
             (\() ->
-                parse " \n " Layout.layoutStrict
+                parse " \n " Elm.Parser.Layout.layoutStrict
                     |> Expect.equal Nothing
             )
-        , test "layoutStrict with comments"
+        , Test.test "layoutStrict with comments"
             (\() ->
-                parse "-- foo\n  --bar\n" Layout.layoutStrict
+                parse "-- foo\n  --bar\n" Elm.Parser.Layout.layoutStrict
                     |> Expect.equal (Just ())
             )
-        , test "layoutStrict with comments 2"
+        , Test.test "layoutStrict with comments 2"
             (\() ->
-                parse "\n--x\n{- foo \n-}\n" Layout.layoutStrict
+                parse "\n--x\n{- foo \n-}\n" Elm.Parser.Layout.layoutStrict
                     |> Expect.equal (Just ())
             )
-        , test "layoutStrict with documentation comment fails"
+        , Test.test "layoutStrict with documentation comment fails"
             (\() ->
-                parse "\n--x\n{-| foo \n-}\n" Layout.layoutStrict
+                parse "\n--x\n{-| foo \n-}\n" Elm.Parser.Layout.layoutStrict
                     |> Expect.equal Nothing
             )
-        , test "layoutStrict some"
+        , Test.test "layoutStrict some"
             (\() ->
                 parse "..\n  \n  "
                     (ParserFast.symbolFollowedBy ".."
-                        (ParserFast.withIndentSetToColumn Layout.layoutStrict)
+                        (ParserFast.withIndentSetToColumn Elm.Parser.Layout.layoutStrict)
                     )
                     |> Expect.equal (Just ())
             )
-        , test "layoutStrict with comments multi empty line preceding"
+        , Test.test "layoutStrict with comments multi empty line preceding"
             (\() ->
-                parse "\n\n --bar\n" Layout.layoutStrict
+                parse "\n\n --bar\n" Elm.Parser.Layout.layoutStrict
                     |> Expect.equal (Just ())
             )
-        , test "layoutStrict with multiple new lines"
+        , Test.test "layoutStrict with multiple new lines"
             (\() ->
                 parse "..\n  \n    \n\n  "
                     (ParserFast.symbolFollowedBy ".."
-                        (ParserFast.withIndentSetToColumn Layout.layoutStrict)
+                        (ParserFast.withIndentSetToColumn Elm.Parser.Layout.layoutStrict)
                     )
                     |> Expect.equal (Just ())
             )
-        , test "layoutStrict with multiline comment plus trailing whitespace"
+        , Test.test "layoutStrict with multiline comment plus trailing whitespace"
             (\() ->
-                parse "\n{- some note -}    \n" Layout.layoutStrict
+                parse "\n{- some note -}    \n" Elm.Parser.Layout.layoutStrict
                     |> Expect.equal (Just ())
             )
+        , Test.describe "comment"
+            [ Test.test "singleLineComment"
+                (\() ->
+                    parseSingleLineComment "--bar"
+                        |> Expect.equal
+                            (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } "--bar"))
+                )
+            , Test.test "singleLineComment state"
+                (\() ->
+                    parseSingleLineComment "--bar"
+                        |> Expect.equal
+                            (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } "--bar"))
+                )
+            , Test.test "singleLineComment including 2-part utf-16 char range"
+                (\() ->
+                    parseSingleLineComment "--bar🔧"
+                        |> Expect.equal
+                            (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } } "--bar🔧"))
+                )
+            , Test.test "singleLineComment does not include new line"
+                (\() ->
+                    parseSingleLineComment "--bar\n"
+                        |> Expect.equal Nothing
+                )
+            , Test.test "multilineComment parse result"
+                (\() ->
+                    parseMultiLineComment "{-foo\nbar-}"
+                        |> Expect.equal
+                            (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-foo\nbar-}"))
+                )
+            , Test.test "multilineComment range"
+                (\() ->
+                    parseMultiLineComment "{-foo\nbar-}"
+                        |> Expect.equal
+                            (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-foo\nbar-}"))
+                )
+            , Test.test "multilineComment including 2-part utf-16 char range"
+                (\() ->
+                    parseMultiLineComment "{-foo\nbar🔧-}"
+                        |> Expect.equal
+                            (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 7 } } "{-foo\nbar🔧-}"))
+                )
+            , Test.test "nested multilineComment only open"
+                (\() ->
+                    parseMultiLineComment "{- {- -}"
+                        |> Expect.equal Nothing
+                )
+            , Test.test "nested multilineComment open and close"
+                (\() ->
+                    parseMultiLineComment "{- {- -} -}"
+                        |> Expect.equal
+                            (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } "{- {- -} -}"))
+                )
+            , Test.test "multilineComment on module documentation"
+                (\() ->
+                    parseMultiLineComment "{-|foo\nbar-}"
+                        |> Expect.equal Nothing
+                )
+            ]
         ]
 
 
-parse : String -> ParserFast.Parser Comments -> Maybe ()
+parseSingleLineComment : String -> Maybe (Elm.Syntax.Node.Node String)
+parseSingleLineComment source =
+    ParserFast.run
+        Elm.Parser.Layout.singleLineComment
+        source
+
+
+parseMultiLineComment : String -> Maybe (Elm.Syntax.Node.Node String)
+parseMultiLineComment source =
+    ParserFast.run
+        Elm.Parser.Layout.multilineComment
+        source
+
+
+parse : String -> ParserFast.Parser ParserWithComments.Comments -> Maybe ()
 parse source parser =
-    parseWithState source
+    Elm.Parser.ParserWithCommentsTestUtil.parseWithState source
         (parser |> ParserFast.map (\c -> { comments = c, syntax = () }))
         |> Maybe.map .syntax
