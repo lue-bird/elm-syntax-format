@@ -221,7 +221,7 @@ c =
 sample37 : String
 sample37 =
     """
-module Elm.Parser.Imports exposing (importDefinition)
+module ElmSyntaxParserLenient exposing (importDefinition)
 
 importX : A
 importX =
