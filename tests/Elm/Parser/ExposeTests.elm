@@ -1,11 +1,14 @@
 module Elm.Parser.ExposeTests exposing (all)
 
-import Elm.Parser.Expose
+import Elm.Parser.Layout
 import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Syntax.Exposing
 import Elm.Syntax.Node
+import ElmSyntaxParserLenient
 import Expect
 import ParserFast
+import ParserWithComments exposing (WithComments)
+import Rope
 import Test exposing (Test)
 
 
@@ -143,7 +146,7 @@ expectAst : Elm.Syntax.Exposing.Exposing -> String -> Expect.Expectation
 expectAst =
     Elm.Parser.ParserWithCommentsTestUtil.expectAst
         (ParserFast.map (\expose -> { comments = expose.comments, syntax = Elm.Syntax.Node.value expose.syntax })
-            Elm.Parser.Expose.exposeDefinition
+            exposeDefinition
         )
 
 
@@ -151,15 +154,29 @@ expectAstWithComments : { ast : Elm.Syntax.Exposing.Exposing, comments : List (E
 expectAstWithComments =
     Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments
         (ParserFast.map (\expose -> { comments = expose.comments, syntax = Elm.Syntax.Node.value expose.syntax })
-            Elm.Parser.Expose.exposeDefinition
+            exposeDefinition
         )
 
 
 expectInvalid : String -> Expect.Expectation
 expectInvalid =
-    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Expose.exposeDefinition
+    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid exposeDefinition
 
 
 expectInvalidWithIndent1 : String -> Expect.Expectation
 expectInvalidWithIndent1 =
-    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Expose.exposeDefinition
+    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid exposeDefinition
+
+
+exposeDefinition : ParserFast.Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing))
+exposeDefinition =
+    ParserFast.map2WithRange
+        (\range commentsAfterExposing exposingListInnerResult ->
+            { comments =
+                commentsAfterExposing
+                    |> Rope.prependTo exposingListInnerResult.comments
+            , syntax = Elm.Syntax.Node.Node range exposingListInnerResult.syntax
+            }
+        )
+        (ParserFast.symbolFollowedBy "exposing" Elm.Parser.Layout.maybeLayout)
+        ElmSyntaxParserLenient.exposing_

@@ -2509,6 +2509,359 @@ a = 1
                         |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
                 )
             ]
+        , Test.describe "pattern"
+            [ Test.test "Unit"
+                (\() ->
+                    "()"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } Elm.Syntax.Pattern.UnitPattern)
+                )
+            , Test.test "Unit with inner layout"
+                (\() ->
+                    """(
+   -- comment
+   )"""
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.pattern
+                            { ast = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 5 } } Elm.Syntax.Pattern.UnitPattern
+                            , comments = [ Elm.Syntax.Node.Node { start = { row = 2, column = 4 }, end = { row = 2, column = 14 } } "-- comment" ]
+                            }
+                )
+            , Test.test "String"
+                (\() ->
+                    "\"Foo\""
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Pattern.StringPattern "Foo"))
+                )
+            , Test.test "Char"
+                (\() ->
+                    "'f'"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.CharPattern 'f'))
+                )
+            , Test.test "Wildcard"
+                (\() ->
+                    "_"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } Elm.Syntax.Pattern.AllPattern)
+                )
+            , Test.test "Parenthesized"
+                (\() ->
+                    "(x)"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
+                                (Elm.Syntax.Pattern.ParenthesizedPattern
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.VarPattern "x"))
+                                )
+                            )
+                )
+            , Test.test "Int"
+                (\() ->
+                    "1"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Pattern.IntPattern 1))
+                )
+            , Test.test "Hex int"
+                (\() ->
+                    "0x1"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.HexPattern 1))
+                )
+            , Test.test "Float should not be valid" (\() -> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern "1.0")
+            , Test.test "Uncons"
+                (\() ->
+                    "n :: tail"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
+                                (Elm.Syntax.Pattern.UnConsPattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Pattern.VarPattern "n"))
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 10 } } (Elm.Syntax.Pattern.VarPattern "tail"))
+                                )
+                            )
+                )
+            , Test.test "Uncons multiple"
+                (\() ->
+                    "a :: b :: cUp"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
+                                (Elm.Syntax.Pattern.UnConsPattern
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Pattern.VarPattern "a"))
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 14 } }
+                                        (Elm.Syntax.Pattern.UnConsPattern (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (Elm.Syntax.Pattern.VarPattern "b"))
+                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 14 } } (Elm.Syntax.Pattern.VarPattern "cUp"))
+                                        )
+                                    )
+                                )
+                            )
+                )
+            , Test.test "Uncons with parens"
+                (\() ->
+                    "(X x) :: xs"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
+                                (Elm.Syntax.Pattern.UnConsPattern
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
+                                        (Elm.Syntax.Pattern.ParenthesizedPattern
+                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } }
+                                                (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "X" }
+                                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 5 } } (Elm.Syntax.Pattern.VarPattern "x") ]
+                                                )
+                                            )
+                                        )
+                                    )
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 12 } } (Elm.Syntax.Pattern.VarPattern "xs"))
+                                )
+                            )
+                )
+            , Test.test "Empty list"
+                (\() ->
+                    "[]"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.ListPattern []))
+                )
+            , Test.test "Empty list pattern with whitespace"
+                (\() ->
+                    "[ ]"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.ListPattern []))
+                )
+            , Test.test "Single element list"
+                (\() ->
+                    "[1]"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.ListPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.IntPattern 1) ]))
+                )
+            , Test.test "Single element list with trailing whitespace"
+                (\() ->
+                    "[1 ]"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Pattern.ListPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.IntPattern 1) ]))
+                )
+            , Test.test "Single element list with leading whitespace"
+                (\() ->
+                    "[ 1]"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Pattern.ListPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.IntPattern 1) ]))
+                )
+            , Test.test "Empty record"
+                (\() ->
+                    "{}"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.RecordPattern []))
+                )
+            , Test.test "Empty record with whitespace"
+                (\() ->
+                    "{ }"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.RecordPattern []))
+                )
+            , Test.test "Record"
+                (\() ->
+                    "{a,b}"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
+                                (Elm.Syntax.Pattern.RecordPattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } "a"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 5 } } "b"
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "Record pattern with whitespace"
+                (\() ->
+                    "{a , b}"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
+                                (Elm.Syntax.Pattern.RecordPattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } "a"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } "b"
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "Record pattern with trailing whitespace"
+                (\() ->
+                    "{a }"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } }
+                                (Elm.Syntax.Pattern.RecordPattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } "a" ]
+                                )
+                            )
+                )
+            , Test.test "Record pattern with leading whitespace"
+                (\() ->
+                    "{ a}"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } }
+                                (Elm.Syntax.Pattern.RecordPattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } "a" ]
+                                )
+                            )
+                )
+            , Test.test "Named"
+                (\() ->
+                    "True"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } }
+                                (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "True" } [])
+                            )
+                )
+            , Test.test "Named pattern without and with spacing should parse to the same"
+                (\() ->
+                    Elm.Parser.ParserWithCommentsTestUtil.parse "Bar " ElmSyntaxParserLenient.pattern
+                        |> Expect.equal (Elm.Parser.ParserWithCommentsTestUtil.parse "Bar" ElmSyntaxParserLenient.pattern)
+                )
+            , Test.test "Qualified named"
+                (\() ->
+                    "Basics.True"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
+                                (Elm.Syntax.Pattern.NamedPattern { moduleName = [ "Basics" ], name = "True" } [])
+                            )
+                )
+            , Test.test "Named pattern with data"
+                (\() ->
+                    "Set x"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
+                                (Elm.Syntax.Pattern.NamedPattern
+                                    { moduleName = [], name = "Set" }
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } } (Elm.Syntax.Pattern.VarPattern "x") ]
+                                )
+                            )
+                )
+            , Test.test "Qualified named pattern with data"
+                (\() ->
+                    "Set.Set x"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
+                                (Elm.Syntax.Pattern.NamedPattern
+                                    { moduleName = [ "Set" ], name = "Set" }
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Elm.Syntax.Pattern.VarPattern "x") ]
+                                )
+                            )
+                )
+            , Test.test "Tuple"
+                (\() ->
+                    "(model, cmd)"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
+                                (Elm.Syntax.Pattern.TuplePattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } (Elm.Syntax.Pattern.VarPattern "model")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } (Elm.Syntax.Pattern.VarPattern "cmd")
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "4-tuple pattern is invalid"
+                (\() ->
+                    "(1,2,3,4)"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                )
+            , Test.test "Nested tuple"
+                (\() ->
+                    "(a,{b,c},())"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
+                                (Elm.Syntax.Pattern.TuplePattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.VarPattern "a")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 9 } } (Elm.Syntax.Pattern.RecordPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } } "b", Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 8 } } "c" ])
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 12 } } Elm.Syntax.Pattern.UnitPattern
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "As pattern"
+                (\() ->
+                    "x as y"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
+                                (Elm.Syntax.Pattern.AsPattern
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Pattern.VarPattern "x"))
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } "y")
+                                )
+                            )
+                )
+            , Test.test "should fail to parse when right side is not a direct variable name"
+                (\() ->
+                    "x as (y)"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                )
+            , Test.test "should fail to parse consecutive as"
+                (\() ->
+                    "x as y as z"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                )
+            , Test.test "should fail to parse :: after as"
+                (\() ->
+                    "x as y :: z"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                )
+            , Test.test "should fail to parse :: after as even when :: was already used before"
+                (\() ->
+                    "w :: x as y :: z"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                )
+            , Test.test "should fail to parse when right side is an invalid variable name"
+                (\() ->
+                    "x as _y"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                )
+            , Test.test "should fail to parse when right side is not a variable name"
+                (\() ->
+                    "x as 1"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                )
+            , Test.test "Record as"
+                (\() ->
+                    "{model,context} as appState"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
+                                (Elm.Syntax.Pattern.AsPattern
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
+                                        (Elm.Syntax.Pattern.RecordPattern
+                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } "model"
+                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 15 } } "context"
+                                            ]
+                                        )
+                                    )
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 20 }, end = { row = 1, column = 28 } } "appState")
+                                )
+                            )
+                )
+            , Test.test "Complex"
+                (\() ->
+                    "(Index irec as index, docVector)"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 33 } }
+                                (Elm.Syntax.Pattern.TuplePattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 21 } }
+                                        (Elm.Syntax.Pattern.AsPattern
+                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 12 } }
+                                                (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "Index" }
+                                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 12 } } (Elm.Syntax.Pattern.VarPattern "irec") ]
+                                                )
+                                            )
+                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 21 } } "index")
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 23 }, end = { row = 1, column = 32 } } (Elm.Syntax.Pattern.VarPattern "docVector")
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "Complex pattern 2"
+                (\() ->
+                    "RBNode_elm_builtin col (RBNode_elm_builtin Red  (RBNode_elm_builtin Red xv))"
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 77 } }
+                                (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "RBNode_elm_builtin" }
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 20 }, end = { row = 1, column = 23 } } (Elm.Syntax.Pattern.VarPattern "col")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 24 }, end = { row = 1, column = 77 } }
+                                        (Elm.Syntax.Pattern.ParenthesizedPattern
+                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 25 }, end = { row = 1, column = 76 } }
+                                                (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "RBNode_elm_builtin" }
+                                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 44 }, end = { row = 1, column = 47 } } (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "Red" } [])
+                                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 49 }, end = { row = 1, column = 76 } } (Elm.Syntax.Pattern.ParenthesizedPattern (Elm.Syntax.Node.Node { start = { row = 1, column = 50 }, end = { row = 1, column = 75 } } (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "RBNode_elm_builtin" } [ Elm.Syntax.Node.Node { start = { row = 1, column = 69 }, end = { row = 1, column = 72 } } (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "Red" } []), Elm.Syntax.Node.Node { start = { row = 1, column = 73 }, end = { row = 1, column = 75 } } (Elm.Syntax.Pattern.VarPattern "xv") ])))
+                                                    ]
+                                                )
+                                            )
+                                        )
+                                    ]
+                                )
+                            )
+                )
+            ]
         ]
 
 
