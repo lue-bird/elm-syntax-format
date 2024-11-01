@@ -93,6 +93,8 @@ config =
     , NoUnused.CustomTypeConstructors.rule []
     , NoUnused.CustomTypeConstructorArgs.rule
     , Review.VariantValueCount.zeroOrOne
+        |> Review.Rule.ignoreErrorsForFiles [ "src/ParserFast.elm" ]
+        |> Review.Rule.ignoreErrorsForFiles [ "src/Rope.elm" ]
     , [ ReviewPipelineStyles.rightPizzaPipelines
             |> ReviewPipelineStyles.forbid
             |> ReviewPipelineStyles.that
@@ -180,9 +182,12 @@ config =
     , NoUnsafeDivision.rule
     , Review.Pattern.Record.forbid
     , Review.Pattern.As.forbid
+        |> Review.Rule.ignoreErrorsForFiles [ "src/ParserFast.elm" ]
     , Review.PhantomType.forbid
     , Review.OpaqueType.forbid
     , NoCatchAllForSpecificRemainingPatterns.rule
+        |> Review.Rule.ignoreErrorsForFiles [ "src/Rope.elm" ]
+        |> Review.Rule.ignoreErrorsForFiles [ "src/ParserFast.elm" ]
     ]
         |> List.map (Review.Rule.ignoreErrorsForDirectories [ "tests/VerifyExamples/" ])
 
