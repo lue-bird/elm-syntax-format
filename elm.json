@@ -5,7 +5,8 @@
     "license": "MIT",
     "version": "1.0.2",
     "exposed-modules": [
-        "ElmSyntaxPrint"
+        "ElmSyntaxPrint",
+        "ElmSyntaxParserLenient"
     ],
     "elm-version": "0.19.1 <= v < 0.20.0",
     "dependencies": {

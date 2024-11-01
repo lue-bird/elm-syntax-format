@@ -3,14 +3,14 @@ Pretty print an [`elm-syntax`](https://dark.elm.dmy.fr/packages/stil4m/elm-synta
 
 ```elm
 import ElmSyntaxPrint
-import Elm.Parser -- from stil4m/elm-syntax
+import ElmSyntaxParserLenient
 
 """
 module   Sample  exposing(..)
 plus2 (n)= {- this adds 2-} n
     + 2
 """
-    |> Elm.Parser.parseToFile
+    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
     |> Result.map
         (\syntaxModule ->
             syntaxModule
