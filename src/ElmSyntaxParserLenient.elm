@@ -2,7 +2,7 @@ module ElmSyntaxParserLenient exposing
     ( Parser, run, module_
     , moduleName, functionName, typeName, expose, exposing_
     , moduleHeader, documentationComment, import_, declarations, declaration
-    , type_, pattern, expressionFollowedByOptimisticLayout
+    , type_, pattern, expression
     )
 
 {-| Like [`Elm.Syntax.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser)
@@ -79,7 +79,7 @@ or reparse only the touched declarations on save.
 
 @docs moduleName, functionName, typeName, expose, exposing_
 @docs moduleHeader, documentationComment, import_, declarations, declaration
-@docs type_, pattern, expressionFollowedByOptimisticLayout
+@docs type_, pattern, expression
 
 -}
 
@@ -1978,6 +1978,11 @@ precedence9ComposeR =
 precedence9ComposeL : InfixOperatorInfo
 precedence9ComposeL =
     infixLeft 9 "<<"
+
+
+expression : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expression =
+    expressionFollowedByOptimisticLayout
 
 
 expressionFollowedByOptimisticLayout : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))

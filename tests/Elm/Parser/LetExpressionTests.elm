@@ -481,9 +481,9 @@ all =
 
 expectAst : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> String -> Expect.Expectation
 expectAst =
-    Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+    Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
 
 
 expectInvalid : String -> Expect.Expectation
 expectInvalid =
-    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression

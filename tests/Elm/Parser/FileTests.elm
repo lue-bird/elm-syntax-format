@@ -1615,91 +1615,91 @@ a = 1
             , Test.test "Integer literal"
                 (\() ->
                     "101"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 101))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 101))
                 )
             , Test.test "Hex integer literal"
                 (\() ->
                     "0x56"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.Hex 86))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.Hex 86))
                 )
             , Test.test "String literal"
                 (\() ->
                     "\"Bar\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.Literal "Bar"))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.Literal "Bar"))
                 )
             , Test.test "multiline string"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "\"\"\"Bar foo \n a\"\"\"" ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse "\"\"\"Bar foo \n a\"\"\"" ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal "Bar foo \n a"))
                 )
             , Test.test "multiline string escape"
                 (\() ->
-                    Elm.Parser.TestUtil.parse """\"\"\" \\\"\"\" \"\"\"""" ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse """\"\"\" \\\"\"\" \"\"\"""" ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal """ \"\"\" """))
                 )
             , Test.test "character escaped"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\''" ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse "'\\''" ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\''))
                 )
             , Test.test "character escaped - 2"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\r'" ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse "'\\r'" ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\u{000D}'))
                 )
             , Test.test "unicode char"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\u{000D}'" ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse "'\\u{000D}'" ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\u{000D}'))
                 )
             , Test.test "unicode char with lowercase hex"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\u{000d}'" ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse "'\\u{000d}'" ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\u{000D}'))
                 )
             , Test.test "string escaped 3"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "\"\\\"\"" ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse "\"\\\"\"" ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal "\""))
                 )
             , Test.test "string escaped"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "\"foo\\\\\"" ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse "\"foo\\\\\"" ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal "foo\\"))
                 )
             , Test.test "character escaped 3"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\n'" ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse "'\\n'" ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\n'))
                 )
             , Test.test "long string"
                 (\() ->
-                    Elm.Parser.TestUtil.parse longString ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse longString ElmSyntaxParserLenient.expression
                         |> Expect.notEqual Nothing
                 )
             , Test.test "long multi line string"
                 (\() ->
-                    Elm.Parser.TestUtil.parse longMultiLineString ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                    Elm.Parser.TestUtil.parse longMultiLineString ElmSyntaxParserLenient.expression
                         |> Expect.notEqual Nothing
                 )
             , Test.test "character literal"
                 (\() ->
                     "'c'"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.CharLiteral 'c'))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.CharLiteral 'c'))
                 )
             , Test.test "tuple expression"
                 (\() ->
                     "(1,2)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
                                 (Elm.Syntax.Expression.TupledExpression
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.Integer 1)
@@ -1711,7 +1711,7 @@ a = 1
             , Test.test "triple expression"
                 (\() ->
                     "(1,2,3)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                                 (Elm.Syntax.Expression.TupledExpression
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.Integer 1)
@@ -1724,7 +1724,7 @@ a = 1
             , Test.test "tuple expression with spaces"
                 (\() ->
                     "( 1  ,  2 )"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.Expression.TupledExpression
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 1)
@@ -1741,7 +1741,7 @@ a = 1
             , Test.test "String literal multiline"
                 (\() ->
                     "\"\"\"Bar foo \n a\"\"\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } (Elm.Syntax.Expression.Literal "Bar foo \n a"))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } (Elm.Syntax.Expression.Literal "Bar foo \n a"))
                 )
             , Test.test "Regression test for multiline strings with backslashes"
                 (\() ->
@@ -1751,32 +1751,32 @@ a = 1
             , Test.test "Regression test 2 for multiline strings with backslashes"
                 (\() ->
                     "\"\"\"\\\\{\\\\}\"\"\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Elm.Syntax.Expression.Literal "\\{\\}"))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Elm.Syntax.Expression.Literal "\\{\\}"))
                 )
             , Test.test "Regression test 3 for multiline strings with backslashes"
                 (\() ->
                     "\"\"\"\\\\a-blablabla-\\\\b\"\"\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } } (Elm.Syntax.Expression.Literal "\\a-blablabla-\\b"))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } } (Elm.Syntax.Expression.Literal "\\a-blablabla-\\b"))
                 )
             , Test.test "Type expression for upper case"
                 (\() ->
                     "Bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "Bar"))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "Bar"))
                 )
             , Test.test "Type expression for lower case"
                 (\() ->
                     "bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
                 )
             , Test.test "Type expression for lower case but qualified"
                 (\() ->
                     "Bar.foo"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [ "Bar" ] "foo"))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [ "Bar" ] "foo"))
                 )
             , Test.test "parenthesizedExpression"
                 (\() ->
                     "(bar)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
                                 (Elm.Syntax.Expression.ParenthesizedExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
@@ -1786,7 +1786,7 @@ a = 1
             , Test.test "parenthesized expression starting with a negation"
                 (\() ->
                     "(-1 * sign)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.Expression.ParenthesizedExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 11 } }
@@ -1804,7 +1804,7 @@ a = 1
             , Test.test "application expression"
                 (\() ->
                     "List.concat []"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [ "List" ] "concat")
@@ -1816,7 +1816,7 @@ a = 1
             , Test.test "Binary operation"
                 (\() ->
                     "model + 1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
                                 (Elm.Syntax.Expression.OperatorApplication "+"
                                     Elm.Syntax.Infix.Left
@@ -1828,7 +1828,7 @@ a = 1
             , Test.test "Nested binary operations (+ and ==)"
                 (\() ->
                     "count + 1 == 1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                 (Elm.Syntax.Expression.OperatorApplication "=="
                                     Elm.Syntax.Infix.Non
@@ -1846,7 +1846,7 @@ a = 1
             , Test.test "Nested binary operations (+ and /=)"
                 (\() ->
                     "count + 1 /= 1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                 (Elm.Syntax.Expression.OperatorApplication "/="
                                     Elm.Syntax.Infix.Non
@@ -1864,7 +1864,7 @@ a = 1
             , Test.test "Nested binary operations (+ and //)"
                 (\() ->
                     "count + 1 // 2"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                 (Elm.Syntax.Expression.OperatorApplication "+"
                                     Elm.Syntax.Infix.Left
@@ -1882,7 +1882,7 @@ a = 1
             , Test.test "Nested binary operations (&& and <|)"
                 (\() ->
                     "condition && condition <| f"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
                                 (Elm.Syntax.Expression.OperatorApplication "<|"
                                     Elm.Syntax.Infix.Right
@@ -1900,7 +1900,7 @@ a = 1
             , Test.test "application expression 2"
                 (\() ->
                     "(\"\", always (List.concat [ [ fileName ], [] ]))"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 48 } }
                                 (Elm.Syntax.Expression.TupledExpression
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Literal "")
@@ -1935,12 +1935,12 @@ a = 1
             , Test.test "expressionNotApplication simple"
                 (\() ->
                     "foo"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
                 )
             , Test.test "unit application"
                 (\() ->
                     "Task.succeed ()"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Elm.Syntax.Expression.FunctionOrValue [ "Task" ] "succeed")
@@ -1952,7 +1952,7 @@ a = 1
             , Test.test "Function call"
                 (\() ->
                     "foo bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
@@ -1969,7 +1969,7 @@ a = 1
             , Test.test "ifBlockExpression"
                 (\() ->
                     "if True then foo else bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 26 } }
                                 (Elm.Syntax.Expression.IfBlock
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "True"))
@@ -1981,7 +1981,7 @@ a = 1
             , Test.test "nestedIfExpression"
                 (\() ->
                     "if True then if False then foo else baz else bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 49 } }
                                 (Elm.Syntax.Expression.IfBlock
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "True"))
@@ -1999,7 +1999,7 @@ a = 1
             , Test.test "recordExpression"
                 (\() ->
                     "{ model = 0, view = view, update = update }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 44 } }
                                 (Elm.Syntax.Expression.RecordExpr
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
@@ -2021,7 +2021,7 @@ a = 1
             , Test.test "recordExpression with comment"
                 (\() ->
                     "{ foo = 1 -- bar\n , baz = 2 }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.expression
                             { ast =
                                 Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 13 } }
                                     (Elm.Syntax.Expression.RecordExpr
@@ -2041,7 +2041,7 @@ a = 1
             , Test.test "listExpression"
                 (\() ->
                     "[ class \"a\", text \"Foo\"]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
                                 (Elm.Syntax.Expression.ListExpr
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
@@ -2063,7 +2063,7 @@ a = 1
             , Test.test "listExpression singleton with comment"
                 (\() ->
                     "[ 1 {- Foo-} ]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.expression
                             { ast =
                                 Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                     (Elm.Syntax.Expression.ListExpr
@@ -2076,7 +2076,7 @@ a = 1
             , Test.test "listExpression empty with comment"
                 (\() ->
                     "[{- Foo -}]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.expression
                             { ast = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.ListExpr [])
                             , comments = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 11 } } "{- Foo -}" ]
                             }
@@ -2084,12 +2084,12 @@ a = 1
             , Test.test "qualified expression"
                 (\() ->
                     "Html.text"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [ "Html" ] "text"))
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [ "Html" ] "text"))
                 )
             , Test.test "record access"
                 (\() ->
                     "foo.bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                                 (Elm.Syntax.Expression.RecordAccess
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
@@ -2100,7 +2100,7 @@ a = 1
             , Test.test "multiple record access operations"
                 (\() ->
                     "foo.bar.baz"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.Expression.RecordAccess
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
@@ -2116,7 +2116,7 @@ a = 1
             , Test.test "multiple record access operations with module name"
                 (\() ->
                     "A.B.foo.bar.baz"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
                                 (Elm.Syntax.Expression.RecordAccess
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
@@ -2132,7 +2132,7 @@ a = 1
             , Test.test "record update"
                 (\() ->
                     "{ model | count = 1, loading = True }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
                                 (Elm.Syntax.Expression.RecordUpdateExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } "model")
@@ -2151,7 +2151,7 @@ a = 1
             , Test.test "record update no spacing"
                 (\() ->
                     "{model| count = 1, loading = True }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 36 } }
                                 (Elm.Syntax.Expression.RecordUpdateExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } "model")
@@ -2170,7 +2170,7 @@ a = 1
             , Test.test "record access as function"
                 (\() ->
                     "List.map .name people"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 22 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [ "List" ] "map")
@@ -2183,7 +2183,7 @@ a = 1
             , Test.test "record access direct"
                 (\() ->
                     "(.spaceEvenly Internal.Style.classes)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
                                 (Elm.Syntax.Expression.ParenthesizedExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 37 } }
@@ -2262,7 +2262,7 @@ a = 1
             , Test.test "prefix notation"
                 (\() ->
                     "(::) x"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.PrefixOperator "::")
@@ -2274,7 +2274,7 @@ a = 1
             , Test.test "subtraction without spaces"
                 (\() ->
                     "2-1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
                                 (Elm.Syntax.Expression.OperatorApplication "-"
                                     Elm.Syntax.Infix.Left
@@ -2286,7 +2286,7 @@ a = 1
             , Test.test "negated expression for value"
                 (\() ->
                     "-x"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } }
                                 (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.FunctionOrValue [] "x")))
                             )
@@ -2294,7 +2294,7 @@ a = 1
             , Test.test "negated expression in application"
                 (\() ->
                     "toFloat -5"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "toFloat")
@@ -2307,7 +2307,7 @@ a = 1
             , Test.test "negated expression for parenthesized"
                 (\() ->
                     "-(x - y)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } }
                                 (Elm.Syntax.Expression.Negation
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 9 } }
@@ -2327,7 +2327,7 @@ a = 1
             , Test.test "negated expression with other operations"
                 (\() ->
                     "-1 + -10 * -100^2 == -100001"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 29 } }
                                 (Elm.Syntax.Expression.OperatorApplication "=="
                                     Elm.Syntax.Infix.Non
@@ -2367,7 +2367,7 @@ a = 1
             , Test.test "plus and minus in the same expression"
                 (\() ->
                     "1 + 2 - 3"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node
                                 { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
                                 (Elm.Syntax.Expression.OperatorApplication "-"
@@ -2386,7 +2386,7 @@ a = 1
             , Test.test "pipe operation"
                 (\() ->
                     "a |> b"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
                                 (Elm.Syntax.Expression.OperatorApplication "|>"
                                     Elm.Syntax.Infix.Left
@@ -2398,7 +2398,7 @@ a = 1
             , Test.test "function with higher order"
                 (\() ->
                     "chompWhile (\\c -> c == ' ' || c == '\\n' || c == '\\r')"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 54 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } } (Elm.Syntax.Expression.FunctionOrValue [] "chompWhile")
@@ -2453,7 +2453,7 @@ a = 1
             , Test.test "application should be lower-priority than field access"
                 (\() ->
                     "foo { d | b = f x y }.b"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
@@ -2483,7 +2483,7 @@ a = 1
             , Test.test "should not consider a negative number parameter as the start of a new application"
                 (\() ->
                     "Random.list -1 generator"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [ "Random" ] "list")
@@ -2501,7 +2501,7 @@ a = 1
             , Test.test "negation can be applied on record access"
                 (\() ->
                     "1 + -{x = 10}.x"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expressionFollowedByOptimisticLayout
+                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
                                 (Elm.Syntax.Expression.OperatorApplication "+"
                                     Elm.Syntax.Infix.Left
