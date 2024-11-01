@@ -1,6 +1,7 @@
 module Elm.Parser.FileTests exposing (all)
 
 import Elm.Parser
+import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Parser.Samples
 import Elm.Syntax.Declaration
 import Elm.Syntax.Exposing
@@ -13,6 +14,7 @@ import Elm.Syntax.TypeAnnotation
 import ElmSyntaxParserLenient
 import Expect
 import ParserFast
+import Rope
 import Test
 
 
@@ -90,6 +92,20 @@ f =
                             , Elm.Syntax.Node.Node { start = { row = 20, column = 1 }, end = { row = 20, column = 8 } } "{- 6 -}"
                             ]
                         )
+            )
+        , Test.test "documentation comment"
+            (\() ->
+                Elm.Parser.ParserWithCommentsTestUtil.parseWithState "{-|foo\nbar-}" (ElmSyntaxParserLenient.documentationComment |> ParserFast.map (\c -> { comments = Just (Rope.one c), syntax = () }))
+                    |> Maybe.map .comments
+                    |> Expect.equal
+                        (Just [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-|foo\nbar-}" ])
+            )
+        , Test.test "documentation comment can handle nested comments"
+            (\() ->
+                Elm.Parser.ParserWithCommentsTestUtil.parseWithState "{-| {- hello -} -}" (ElmSyntaxParserLenient.documentationComment |> ParserFast.map (\c -> { comments = Just (Rope.one c), syntax = () }))
+                    |> Maybe.map .comments
+                    |> Expect.equal
+                        (Just [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 19 } } "{-| {- hello -} -}" ])
             )
         , Test.test "declarations with comments"
             (\() ->

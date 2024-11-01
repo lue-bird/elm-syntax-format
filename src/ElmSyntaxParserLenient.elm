@@ -1,6 +1,5 @@
-module ElmSyntaxParserLenient exposing (declaration, declarations, module_)
+module ElmSyntaxParserLenient exposing (declaration, declarations, documentationComment, module_)
 
-import Elm.Parser.Comments
 import Elm.Parser.Expression
 import Elm.Parser.Imports
 import Elm.Parser.Layout
@@ -9,6 +8,7 @@ import Elm.Parser.Patterns
 import Elm.Parser.Tokens
 import Elm.Parser.TypeAnnotation
 import Elm.Syntax.Declaration
+import Elm.Syntax.Documentation
 import Elm.Syntax.Expression
 import Elm.Syntax.File
 import Elm.Syntax.Infix
@@ -46,7 +46,7 @@ module_ =
                 (\moduleDocumentation commentsAfter ->
                     Rope.one moduleDocumentation |> Rope.filledPrependTo commentsAfter
                 )
-                Elm.Parser.Comments.documentationComment
+                documentationComment
                 Elm.Parser.Layout.layoutStrict
                 Rope.empty
             )
@@ -79,6 +79,16 @@ declaration =
         typeOrTypeAliasDefinitionWithoutDocumentation
         portDeclarationWithoutDocumentation
         infixDeclaration
+
+
+documentationComment : ParserFast.Parser (Elm.Syntax.Node.Node Elm.Syntax.Documentation.Documentation)
+documentationComment =
+    -- technically making the whole parser fail on multi-line comments would be "correct"
+    -- but in practice, all declaration comments allow layout before which already handles
+    -- these.
+    ParserFast.nestableMultiCommentMapWithRange Elm.Syntax.Node.Node
+        ( '{', "-" )
+        ( '-', "}" )
 
 
 declarationWithDocumentation : ParserFast.Parser (ParserWithComments.WithComments (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration))
@@ -212,7 +222,7 @@ declarationWithDocumentation =
                             )
                     }
         )
-        Elm.Parser.Comments.documentationComment
+        documentationComment
         (Elm.Parser.Layout.layoutStrictFollowedByWithComments
             (ParserFast.oneOf3
                 functionAfterDocumentation
