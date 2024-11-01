@@ -1,7 +1,6 @@
 module Elm.Parser.CommentTest exposing (all)
 
 import Elm.Parser.Comments
-import Elm.Parser.Layout
 import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Syntax.Node
 import Expect

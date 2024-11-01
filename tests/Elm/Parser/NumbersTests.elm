@@ -1,32 +1,32 @@
 module Elm.Parser.NumbersTests exposing (all)
 
-import Elm.Parser.TestUtil exposing (..)
+import Elm.Parser.TestUtil
 import Expect
 import ParserFast
-import Test exposing (..)
+import Test
 
 
-all : Test
+all : Test.Test
 all =
-    describe "NumbersTests"
-        [ describe "integerDecimalOrHexadecimalMapWithRange"
-            [ test "hex"
+    Test.describe "NumbersTests"
+        [ Test.describe "integerDecimalOrHexadecimalMapWithRange"
+            [ Test.test "hex"
                 (\() ->
-                    parseToResult "0x03FFFFFF" (ParserFast.integerDecimalOrHexadecimalMapWithRange (\_ _ -> -1) (\_ n -> n))
+                    Elm.Parser.TestUtil.parseToResult "0x03FFFFFF" (ParserFast.integerDecimalOrHexadecimalMapWithRange (\_ _ -> -1) (\_ n -> n))
                         |> Expect.equal
                             (Just 67108863)
                 )
-            , test "hex - 2"
+            , Test.test "hex - 2"
                 (\() ->
-                    parseToResult "0xFF" (ParserFast.integerDecimalOrHexadecimalMapWithRange (\_ _ -> -1) (\_ n -> n))
+                    Elm.Parser.TestUtil.parseToResult "0xFF" (ParserFast.integerDecimalOrHexadecimalMapWithRange (\_ _ -> -1) (\_ n -> n))
                         |> Expect.equal
                             (Just 255)
                 )
             ]
-        , describe "floatOrIntegerDecimalOrHexadecimalMapWithRange"
-            [ test "hex"
+        , Test.describe "floatOrIntegerDecimalOrHexadecimalMapWithRange"
+            [ Test.test "hex"
                 (\() ->
-                    parseToResult "0x2A"
+                    Elm.Parser.TestUtil.parseToResult "0x2A"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ _ -> -1)
                             (\_ _ -> -1)
@@ -35,9 +35,9 @@ all =
                         |> Expect.equal
                             (Just 42)
                 )
-            , test "float"
+            , Test.test "float"
                 (\() ->
-                    parseToResult "2.0"
+                    Elm.Parser.TestUtil.parseToResult "2.0"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
                             (\_ _ -> -1)
@@ -46,9 +46,9 @@ all =
                         |> Expect.equal
                             (Just 2.0)
                 )
-            , test "integer with negative exponent"
+            , Test.test "integer with negative exponent"
                 (\() ->
-                    parseToResult "2e-2"
+                    Elm.Parser.TestUtil.parseToResult "2e-2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
                             (\_ _ -> -1)
@@ -57,9 +57,9 @@ all =
                         |> Expect.equal
                             (Just 2.0e-2)
                 )
-            , test "integer with negative exponent (uppercase E)"
+            , Test.test "integer with negative exponent (uppercase E)"
                 (\() ->
-                    parseToResult "2E-2"
+                    Elm.Parser.TestUtil.parseToResult "2E-2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
                             (\_ _ -> -1)
@@ -68,9 +68,9 @@ all =
                         |> Expect.equal
                             (Just 2.0e-2)
                 )
-            , test "integer with positive exponent"
+            , Test.test "integer with positive exponent"
                 (\() ->
-                    parseToResult "2e+2"
+                    Elm.Parser.TestUtil.parseToResult "2e+2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
                             (\_ _ -> -1)
@@ -79,9 +79,9 @@ all =
                         |> Expect.equal
                             (Just 2.0e2)
                 )
-            , test "float with negative exponent"
+            , Test.test "float with negative exponent"
                 (\() ->
-                    parseToResult "2.0e-2"
+                    Elm.Parser.TestUtil.parseToResult "2.0e-2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
                             (\_ _ -> -1)
@@ -90,9 +90,9 @@ all =
                         |> Expect.equal
                             (Just 2.0e-2)
                 )
-            , test "float with negative exponent (uppercase E)"
+            , Test.test "float with negative exponent (uppercase E)"
                 (\() ->
-                    parseToResult "2.0E-2"
+                    Elm.Parser.TestUtil.parseToResult "2.0E-2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
                             (\_ _ -> -1)
@@ -101,9 +101,9 @@ all =
                         |> Expect.equal
                             (Just 2.0e-2)
                 )
-            , test "float with positive exponent"
+            , Test.test "float with positive exponent"
                 (\() ->
-                    parseToResult "2.0e+2"
+                    Elm.Parser.TestUtil.parseToResult "2.0e+2"
                         (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
                             (\_ n -> n)
                             (\_ _ -> -1)

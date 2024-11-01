@@ -1,31 +1,30 @@
 module Elm.Parser.FileTests exposing (all)
 
 import Elm.Parser
-import Elm.Parser.Samples as Samples
-import Elm.RawFile as RawFile exposing (RawFile)
-import Elm.Syntax.Declaration exposing (Declaration(..))
-import Elm.Syntax.Exposing exposing (Exposing(..))
-import Elm.Syntax.Expression exposing (Expression(..), LetDeclaration(..))
-import Elm.Syntax.Infix exposing (InfixDirection(..))
-import Elm.Syntax.Module exposing (Module(..))
-import Elm.Syntax.Node exposing (Node(..))
-import Elm.Syntax.Pattern exposing (Pattern(..))
-import Elm.Syntax.TypeAnnotation exposing (TypeAnnotation(..))
-import ElmSyntaxParserLenient as Parser
+import Elm.Parser.Samples
+import Elm.Syntax.Declaration
+import Elm.Syntax.Exposing
+import Elm.Syntax.Expression
+import Elm.Syntax.Infix
+import Elm.Syntax.Module
+import Elm.Syntax.Node
+import Elm.Syntax.Pattern
+import Elm.Syntax.TypeAnnotation
+import ElmSyntaxParserLenient
 import Expect
 import ParserFast
-import Test exposing (..)
+import Test
 
 
-all : Test
+all : Test.Test
 all =
     Test.concat
-        [ describe "FileTests"
+        [ Test.describe "FileTests"
             (List.map
                 (\( n, s ) ->
-                    test ("sample " ++ String.fromInt n)
+                    Test.test ("sample " ++ String.fromInt n)
                         (\() ->
-                            case ParserFast.run Parser.module_ s of
+                            case ParserFast.run ElmSyntaxParserLenient.module_ s of
                                 Nothing ->
                                     Expect.fail "failed to parse"
 
@@ -33,7 +32,7 @@ all =
                                     Expect.pass
                         )
                 )
-                Samples.allSamples
+                Elm.Parser.Samples.allSamples
             )
 
         -- , describe "Error messages" <|
@@ -51,7 +50,7 @@ all =
         --             Parser.parse "module Foo exposing (..) \nx = \n  x + _"
         --                 |> Expect.equal (Err [ "Could not continue parsing on location (2,6)" ])
         --     ]
-        , test "Comments ordering"
+        , Test.test "Comments ordering"
             (\() ->
                 let
                     input : String
@@ -82,17 +81,17 @@ f =
                     |> Result.map .comments
                     |> Expect.equal
                         (Ok
-                            [ Node { start = { row = 4, column = 1 }, end = { row = 5, column = 3 } } "{-| Module documentation\n-}"
-                            , Node { start = { row = 9, column = 1 }, end = { row = 9, column = 5 } } "-- 1"
-                            , Node { start = { row = 10, column = 1 }, end = { row = 10, column = 8 } } "{- 2 -}"
-                            , Node { start = { row = 11, column = 1 }, end = { row = 11, column = 5 } } "-- 3"
-                            , Node { start = { row = 16, column = 5 }, end = { row = 16, column = 9 } } "-- 4"
-                            , Node { start = { row = 19, column = 1 }, end = { row = 19, column = 5 } } "-- 5"
-                            , Node { start = { row = 20, column = 1 }, end = { row = 20, column = 8 } } "{- 6 -}"
+                            [ Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 5, column = 3 } } "{-| Module documentation\n-}"
+                            , Elm.Syntax.Node.Node { start = { row = 9, column = 1 }, end = { row = 9, column = 5 } } "-- 1"
+                            , Elm.Syntax.Node.Node { start = { row = 10, column = 1 }, end = { row = 10, column = 8 } } "{- 2 -}"
+                            , Elm.Syntax.Node.Node { start = { row = 11, column = 1 }, end = { row = 11, column = 5 } } "-- 3"
+                            , Elm.Syntax.Node.Node { start = { row = 16, column = 5 }, end = { row = 16, column = 9 } } "-- 4"
+                            , Elm.Syntax.Node.Node { start = { row = 19, column = 1 }, end = { row = 19, column = 5 } } "-- 5"
+                            , Elm.Syntax.Node.Node { start = { row = 20, column = 1 }, end = { row = 20, column = 8 } } "{- 6 -}"
                             ]
                         )
             )
-        , test "declarations with comments"
+        , Test.test "declarations with comments"
             (\() ->
                 """module Foo exposing (b, fn)
 
@@ -116,12 +115,12 @@ b =
                     |> Result.map .comments
                     |> Expect.equal
                         (Ok
-                            [ Node { start = { row = 7, column = 17 }, end = { row = 7, column = 21 } } "-- 1"
-                            , Node { start = { row = 13, column = 1 }, end = { row = 13, column = 5 } } "-- 2"
+                            [ Elm.Syntax.Node.Node { start = { row = 7, column = 17 }, end = { row = 7, column = 21 } } "-- 1"
+                            , Elm.Syntax.Node.Node { start = { row = 13, column = 1 }, end = { row = 13, column = 5 } } "-- 2"
                             ]
                         )
             )
-        , test "function declaration with a case and trailing whitespace"
+        , Test.test "function declaration with a case and trailing whitespace"
             (\() ->
                 """
 module Trailing.Whitespace exposing (..)
@@ -143,34 +142,34 @@ caseWhitespace f = case f   of
                     |> Expect.equal
                         (Ok
                             { moduleDefinition =
-                                Node { start = { row = 2, column = 1 }, end = { row = 2, column = 41 } }
-                                    (NormalModule
-                                        { moduleName = Node { start = { row = 2, column = 8 }, end = { row = 2, column = 27 } } [ "Trailing", "Whitespace" ]
+                                Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 41 } }
+                                    (Elm.Syntax.Module.NormalModule
+                                        { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 8 }, end = { row = 2, column = 27 } } [ "Trailing", "Whitespace" ]
                                         , exposingList =
-                                            Node { start = { row = 2, column = 28 }, end = { row = 2, column = 41 } }
-                                                (All { start = { row = 2, column = 38 }, end = { row = 2, column = 40 } })
+                                            Elm.Syntax.Node.Node { start = { row = 2, column = 28 }, end = { row = 2, column = 41 } }
+                                                (Elm.Syntax.Exposing.All { start = { row = 2, column = 38 }, end = { row = 2, column = 40 } })
                                         }
                                     )
                             , imports = []
                             , declarations =
-                                [ Node { start = { row = 4, column = 1 }, end = { row = 11, column = 11 } }
-                                    (FunctionDeclaration
+                                [ Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 11, column = 11 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 4, column = 1 }, end = { row = 11, column = 11 } }
-                                                { name = Node { start = { row = 4, column = 1 }, end = { row = 4, column = 15 } } "caseWhitespace"
-                                                , arguments = [ Node { start = { row = 4, column = 16 }, end = { row = 4, column = 17 } } (VarPattern "f") ]
+                                            Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 11, column = 11 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 4, column = 15 } } "caseWhitespace"
+                                                , arguments = [ Elm.Syntax.Node.Node { start = { row = 4, column = 16 }, end = { row = 4, column = 17 } } (Elm.Syntax.Pattern.VarPattern "f") ]
                                                 , expression =
-                                                    Node { start = { row = 4, column = 20 }, end = { row = 11, column = 11 } }
-                                                        (CaseExpression
-                                                            { expression = Node { start = { row = 4, column = 25 }, end = { row = 4, column = 26 } } (FunctionOrValue [] "f")
+                                                    Elm.Syntax.Node.Node { start = { row = 4, column = 20 }, end = { row = 11, column = 11 } }
+                                                        (Elm.Syntax.Expression.CaseExpression
+                                                            { expression = Elm.Syntax.Node.Node { start = { row = 4, column = 25 }, end = { row = 4, column = 26 } } (Elm.Syntax.Expression.FunctionOrValue [] "f")
                                                             , cases =
-                                                                [ ( Node { start = { row = 5, column = 3 }, end = { row = 5, column = 7 } } (NamedPattern { moduleName = [], name = "True" } [])
-                                                                  , Node { start = { row = 6, column = 5 }, end = { row = 6, column = 6 } } (Integer 1)
+                                                                [ ( Elm.Syntax.Node.Node { start = { row = 5, column = 3 }, end = { row = 5, column = 7 } } (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "True" } [])
+                                                                  , Elm.Syntax.Node.Node { start = { row = 6, column = 5 }, end = { row = 6, column = 6 } } (Elm.Syntax.Expression.Integer 1)
                                                                   )
-                                                                , ( Node { start = { row = 7, column = 3 }, end = { row = 7, column = 8 } } (NamedPattern { moduleName = [], name = "False" } [])
-                                                                  , Node { start = { row = 11, column = 10 }, end = { row = 11, column = 11 } } (Integer 2)
+                                                                , ( Elm.Syntax.Node.Node { start = { row = 7, column = 3 }, end = { row = 7, column = 8 } } (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "False" } [])
+                                                                  , Elm.Syntax.Node.Node { start = { row = 11, column = 10 }, end = { row = 11, column = 11 } } (Elm.Syntax.Expression.Integer 2)
                                                                   )
                                                                 ]
                                                             }
@@ -179,11 +178,11 @@ caseWhitespace f = case f   of
                                         }
                                     )
                                 ]
-                            , comments = [ Node { start = { row = 13, column = 4 }, end = { row = 13, column = 18 } } "--some comment" ]
+                            , comments = [ Elm.Syntax.Node.Node { start = { row = 13, column = 4 }, end = { row = 13, column = 18 } } "--some comment" ]
                             }
                         )
             )
-        , test "function declaration with lambda and trailing whitespace"
+        , Test.test "function declaration with lambda and trailing whitespace"
             (\() ->
                 """
 module Trailing.Whitespace exposing (..)
@@ -202,37 +201,37 @@ lambdaWhitespace =   \\ a b ->    a
                     |> Expect.equal
                         (Ok
                             { moduleDefinition =
-                                Node { start = { row = 2, column = 1 }, end = { row = 2, column = 41 } }
-                                    (NormalModule
-                                        { moduleName = Node { start = { row = 2, column = 8 }, end = { row = 2, column = 27 } } [ "Trailing", "Whitespace" ]
+                                Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 41 } }
+                                    (Elm.Syntax.Module.NormalModule
+                                        { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 8 }, end = { row = 2, column = 27 } } [ "Trailing", "Whitespace" ]
                                         , exposingList =
-                                            Node { start = { row = 2, column = 28 }, end = { row = 2, column = 41 } }
-                                                (All { start = { row = 2, column = 38 }, end = { row = 2, column = 40 } })
+                                            Elm.Syntax.Node.Node { start = { row = 2, column = 28 }, end = { row = 2, column = 41 } }
+                                                (Elm.Syntax.Exposing.All { start = { row = 2, column = 38 }, end = { row = 2, column = 40 } })
                                         }
                                     )
                             , imports = []
                             , declarations =
-                                [ Node { start = { row = 4, column = 1 }, end = { row = 8, column = 6 } }
-                                    (FunctionDeclaration
+                                [ Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 8, column = 6 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 4, column = 1 }, end = { row = 8, column = 6 } }
-                                                { name = Node { start = { row = 4, column = 1 }, end = { row = 4, column = 17 } } "lambdaWhitespace"
+                                            Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 8, column = 6 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 4, column = 17 } } "lambdaWhitespace"
                                                 , arguments = []
                                                 , expression =
-                                                    Node { start = { row = 4, column = 22 }, end = { row = 8, column = 6 } }
-                                                        (LambdaExpression
+                                                    Elm.Syntax.Node.Node { start = { row = 4, column = 22 }, end = { row = 8, column = 6 } }
+                                                        (Elm.Syntax.Expression.LambdaExpression
                                                             { args =
-                                                                [ Node { start = { row = 4, column = 24 }, end = { row = 4, column = 25 } } (VarPattern "a")
-                                                                , Node { start = { row = 4, column = 26 }, end = { row = 4, column = 27 } } (VarPattern "b")
+                                                                [ Elm.Syntax.Node.Node { start = { row = 4, column = 24 }, end = { row = 4, column = 25 } } (Elm.Syntax.Pattern.VarPattern "a")
+                                                                , Elm.Syntax.Node.Node { start = { row = 4, column = 26 }, end = { row = 4, column = 27 } } (Elm.Syntax.Pattern.VarPattern "b")
                                                                 ]
                                                             , expression =
-                                                                Node { start = { row = 4, column = 34 }, end = { row = 8, column = 6 } }
-                                                                    (OperatorApplication "+"
-                                                                        Left
-                                                                        (Node { start = { row = 4, column = 34 }, end = { row = 4, column = 35 } } (FunctionOrValue [] "a"))
-                                                                        (Node { start = { row = 8, column = 5 }, end = { row = 8, column = 6 } } (FunctionOrValue [] "b"))
+                                                                Elm.Syntax.Node.Node { start = { row = 4, column = 34 }, end = { row = 8, column = 6 } }
+                                                                    (Elm.Syntax.Expression.OperatorApplication "+"
+                                                                        Elm.Syntax.Infix.Left
+                                                                        (Elm.Syntax.Node.Node { start = { row = 4, column = 34 }, end = { row = 4, column = 35 } } (Elm.Syntax.Expression.FunctionOrValue [] "a"))
+                                                                        (Elm.Syntax.Node.Node { start = { row = 8, column = 5 }, end = { row = 8, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "b"))
                                                                     )
                                                             }
                                                         )
@@ -240,11 +239,11 @@ lambdaWhitespace =   \\ a b ->    a
                                         }
                                     )
                                 ]
-                            , comments = [ Node { start = { row = 11, column = 1 }, end = { row = 11, column = 15 } } "--some comment" ]
+                            , comments = [ Elm.Syntax.Node.Node { start = { row = 11, column = 1 }, end = { row = 11, column = 15 } } "--some comment" ]
                             }
                         )
             )
-        , test "function declaration with let and trailing whitespace"
+        , Test.test "function declaration with let and trailing whitespace"
             (\() ->
                 """
 module Trailing.Whitespace exposing (..)
@@ -263,53 +262,53 @@ letWhitespace = let
                     |> Expect.equal
                         (Ok
                             { moduleDefinition =
-                                Node { start = { row = 2, column = 1 }, end = { row = 2, column = 41 } }
-                                    (NormalModule
-                                        { moduleName = Node { start = { row = 2, column = 8 }, end = { row = 2, column = 27 } } [ "Trailing", "Whitespace" ]
+                                Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 41 } }
+                                    (Elm.Syntax.Module.NormalModule
+                                        { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 8 }, end = { row = 2, column = 27 } } [ "Trailing", "Whitespace" ]
                                         , exposingList =
-                                            Node { start = { row = 2, column = 28 }, end = { row = 2, column = 41 } }
-                                                (All { start = { row = 2, column = 38 }, end = { row = 2, column = 40 } })
+                                            Elm.Syntax.Node.Node { start = { row = 2, column = 28 }, end = { row = 2, column = 41 } }
+                                                (Elm.Syntax.Exposing.All { start = { row = 2, column = 38 }, end = { row = 2, column = 40 } })
                                         }
                                     )
                             , imports = []
                             , declarations =
-                                [ Node { start = { row = 4, column = 1 }, end = { row = 8, column = 3 } }
-                                    (FunctionDeclaration
+                                [ Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 8, column = 3 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 4, column = 1 }, end = { row = 8, column = 3 } }
-                                                { name = Node { start = { row = 4, column = 1 }, end = { row = 4, column = 14 } } "letWhitespace"
+                                            Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 8, column = 3 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 4, column = 14 } } "letWhitespace"
                                                 , arguments = []
                                                 , expression =
-                                                    Node { start = { row = 4, column = 17 }, end = { row = 8, column = 3 } }
-                                                        (LetExpression
+                                                    Elm.Syntax.Node.Node { start = { row = 4, column = 17 }, end = { row = 8, column = 3 } }
+                                                        (Elm.Syntax.Expression.LetExpression
                                                             { declarations =
-                                                                [ Node { start = { row = 5, column = 19 }, end = { row = 5, column = 26 } }
-                                                                    (LetFunction
+                                                                [ Elm.Syntax.Node.Node { start = { row = 5, column = 19 }, end = { row = 5, column = 26 } }
+                                                                    (Elm.Syntax.Expression.LetFunction
                                                                         { documentation = Nothing
                                                                         , signature = Nothing
                                                                         , declaration =
-                                                                            Node { start = { row = 5, column = 19 }, end = { row = 5, column = 26 } }
-                                                                                { name = Node { start = { row = 5, column = 19 }, end = { row = 5, column = 20 } } "b"
+                                                                            Elm.Syntax.Node.Node { start = { row = 5, column = 19 }, end = { row = 5, column = 26 } }
+                                                                                { name = Elm.Syntax.Node.Node { start = { row = 5, column = 19 }, end = { row = 5, column = 20 } } "b"
                                                                                 , arguments = []
-                                                                                , expression = Node { start = { row = 5, column = 25 }, end = { row = 5, column = 26 } } (Integer 1)
+                                                                                , expression = Elm.Syntax.Node.Node { start = { row = 5, column = 25 }, end = { row = 5, column = 26 } } (Elm.Syntax.Expression.Integer 1)
                                                                                 }
                                                                         }
                                                                     )
                                                                 ]
-                                                            , expression = Node { start = { row = 8, column = 2 }, end = { row = 8, column = 3 } } (FunctionOrValue [] "b")
+                                                            , expression = Elm.Syntax.Node.Node { start = { row = 8, column = 2 }, end = { row = 8, column = 3 } } (Elm.Syntax.Expression.FunctionOrValue [] "b")
                                                             }
                                                         )
                                                 }
                                         }
                                     )
                                 ]
-                            , comments = [ Node { start = { row = 11, column = 1 }, end = { row = 11, column = 15 } } "--some comment" ]
+                            , comments = [ Elm.Syntax.Node.Node { start = { row = 11, column = 1 }, end = { row = 11, column = 15 } } "--some comment" ]
                             }
                         )
             )
-        , test "type declaration with documentation after imports"
+        , Test.test "type declaration with documentation after imports"
             (\() ->
                 """
 module Foo exposing (..)
@@ -325,30 +324,30 @@ type Configuration
                     |> Expect.equal
                         (Ok
                             { moduleDefinition =
-                                Node { start = { row = 2, column = 1 }, end = { row = 2, column = 25 } }
-                                    (NormalModule
-                                        { moduleName = Node { start = { row = 2, column = 8 }, end = { row = 2, column = 11 } } [ "Foo" ]
+                                Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 25 } }
+                                    (Elm.Syntax.Module.NormalModule
+                                        { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 8 }, end = { row = 2, column = 11 } } [ "Foo" ]
                                         , exposingList =
-                                            Node { start = { row = 2, column = 12 }, end = { row = 2, column = 25 } }
-                                                (All { start = { row = 2, column = 22 }, end = { row = 2, column = 24 } })
+                                            Elm.Syntax.Node.Node { start = { row = 2, column = 12 }, end = { row = 2, column = 25 } }
+                                                (Elm.Syntax.Exposing.All { start = { row = 2, column = 22 }, end = { row = 2, column = 24 } })
                                         }
                                     )
                             , imports =
-                                [ Node { start = { row = 4, column = 1 }, end = { row = 4, column = 12 } }
-                                    { moduleName = Node { start = { row = 4, column = 8 }, end = { row = 4, column = 12 } } [ "Dict" ]
+                                [ Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 4, column = 12 } }
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 4, column = 8 }, end = { row = 4, column = 12 } } [ "Dict" ]
                                     , moduleAlias = Nothing
                                     , exposingList = Nothing
                                     }
                                 ]
                             , declarations =
-                                [ Node { start = { row = 6, column = 1 }, end = { row = 9, column = 20 } }
-                                    (CustomTypeDeclaration
-                                        { documentation = Just (Node { start = { row = 6, column = 1 }, end = { row = 7, column = 3 } } "{-| Config goes here\n-}")
-                                        , name = Node { start = { row = 8, column = 6 }, end = { row = 8, column = 19 } } "Configuration"
+                                [ Elm.Syntax.Node.Node { start = { row = 6, column = 1 }, end = { row = 9, column = 20 } }
+                                    (Elm.Syntax.Declaration.CustomTypeDeclaration
+                                        { documentation = Just (Elm.Syntax.Node.Node { start = { row = 6, column = 1 }, end = { row = 7, column = 3 } } "{-| Config goes here\n-}")
+                                        , name = Elm.Syntax.Node.Node { start = { row = 8, column = 6 }, end = { row = 8, column = 19 } } "Configuration"
                                         , generics = []
                                         , constructors =
-                                            [ Node { start = { row = 9, column = 7 }, end = { row = 9, column = 20 } }
-                                                { name = Node { start = { row = 9, column = 7 }, end = { row = 9, column = 20 } } "Configuration"
+                                            [ Elm.Syntax.Node.Node { start = { row = 9, column = 7 }, end = { row = 9, column = 20 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 9, column = 7 }, end = { row = 9, column = 20 } } "Configuration"
                                                 , arguments = []
                                                 }
                                             ]
@@ -359,7 +358,7 @@ type Configuration
                             }
                         )
             )
-        , test "module documentation formatted like a type documentation"
+        , Test.test "module documentation formatted like a type documentation"
             (\() ->
                 """
 module Foo exposing (..)
@@ -373,35 +372,35 @@ type Configuration
                     |> Expect.equal
                         (Ok
                             { moduleDefinition =
-                                Node { start = { row = 2, column = 1 }, end = { row = 2, column = 25 } }
-                                    (NormalModule
-                                        { moduleName = Node { start = { row = 2, column = 8 }, end = { row = 2, column = 11 } } [ "Foo" ]
+                                Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 25 } }
+                                    (Elm.Syntax.Module.NormalModule
+                                        { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 8 }, end = { row = 2, column = 11 } } [ "Foo" ]
                                         , exposingList =
-                                            Node { start = { row = 2, column = 12 }, end = { row = 2, column = 25 } }
-                                                (All { start = { row = 2, column = 22 }, end = { row = 2, column = 24 } })
+                                            Elm.Syntax.Node.Node { start = { row = 2, column = 12 }, end = { row = 2, column = 25 } }
+                                                (Elm.Syntax.Exposing.All { start = { row = 2, column = 22 }, end = { row = 2, column = 24 } })
                                         }
                                     )
                             , imports = []
                             , declarations =
-                                [ Node { start = { row = 6, column = 1 }, end = { row = 7, column = 20 } }
-                                    (CustomTypeDeclaration
+                                [ Elm.Syntax.Node.Node { start = { row = 6, column = 1 }, end = { row = 7, column = 20 } }
+                                    (Elm.Syntax.Declaration.CustomTypeDeclaration
                                         { documentation = Nothing
-                                        , name = Node { start = { row = 6, column = 6 }, end = { row = 6, column = 19 } } "Configuration"
+                                        , name = Elm.Syntax.Node.Node { start = { row = 6, column = 6 }, end = { row = 6, column = 19 } } "Configuration"
                                         , generics = []
                                         , constructors =
-                                            [ Node { start = { row = 7, column = 7 }, end = { row = 7, column = 20 } }
-                                                { name = Node { start = { row = 7, column = 7 }, end = { row = 7, column = 20 } } "Configuration"
+                                            [ Elm.Syntax.Node.Node { start = { row = 7, column = 7 }, end = { row = 7, column = 20 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 7, column = 7 }, end = { row = 7, column = 20 } } "Configuration"
                                                 , arguments = []
                                                 }
                                             ]
                                         }
                                     )
                                 ]
-                            , comments = [ Node { start = { row = 4, column = 1 }, end = { row = 5, column = 3 } } "{-| actually module doc\n-}" ]
+                            , comments = [ Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 5, column = 3 } } "{-| actually module doc\n-}" ]
                             }
                         )
             )
-        , test "documentation on a port declaration is treated as a normal comment"
+        , Test.test "documentation on a port declaration is treated as a normal comment"
             (\() ->
                 """
 port module Foo exposing (..)
@@ -416,45 +415,45 @@ port sendResponse : String -> Cmd msg
                     |> Expect.equal
                         (Ok
                             { moduleDefinition =
-                                Node { start = { row = 2, column = 1 }, end = { row = 2, column = 30 } }
-                                    (PortModule
-                                        { moduleName = Node { start = { row = 2, column = 13 }, end = { row = 2, column = 16 } } [ "Foo" ]
+                                Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 30 } }
+                                    (Elm.Syntax.Module.PortModule
+                                        { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 13 }, end = { row = 2, column = 16 } } [ "Foo" ]
                                         , exposingList =
-                                            Node { start = { row = 2, column = 17 }, end = { row = 2, column = 30 } }
-                                                (All { start = { row = 2, column = 27 }, end = { row = 2, column = 29 } })
+                                            Elm.Syntax.Node.Node { start = { row = 2, column = 17 }, end = { row = 2, column = 30 } }
+                                                (Elm.Syntax.Exposing.All { start = { row = 2, column = 27 }, end = { row = 2, column = 29 } })
                                         }
                                     )
                             , imports =
-                                [ Node { start = { row = 4, column = 1 }, end = { row = 4, column = 14 } }
-                                    { moduleName = Node { start = { row = 4, column = 8 }, end = { row = 4, column = 14 } } [ "String" ]
+                                [ Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 4, column = 14 } }
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 4, column = 8 }, end = { row = 4, column = 14 } } [ "String" ]
                                     , moduleAlias = Nothing
                                     , exposingList = Nothing
                                     }
                                 ]
                             , declarations =
-                                [ Node { start = { row = 8, column = 1 }, end = { row = 8, column = 38 } }
-                                    (PortDeclaration
-                                        { name = Node { start = { row = 8, column = 6 }, end = { row = 8, column = 18 } } "sendResponse"
+                                [ Elm.Syntax.Node.Node { start = { row = 8, column = 1 }, end = { row = 8, column = 38 } }
+                                    (Elm.Syntax.Declaration.PortDeclaration
+                                        { name = Elm.Syntax.Node.Node { start = { row = 8, column = 6 }, end = { row = 8, column = 18 } } "sendResponse"
                                         , typeAnnotation =
-                                            Node { start = { row = 8, column = 21 }, end = { row = 8, column = 38 } }
-                                                (FunctionTypeAnnotation
-                                                    (Node { start = { row = 8, column = 21 }, end = { row = 8, column = 27 } }
-                                                        (Typed (Node { start = { row = 8, column = 21 }, end = { row = 8, column = 27 } } ( [], "String" )) [])
+                                            Elm.Syntax.Node.Node { start = { row = 8, column = 21 }, end = { row = 8, column = 38 } }
+                                                (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
+                                                    (Elm.Syntax.Node.Node { start = { row = 8, column = 21 }, end = { row = 8, column = 27 } }
+                                                        (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 8, column = 21 }, end = { row = 8, column = 27 } } ( [], "String" )) [])
                                                     )
-                                                    (Node { start = { row = 8, column = 31 }, end = { row = 8, column = 38 } }
-                                                        (Typed (Node { start = { row = 8, column = 31 }, end = { row = 8, column = 34 } } ( [], "Cmd" ))
-                                                            [ Node { start = { row = 8, column = 35 }, end = { row = 8, column = 38 } } (GenericType "msg") ]
+                                                    (Elm.Syntax.Node.Node { start = { row = 8, column = 31 }, end = { row = 8, column = 38 } }
+                                                        (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 8, column = 31 }, end = { row = 8, column = 34 } } ( [], "Cmd" ))
+                                                            [ Elm.Syntax.Node.Node { start = { row = 8, column = 35 }, end = { row = 8, column = 38 } } (Elm.Syntax.TypeAnnotation.GenericType "msg") ]
                                                         )
                                                     )
                                                 )
                                         }
                                     )
                                 ]
-                            , comments = [ Node { start = { row = 6, column = 1 }, end = { row = 7, column = 3 } } "{-| foo\n-}" ]
+                            , comments = [ Elm.Syntax.Node.Node { start = { row = 6, column = 1 }, end = { row = 7, column = 3 } } "{-| foo\n-}" ]
                             }
                         )
             )
-        , test "A file with a large number of comments should not create a stack overflow"
+        , Test.test "A file with a large number of comments should not create a stack overflow"
             (\() ->
                 let
                     comments : String

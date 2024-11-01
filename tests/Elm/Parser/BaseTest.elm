@@ -1,25 +1,25 @@
 module Elm.Parser.BaseTest exposing (all)
 
-import Elm.Parser.Base as Parser
-import Elm.Parser.TestUtil as TestUtil
-import Elm.Syntax.Node as Node
+import Elm.Parser.Base
+import Elm.Parser.TestUtil
+import Elm.Syntax.Node
 import Expect
-import Test exposing (Test, describe, test)
+import Test
 
 
-all : Test
+all : Test.Test
 all =
-    describe "BaseTest"
-        [ test "moduleName"
+    Test.describe "BaseTest"
+        [ Test.test "moduleName"
             (\() ->
-                TestUtil.parseToResult "Foo" Parser.moduleName
-                    |> Maybe.map Node.value
+                Elm.Parser.TestUtil.parseToResult "Foo" Elm.Parser.Base.moduleName
+                    |> Maybe.map Elm.Syntax.Node.value
                     |> Expect.equal (Just [ "Foo" ])
             )
-        , test "moduleNameDir"
+        , Test.test "moduleNameDir"
             (\() ->
-                TestUtil.parseToResult "Foo.Bar" Parser.moduleName
-                    |> Maybe.map Node.value
+                Elm.Parser.TestUtil.parseToResult "Foo.Bar" Elm.Parser.Base.moduleName
+                    |> Maybe.map Elm.Syntax.Node.value
                     |> Expect.equal (Just [ "Foo", "Bar" ])
             )
         ]

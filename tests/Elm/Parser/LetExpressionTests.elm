@@ -1,87 +1,87 @@
 module Elm.Parser.LetExpressionTests exposing (all)
 
-import Elm.Parser.Expression exposing (expressionFollowedByOptimisticLayout)
-import Elm.Parser.ParserWithCommentsTestUtil as ParserWithCommentsUtil
-import Elm.Syntax.Expression exposing (..)
-import Elm.Syntax.Node exposing (Node(..))
-import Elm.Syntax.Pattern exposing (..)
-import Elm.Syntax.TypeAnnotation exposing (TypeAnnotation(..))
+import Elm.Parser.Expression
+import Elm.Parser.ParserWithCommentsTestUtil
+import Elm.Syntax.Expression
+import Elm.Syntax.Node
+import Elm.Syntax.Pattern
+import Elm.Syntax.TypeAnnotation
 import Expect
-import Test exposing (..)
+import Test
 
 
-all : Test
+all : Test.Test
 all =
-    describe "LetExpressionTests"
-        [ test "let expression with multiple declarations"
+    Test.describe "LetExpressionTests"
+        [ Test.test "let expression with multiple declarations"
             (\() ->
                 """let
   foo = bar
 
   john n = n in 1"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 4, column = 18 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 4, column = 18 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 3 }, end = { row = 2, column = 12 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 12 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature = Nothing
                                             , declaration =
-                                                Node { start = { row = 2, column = 3 }, end = { row = 2, column = 12 } }
-                                                    { name = Node { start = { row = 2, column = 3 }, end = { row = 2, column = 6 } } "foo"
+                                                Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 12 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 6 } } "foo"
                                                     , arguments = []
-                                                    , expression = Node { start = { row = 2, column = 9 }, end = { row = 2, column = 12 } } (FunctionOrValue [] "bar")
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar")
                                                     }
                                             }
                                         )
-                                    , Node { start = { row = 4, column = 3 }, end = { row = 4, column = 13 } }
-                                        (LetFunction
+                                    , Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 13 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature = Nothing
                                             , declaration =
-                                                Node { start = { row = 4, column = 3 }, end = { row = 4, column = 13 } }
-                                                    { name = Node { start = { row = 4, column = 3 }, end = { row = 4, column = 7 } } "john"
-                                                    , arguments = [ Node { start = { row = 4, column = 8 }, end = { row = 4, column = 9 } } (VarPattern "n") ]
-                                                    , expression = Node { start = { row = 4, column = 12 }, end = { row = 4, column = 13 } } (FunctionOrValue [] "n")
+                                                Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 13 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 7 } } "john"
+                                                    , arguments = [ Elm.Syntax.Node.Node { start = { row = 4, column = 8 }, end = { row = 4, column = 9 } } (Elm.Syntax.Pattern.VarPattern "n") ]
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 4, column = 12 }, end = { row = 4, column = 13 } } (Elm.Syntax.Expression.FunctionOrValue [] "n")
                                                     }
                                             }
                                         )
                                     ]
-                                , expression = Node { start = { row = 4, column = 17 }, end = { row = 4, column = 18 } } (Integer 1)
+                                , expression = Elm.Syntax.Node.Node { start = { row = 4, column = 17 }, end = { row = 4, column = 18 } } (Elm.Syntax.Expression.Integer 1)
                                 }
                             )
                         )
             )
-        , test "Let with `in` indented more than the body and let declarations"
+        , Test.test "Let with `in` indented more than the body and let declarations"
             (\() ->
                 """let
   bar = 1
             in
   bar"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 4, column = 6 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 4, column = 6 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature = Nothing
                                             , declaration =
-                                                Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } }
-                                                    { name = Node { start = { row = 2, column = 3 }, end = { row = 2, column = 6 } } "bar"
+                                                Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 6 } } "bar"
                                                     , arguments = []
-                                                    , expression = Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } (Integer 1)
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } (Elm.Syntax.Expression.Integer 1)
                                                     }
                                             }
                                         )
                                     ]
-                                , expression = Node { start = { row = 4, column = 3 }, end = { row = 4, column = 6 } } (FunctionOrValue [] "bar")
+                                , expression = Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar")
                                 }
                             )
                         )
             )
-        , test "should fail to parse if declaration is indented as much as `let`"
+        , Test.test "should fail to parse if declaration is indented as much as `let`"
             (\() ->
                 """  let
   bar = 1
@@ -89,7 +89,7 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "should fail to parse if declarations are not indented the same way"
+        , Test.test "should fail to parse if declarations are not indented the same way"
             (\() ->
                 """  let
     bar = 1
@@ -98,35 +98,35 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "let with deindented expression in in"
+        , Test.test "let with deindented expression in in"
             (\() ->
                 """let
   bar = 1
  in
    bar"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 4, column = 7 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 4, column = 7 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature = Nothing
                                             , declaration =
-                                                Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } }
-                                                    { name = Node { start = { row = 2, column = 3 }, end = { row = 2, column = 6 } } "bar"
+                                                Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 10 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 6 } } "bar"
                                                     , arguments = []
-                                                    , expression = Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } (Integer 1)
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } (Elm.Syntax.Expression.Integer 1)
                                                     }
                                             }
                                         )
                                     ]
-                                , expression = Node { start = { row = 4, column = 4 }, end = { row = 4, column = 7 } } (FunctionOrValue [] "bar")
+                                , expression = Elm.Syntax.Node.Node { start = { row = 4, column = 4 }, end = { row = 4, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar")
                                 }
                             )
                         )
             )
-        , test "Let function with type annotation"
+        , Test.test "Let function with type annotation"
             (\() ->
                 """let
     bar : Int
@@ -134,36 +134,36 @@ all =
   in
   bar"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 5, column = 6 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 5, column = 6 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 5 }, end = { row = 3, column = 12 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 3, column = 12 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature =
                                                 Just
-                                                    (Node { start = { row = 2, column = 5 }, end = { row = 2, column = 14 } }
-                                                        { name = Node { start = { row = 2, column = 5 }, end = { row = 2, column = 8 } } "bar"
+                                                    (Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 2, column = 14 } }
+                                                        { name = Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 2, column = 8 } } "bar"
                                                         , typeAnnotation =
-                                                            Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } }
-                                                                (Typed (Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } } ( [], "Int" )) [])
+                                                            Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } }
+                                                                (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } } ( [], "Int" )) [])
                                                         }
                                                     )
                                             , declaration =
-                                                Node { start = { row = 3, column = 5 }, end = { row = 3, column = 12 } }
-                                                    { name = Node { start = { row = 3, column = 5 }, end = { row = 3, column = 8 } } "bar"
+                                                Elm.Syntax.Node.Node { start = { row = 3, column = 5 }, end = { row = 3, column = 12 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 3, column = 5 }, end = { row = 3, column = 8 } } "bar"
                                                     , arguments = []
-                                                    , expression = Node { start = { row = 3, column = 11 }, end = { row = 3, column = 12 } } (Integer 1)
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 3, column = 11 }, end = { row = 3, column = 12 } } (Elm.Syntax.Expression.Integer 1)
                                                     }
                                             }
                                         )
                                     ]
-                                , expression = Node { start = { row = 5, column = 3 }, end = { row = 5, column = 6 } } (FunctionOrValue [] "bar")
+                                , expression = Elm.Syntax.Node.Node { start = { row = 5, column = 3 }, end = { row = 5, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar")
                                 }
                             )
                         )
             )
-        , test "Let function with type annotation (separated by a few lines)"
+        , Test.test "Let function with type annotation (separated by a few lines)"
             (\() ->
                 """let
     bar : Int
@@ -173,34 +173,34 @@ all =
   in
   bar"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 7, column = 6 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 7, column = 6 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 5 }, end = { row = 5, column = 12 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 5, column = 12 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature =
                                                 Just
-                                                    (Node { start = { row = 2, column = 5 }, end = { row = 2, column = 14 } }
-                                                        { name = Node { start = { row = 2, column = 5 }, end = { row = 2, column = 8 } } "bar"
-                                                        , typeAnnotation = Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } } (Typed (Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } } ( [], "Int" )) [])
+                                                    (Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 2, column = 14 } }
+                                                        { name = Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 2, column = 8 } } "bar"
+                                                        , typeAnnotation = Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } } (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } } ( [], "Int" )) [])
                                                         }
                                                     )
                                             , declaration =
-                                                Node { start = { row = 5, column = 5 }, end = { row = 5, column = 12 } }
-                                                    { name = Node { start = { row = 5, column = 5 }, end = { row = 5, column = 8 } } "bar"
+                                                Elm.Syntax.Node.Node { start = { row = 5, column = 5 }, end = { row = 5, column = 12 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 5, column = 5 }, end = { row = 5, column = 8 } } "bar"
                                                     , arguments = []
-                                                    , expression = Node { start = { row = 5, column = 11 }, end = { row = 5, column = 12 } } (Integer 1)
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 5, column = 11 }, end = { row = 5, column = 12 } } (Elm.Syntax.Expression.Integer 1)
                                                     }
                                             }
                                         )
                                     ]
-                                , expression = Node { start = { row = 7, column = 3 }, end = { row = 7, column = 6 } } (FunctionOrValue [] "bar")
+                                , expression = Elm.Syntax.Node.Node { start = { row = 7, column = 3 }, end = { row = 7, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar")
                                 }
                             )
                         )
             )
-        , test "should fail to parse when type annotation and declaration are not aligned (annotation earlier)"
+        , Test.test "should fail to parse when type annotation and declaration are not aligned (annotation earlier)"
             (\() ->
                 """let
     bar : Int
@@ -209,7 +209,7 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "should fail to parse when type annotation and declaration are not aligned (annotation later)"
+        , Test.test "should fail to parse when type annotation and declaration are not aligned (annotation later)"
             (\() ->
                 """let
        bar : Int
@@ -218,7 +218,7 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "should fail to parse `as` pattern not surrounded by parentheses"
+        , Test.test "should fail to parse `as` pattern not surrounded by parentheses"
             (\() ->
                 """let
           bar n as m = 1
@@ -226,38 +226,38 @@ all =
         bar"""
                     |> expectInvalid
             )
-        , test "correctly parse variant + args pattern not surrounded by parentheses"
+        , Test.test "correctly parse variant + args pattern not surrounded by parentheses"
             (\() ->
                 """let
           bar Bar m = 1
         in
         bar"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 4, column = 12 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 4, column = 12 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 11 }, end = { row = 2, column = 24 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 24 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature = Nothing
                                             , declaration =
-                                                Node { start = { row = 2, column = 11 }, end = { row = 2, column = 24 } }
-                                                    { name = Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } } "bar"
+                                                Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 24 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 14 } } "bar"
                                                     , arguments =
-                                                        [ Node { start = { row = 2, column = 15 }, end = { row = 2, column = 18 } } (NamedPattern { moduleName = [], name = "Bar" } [])
-                                                        , Node { start = { row = 2, column = 19 }, end = { row = 2, column = 20 } } (VarPattern "m")
+                                                        [ Elm.Syntax.Node.Node { start = { row = 2, column = 15 }, end = { row = 2, column = 18 } } (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "Bar" } [])
+                                                        , Elm.Syntax.Node.Node { start = { row = 2, column = 19 }, end = { row = 2, column = 20 } } (Elm.Syntax.Pattern.VarPattern "m")
                                                         ]
-                                                    , expression = Node { start = { row = 2, column = 23 }, end = { row = 2, column = 24 } } (Integer 1)
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 2, column = 23 }, end = { row = 2, column = 24 } } (Elm.Syntax.Expression.Integer 1)
                                                     }
                                             }
                                         )
                                     ]
-                                , expression = Node { start = { row = 4, column = 9 }, end = { row = 4, column = 12 } } (FunctionOrValue [] "bar")
+                                , expression = Elm.Syntax.Node.Node { start = { row = 4, column = 9 }, end = { row = 4, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar")
                                 }
                             )
                         )
             )
-        , test "should not parse let destructuring with a type annotation"
+        , Test.test "should not parse let destructuring with a type annotation"
             (\() ->
                 """let
     bar : Int
@@ -266,7 +266,7 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "should not parse let destructuring with `as` not surrounded by parentheses"
+        , Test.test "should not parse let destructuring with `as` not surrounded by parentheses"
             (\() ->
                 """let
     foo as bar = 1
@@ -274,7 +274,7 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "should not parse let destructuring with variant + arguments not surrounded by parentheses"
+        , Test.test "should not parse let destructuring with variant + arguments not surrounded by parentheses"
             (\() ->
                 """let
     Foo bar = 1
@@ -282,7 +282,7 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "should not parse let destructuring with non-positive layout before ="
+        , Test.test "should not parse let destructuring with non-positive layout before ="
             (\() ->
                 """let
     (bar)
@@ -291,7 +291,7 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "should not parse let destructuring with non-positive layout before expression"
+        , Test.test "should not parse let destructuring with non-positive layout before expression"
             (\() ->
                 """let
     (bar) =
@@ -300,7 +300,7 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "should not parse let type annotation without a declaration"
+        , Test.test "should not parse let type annotation without a declaration"
             (\() ->
                 """let
     bar : Int
@@ -308,7 +308,7 @@ all =
   bar"""
                     |> expectInvalid
             )
-        , test "Using destructuring"
+        , Test.test "Using destructuring"
             (\() ->
                 """let
     _ = b
@@ -318,172 +318,172 @@ all =
  in
     1"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 7, column = 6 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 7, column = 6 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 5 }, end = { row = 2, column = 10 } }
-                                        (LetDestructuring (Node { start = { row = 2, column = 5 }, end = { row = 2, column = 6 } } AllPattern) (Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } (FunctionOrValue [] "b")))
-                                    , Node { start = { row = 3, column = 5 }, end = { row = 3, column = 12 } }
-                                        (LetDestructuring
-                                            (Node { start = { row = 3, column = 5 }, end = { row = 3, column = 8 } }
-                                                (RecordPattern [ Node { start = { row = 3, column = 6 }, end = { row = 3, column = 7 } } "a" ])
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 2, column = 10 } }
+                                        (Elm.Syntax.Expression.LetDestructuring (Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 2, column = 6 } } Elm.Syntax.Pattern.AllPattern) (Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [] "b")))
+                                    , Elm.Syntax.Node.Node { start = { row = 3, column = 5 }, end = { row = 3, column = 12 } }
+                                        (Elm.Syntax.Expression.LetDestructuring
+                                            (Elm.Syntax.Node.Node { start = { row = 3, column = 5 }, end = { row = 3, column = 8 } }
+                                                (Elm.Syntax.Pattern.RecordPattern [ Elm.Syntax.Node.Node { start = { row = 3, column = 6 }, end = { row = 3, column = 7 } } "a" ])
                                             )
-                                            (Node { start = { row = 3, column = 11 }, end = { row = 3, column = 12 } } (FunctionOrValue [] "b"))
+                                            (Elm.Syntax.Node.Node { start = { row = 3, column = 11 }, end = { row = 3, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [] "b"))
                                         )
-                                    , Node { start = { row = 4, column = 5 }, end = { row = 4, column = 15 } }
-                                        (LetDestructuring
-                                            (Node { start = { row = 4, column = 5 }, end = { row = 4, column = 11 } }
-                                                (TuplePattern
-                                                    [ Node { start = { row = 4, column = 6 }, end = { row = 4, column = 7 } } (VarPattern "c")
-                                                    , Node { start = { row = 4, column = 9 }, end = { row = 4, column = 10 } } (VarPattern "d")
+                                    , Elm.Syntax.Node.Node { start = { row = 4, column = 5 }, end = { row = 4, column = 15 } }
+                                        (Elm.Syntax.Expression.LetDestructuring
+                                            (Elm.Syntax.Node.Node { start = { row = 4, column = 5 }, end = { row = 4, column = 11 } }
+                                                (Elm.Syntax.Pattern.TuplePattern
+                                                    [ Elm.Syntax.Node.Node { start = { row = 4, column = 6 }, end = { row = 4, column = 7 } } (Elm.Syntax.Pattern.VarPattern "c")
+                                                    , Elm.Syntax.Node.Node { start = { row = 4, column = 9 }, end = { row = 4, column = 10 } } (Elm.Syntax.Pattern.VarPattern "d")
                                                     ]
                                                 )
                                             )
-                                            (Node { start = { row = 4, column = 14 }, end = { row = 4, column = 15 } } (FunctionOrValue [] "e"))
+                                            (Elm.Syntax.Node.Node { start = { row = 4, column = 14 }, end = { row = 4, column = 15 } } (Elm.Syntax.Expression.FunctionOrValue [] "e"))
                                         )
-                                    , Node { start = { row = 5, column = 5 }, end = { row = 5, column = 19 } }
-                                        (LetDestructuring
-                                            (Node { start = { row = 5, column = 5 }, end = { row = 5, column = 15 } }
-                                                (ParenthesizedPattern
-                                                    (Node { start = { row = 5, column = 6 }, end = { row = 5, column = 14 } } (NamedPattern { moduleName = [], name = "Node" } [ Node { start = { row = 5, column = 11 }, end = { row = 5, column = 12 } } AllPattern, Node { start = { row = 5, column = 13 }, end = { row = 5, column = 14 } } (VarPattern "f") ]))
+                                    , Elm.Syntax.Node.Node { start = { row = 5, column = 5 }, end = { row = 5, column = 19 } }
+                                        (Elm.Syntax.Expression.LetDestructuring
+                                            (Elm.Syntax.Node.Node { start = { row = 5, column = 5 }, end = { row = 5, column = 15 } }
+                                                (Elm.Syntax.Pattern.ParenthesizedPattern
+                                                    (Elm.Syntax.Node.Node { start = { row = 5, column = 6 }, end = { row = 5, column = 14 } } (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "Node" } [ Elm.Syntax.Node.Node { start = { row = 5, column = 11 }, end = { row = 5, column = 12 } } Elm.Syntax.Pattern.AllPattern, Elm.Syntax.Node.Node { start = { row = 5, column = 13 }, end = { row = 5, column = 14 } } (Elm.Syntax.Pattern.VarPattern "f") ]))
                                                 )
                                             )
-                                            (Node { start = { row = 5, column = 18 }, end = { row = 5, column = 19 } } (FunctionOrValue [] "g"))
+                                            (Elm.Syntax.Node.Node { start = { row = 5, column = 18 }, end = { row = 5, column = 19 } } (Elm.Syntax.Expression.FunctionOrValue [] "g"))
                                         )
                                     ]
-                                , expression = Node { start = { row = 7, column = 5 }, end = { row = 7, column = 6 } } (Integer 1)
+                                , expression = Elm.Syntax.Node.Node { start = { row = 7, column = 5 }, end = { row = 7, column = 6 } } (Elm.Syntax.Expression.Integer 1)
                                 }
                             )
                         )
             )
-        , test "On one line"
+        , Test.test "On one line"
             (\() ->
                 "let indent = String.length s in indent"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 39 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 39 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 1, column = 5 }, end = { row = 1, column = 29 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 29 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature = Nothing
                                             , declaration =
-                                                Node { start = { row = 1, column = 5 }, end = { row = 1, column = 29 } }
-                                                    { name = Node { start = { row = 1, column = 5 }, end = { row = 1, column = 11 } } "indent"
+                                                Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 29 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 11 } } "indent"
                                                     , arguments = []
                                                     , expression =
-                                                        Node { start = { row = 1, column = 14 }, end = { row = 1, column = 29 } }
-                                                            (Application
-                                                                [ Node { start = { row = 1, column = 14 }, end = { row = 1, column = 27 } } (FunctionOrValue [ "String" ] "length")
-                                                                , Node { start = { row = 1, column = 28 }, end = { row = 1, column = 29 } } (FunctionOrValue [] "s")
+                                                        Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 29 } }
+                                                            (Elm.Syntax.Expression.Application
+                                                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 27 } } (Elm.Syntax.Expression.FunctionOrValue [ "String" ] "length")
+                                                                , Elm.Syntax.Node.Node { start = { row = 1, column = 28 }, end = { row = 1, column = 29 } } (Elm.Syntax.Expression.FunctionOrValue [] "s")
                                                                 ]
                                                             )
                                                     }
                                             }
                                         )
                                     ]
-                                , expression = Node { start = { row = 1, column = 33 }, end = { row = 1, column = 39 } } (FunctionOrValue [] "indent")
+                                , expression = Elm.Syntax.Node.Node { start = { row = 1, column = 33 }, end = { row = 1, column = 39 } } (Elm.Syntax.Expression.FunctionOrValue [] "indent")
                                 }
                             )
                         )
             )
-        , test "let with list after in without space"
+        , Test.test "let with list after in without space"
             (\() ->
                 """let
         a = 1
     in[]"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 3, column = 9 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 9 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature = Nothing
                                             , declaration =
-                                                Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
-                                                    { name = Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } "a"
+                                                Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } "a"
                                                     , arguments = []
-                                                    , expression = Node { start = { row = 2, column = 13 }, end = { row = 2, column = 14 } } (Integer 1)
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 2, column = 13 }, end = { row = 2, column = 14 } } (Elm.Syntax.Expression.Integer 1)
                                                     }
                                             }
                                         )
                                     ]
-                                , expression = Node { start = { row = 3, column = 7 }, end = { row = 3, column = 9 } } (ListExpr [])
+                                , expression = Elm.Syntax.Node.Node { start = { row = 3, column = 7 }, end = { row = 3, column = 9 } } (Elm.Syntax.Expression.ListExpr [])
                                 }
                             )
                         )
             )
-        , test "let with record after in without space"
+        , Test.test "let with record after in without space"
             (\() ->
                 """let
         a = 1
     in{}"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 3, column = 9 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 9 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature = Nothing
                                             , declaration =
-                                                Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
-                                                    { name = Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } "a"
+                                                Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } "a"
                                                     , arguments = []
-                                                    , expression = Node { start = { row = 2, column = 13 }, end = { row = 2, column = 14 } } (Integer 1)
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 2, column = 13 }, end = { row = 2, column = 14 } } (Elm.Syntax.Expression.Integer 1)
                                                     }
                                             }
                                         )
                                     ]
-                                , expression = Node { start = { row = 3, column = 7 }, end = { row = 3, column = 9 } } (RecordExpr [])
+                                , expression = Elm.Syntax.Node.Node { start = { row = 3, column = 7 }, end = { row = 3, column = 9 } } (Elm.Syntax.Expression.RecordExpr [])
                                 }
                             )
                         )
             )
-        , test "let with lambda after in without space"
+        , Test.test "let with lambda after in without space"
             (\() ->
                 """let
         a = 1
     in\\_ -> 1"""
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 3, column = 14 } }
-                            (LetExpression
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 14 } }
+                            (Elm.Syntax.Expression.LetExpression
                                 { declarations =
-                                    [ Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
-                                        (LetFunction
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
+                                        (Elm.Syntax.Expression.LetFunction
                                             { documentation = Nothing
                                             , signature = Nothing
                                             , declaration =
-                                                Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
-                                                    { name = Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } "a"
+                                                Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 14 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } } "a"
                                                     , arguments = []
-                                                    , expression = Node { start = { row = 2, column = 13 }, end = { row = 2, column = 14 } } (Integer 1)
+                                                    , expression = Elm.Syntax.Node.Node { start = { row = 2, column = 13 }, end = { row = 2, column = 14 } } (Elm.Syntax.Expression.Integer 1)
                                                     }
                                             }
                                         )
                                     ]
                                 , expression =
-                                    Node { start = { row = 3, column = 7 }, end = { row = 3, column = 14 } }
-                                        (LambdaExpression { args = [ Node { start = { row = 3, column = 8 }, end = { row = 3, column = 9 } } AllPattern ], expression = Node { start = { row = 3, column = 13 }, end = { row = 3, column = 14 } } (Integer 1) })
+                                    Elm.Syntax.Node.Node { start = { row = 3, column = 7 }, end = { row = 3, column = 14 } }
+                                        (Elm.Syntax.Expression.LambdaExpression { args = [ Elm.Syntax.Node.Node { start = { row = 3, column = 8 }, end = { row = 3, column = 9 } } Elm.Syntax.Pattern.AllPattern ], expression = Elm.Syntax.Node.Node { start = { row = 3, column = 13 }, end = { row = 3, column = 14 } } (Elm.Syntax.Expression.Integer 1) })
                                 }
                             )
                         )
             )
-        , test "let is not confused by a variable name starting with let"
+        , Test.test "let is not confused by a variable name starting with let"
             (\() ->
                 "letterbox"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (FunctionOrValue [] "letterbox"))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [] "letterbox"))
             )
         ]
 
 
-expectAst : Node Expression -> String -> Expect.Expectation
+expectAst : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> String -> Expect.Expectation
 expectAst =
-    ParserWithCommentsUtil.expectAst expressionFollowedByOptimisticLayout
+    Elm.Parser.ParserWithCommentsTestUtil.expectAst Elm.Parser.Expression.expressionFollowedByOptimisticLayout
 
 
 expectInvalid : String -> Expect.Expectation
 expectInvalid =
-    ParserWithCommentsUtil.expectInvalid expressionFollowedByOptimisticLayout
+    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Expression.expressionFollowedByOptimisticLayout

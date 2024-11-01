@@ -1,268 +1,268 @@
 module Elm.Parser.ExpressionTests exposing (all)
 
 import Elm.Parser.Declarations
-import Elm.Parser.Expression exposing (expressionFollowedByOptimisticLayout)
-import Elm.Parser.ParserWithCommentsTestUtil as ParserWithCommentsUtil
-import Elm.Syntax.Expression exposing (Expression(..))
-import Elm.Syntax.Infix as Infix exposing (InfixDirection(..))
-import Elm.Syntax.Node exposing (Node(..))
-import Elm.Syntax.Pattern exposing (..)
+import Elm.Parser.Expression
+import Elm.Parser.ParserWithCommentsTestUtil
+import Elm.Syntax.Expression
+import Elm.Syntax.Infix
+import Elm.Syntax.Node
+import Elm.Syntax.Pattern
 import Expect
-import Test exposing (Test, describe, test)
+import Test
 
 
-all : Test
+all : Test.Test
 all =
-    describe "ExpressionTests"
-        [ test "empty"
+    Test.describe "ExpressionTests"
+        [ Test.test "empty"
             (\() ->
                 "a = "
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "Integer literal"
+        , Test.test "Integer literal"
             (\() ->
                 "101"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Integer 101))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 101))
             )
-        , test "Hex integer literal"
+        , Test.test "Hex integer literal"
             (\() ->
                 "0x56"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Hex 86))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.Hex 86))
             )
-        , test "String literal"
+        , Test.test "String literal"
             (\() ->
                 "\"Bar\""
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Literal "Bar"))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.Literal "Bar"))
             )
-        , test "character literal"
+        , Test.test "character literal"
             (\() ->
                 "'c'"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (CharLiteral 'c'))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.CharLiteral 'c'))
             )
-        , test "tuple expression"
+        , Test.test "tuple expression"
             (\() ->
                 "(1,2)"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
-                            (TupledExpression
-                                [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Integer 1)
-                                , Node { start = { row = 1, column = 4 }, end = { row = 1, column = 5 } } (Integer 2)
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
+                            (Elm.Syntax.Expression.TupledExpression
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.Integer 1)
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.Integer 2)
                                 ]
                             )
                         )
             )
-        , test "triple expression"
+        , Test.test "triple expression"
             (\() ->
                 "(1,2,3)"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
-                            (TupledExpression
-                                [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Integer 1)
-                                , Node { start = { row = 1, column = 4 }, end = { row = 1, column = 5 } } (Integer 2)
-                                , Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (Integer 3)
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
+                            (Elm.Syntax.Expression.TupledExpression
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.Integer 1)
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.Integer 2)
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (Elm.Syntax.Expression.Integer 3)
                                 ]
                             )
                         )
             )
-        , test "tuple expression with spaces"
+        , Test.test "tuple expression with spaces"
             (\() ->
                 "( 1  ,  2 )"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
-                            (TupledExpression
-                                [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Integer 1)
-                                , Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Integer 2)
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
+                            (Elm.Syntax.Expression.TupledExpression
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 1)
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.Integer 2)
                                 ]
                             )
                         )
             )
-        , test "4-tuple expression is invalid"
+        , Test.test "4-tuple expression is invalid"
             (\() ->
                 "a = (1,2,3,4)"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "String literal multiline"
+        , Test.test "String literal multiline"
             (\() ->
                 "\"\"\"Bar foo \n a\"\"\""
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } (Literal "Bar foo \n a"))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } (Elm.Syntax.Expression.Literal "Bar foo \n a"))
             )
-        , test "Regression test for multiline strings with backslashes"
+        , Test.test "Regression test for multiline strings with backslashes"
             (\() ->
                 "a = \"\"\"\\{\\}\"\"\""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "Regression test 2 for multiline strings with backslashes"
+        , Test.test "Regression test 2 for multiline strings with backslashes"
             (\() ->
                 "\"\"\"\\\\{\\\\}\"\"\""
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Literal "\\{\\}"))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Elm.Syntax.Expression.Literal "\\{\\}"))
             )
-        , test "Regression test 3 for multiline strings with backslashes"
+        , Test.test "Regression test 3 for multiline strings with backslashes"
             (\() ->
                 "\"\"\"\\\\a-blablabla-\\\\b\"\"\""
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } } (Literal "\\a-blablabla-\\b"))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } } (Elm.Syntax.Expression.Literal "\\a-blablabla-\\b"))
             )
-        , test "Type expression for upper case"
+        , Test.test "Type expression for upper case"
             (\() ->
                 "Bar"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "Bar"))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "Bar"))
             )
-        , test "Type expression for lower case"
+        , Test.test "Type expression for lower case"
             (\() ->
                 "bar"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "bar"))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
             )
-        , test "Type expression for lower case but qualified"
+        , Test.test "Type expression for lower case but qualified"
             (\() ->
                 "Bar.foo"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (FunctionOrValue [ "Bar" ] "foo"))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [ "Bar" ] "foo"))
             )
-        , test "parenthesizedExpression"
+        , Test.test "parenthesizedExpression"
             (\() ->
                 "(bar)"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
-                            (ParenthesizedExpression
-                                (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } } (FunctionOrValue [] "bar"))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
+                            (Elm.Syntax.Expression.ParenthesizedExpression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
                             )
                         )
             )
-        , test "parenthesized expression starting with a negation"
+        , Test.test "parenthesized expression starting with a negation"
             (\() ->
                 "(-1 * sign)"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
-                            (ParenthesizedExpression
-                                (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 11 } }
-                                    (OperatorApplication "*"
-                                        Left
-                                        (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } }
-                                            (Negation (Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Integer 1)))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
+                            (Elm.Syntax.Expression.ParenthesizedExpression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 11 } }
+                                    (Elm.Syntax.Expression.OperatorApplication "*"
+                                        Elm.Syntax.Infix.Left
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } }
+                                            (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 1)))
                                         )
-                                        (Node { start = { row = 1, column = 7 }, end = { row = 1, column = 11 } } (FunctionOrValue [] "sign"))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 11 } } (Elm.Syntax.Expression.FunctionOrValue [] "sign"))
                                     )
                                 )
                             )
                         )
             )
-        , test "application expression"
+        , Test.test "application expression"
             (\() ->
                 "List.concat []"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
-                            (Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (FunctionOrValue [ "List" ] "concat")
-                                , Node { start = { row = 1, column = 13 }, end = { row = 1, column = 15 } } (ListExpr [])
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
+                            (Elm.Syntax.Expression.Application
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [ "List" ] "concat")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 15 } } (Elm.Syntax.Expression.ListExpr [])
                                 ]
                             )
                         )
             )
-        , test "Binary operation"
+        , Test.test "Binary operation"
             (\() ->
                 "model + 1"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
-                            (OperatorApplication "+"
-                                Infix.Left
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (FunctionOrValue [] "model"))
-                                (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Integer 1))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
+                            (Elm.Syntax.Expression.OperatorApplication "+"
+                                Elm.Syntax.Infix.Left
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "model"))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.Integer 1))
                             )
                         )
             )
-        , test "Nested binary operations (+ and ==)"
+        , Test.test "Nested binary operations (+ and ==)"
             (\() ->
                 "count + 1 == 1"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
-                            (OperatorApplication "=="
-                                Non
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
-                                    (OperatorApplication "+"
-                                        Left
-                                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (FunctionOrValue [] "count"))
-                                        (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Integer 1))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
+                            (Elm.Syntax.Expression.OperatorApplication "=="
+                                Elm.Syntax.Infix.Non
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
+                                    (Elm.Syntax.Expression.OperatorApplication "+"
+                                        Elm.Syntax.Infix.Left
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "count"))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.Integer 1))
                                     )
                                 )
-                                (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (Integer 1))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (Elm.Syntax.Expression.Integer 1))
                             )
                         )
             )
-        , test "Nested binary operations (+ and /=)"
+        , Test.test "Nested binary operations (+ and /=)"
             (\() ->
                 "count + 1 /= 1"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
-                            (OperatorApplication "/="
-                                Non
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
-                                    (OperatorApplication "+"
-                                        Left
-                                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (FunctionOrValue [] "count"))
-                                        (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Integer 1))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
+                            (Elm.Syntax.Expression.OperatorApplication "/="
+                                Elm.Syntax.Infix.Non
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
+                                    (Elm.Syntax.Expression.OperatorApplication "+"
+                                        Elm.Syntax.Infix.Left
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "count"))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.Integer 1))
                                     )
                                 )
-                                (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (Integer 1))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (Elm.Syntax.Expression.Integer 1))
                             )
                         )
             )
-        , test "Nested binary operations (+ and //)"
+        , Test.test "Nested binary operations (+ and //)"
             (\() ->
                 "count + 1 // 2"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
-                            (OperatorApplication "+"
-                                Left
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (FunctionOrValue [] "count"))
-                                (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 15 } }
-                                    (OperatorApplication "//"
-                                        Left
-                                        (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Integer 1))
-                                        (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (Integer 2))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
+                            (Elm.Syntax.Expression.OperatorApplication "+"
+                                Elm.Syntax.Infix.Left
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "count"))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 15 } }
+                                    (Elm.Syntax.Expression.OperatorApplication "//"
+                                        Elm.Syntax.Infix.Left
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.Integer 1))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (Elm.Syntax.Expression.Integer 2))
                                     )
                                 )
                             )
                         )
             )
-        , test "Nested binary operations (&& and <|)"
+        , Test.test "Nested binary operations (&& and <|)"
             (\() ->
                 "condition && condition <| f"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
-                            (OperatorApplication "<|"
-                                Right
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 23 } }
-                                    (OperatorApplication "&&"
-                                        Right
-                                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (FunctionOrValue [] "condition"))
-                                        (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 23 } } (FunctionOrValue [] "condition"))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
+                            (Elm.Syntax.Expression.OperatorApplication "<|"
+                                Elm.Syntax.Infix.Right
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 23 } }
+                                    (Elm.Syntax.Expression.OperatorApplication "&&"
+                                        Elm.Syntax.Infix.Right
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [] "condition"))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 23 } } (Elm.Syntax.Expression.FunctionOrValue [] "condition"))
                                     )
                                 )
-                                (Node { start = { row = 1, column = 27 }, end = { row = 1, column = 28 } } (FunctionOrValue [] "f"))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 28 } } (Elm.Syntax.Expression.FunctionOrValue [] "f"))
                             )
                         )
             )
-        , test "application expression 2"
+        , Test.test "application expression 2"
             (\() ->
                 "(\"\", always (List.concat [ [ fileName ], [] ]))"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 48 } }
-                            (TupledExpression
-                                [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } (Literal "")
-                                , Node { start = { row = 1, column = 6 }, end = { row = 1, column = 47 } }
-                                    (Application
-                                        [ Node { start = { row = 1, column = 6 }, end = { row = 1, column = 12 } } (FunctionOrValue [] "always")
-                                        , Node { start = { row = 1, column = 13 }, end = { row = 1, column = 47 } }
-                                            (ParenthesizedExpression
-                                                (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 46 } }
-                                                    (Application
-                                                        [ Node { start = { row = 1, column = 14 }, end = { row = 1, column = 25 } } (FunctionOrValue [ "List" ] "concat")
-                                                        , Node { start = { row = 1, column = 26 }, end = { row = 1, column = 46 } }
-                                                            (ListExpr
-                                                                [ Node { start = { row = 1, column = 28 }, end = { row = 1, column = 40 } }
-                                                                    (ListExpr
-                                                                        [ Node { start = { row = 1, column = 30 }, end = { row = 1, column = 38 } } (FunctionOrValue [] "fileName")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 48 } }
+                            (Elm.Syntax.Expression.TupledExpression
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Literal "")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 47 } }
+                                    (Elm.Syntax.Expression.Application
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [] "always")
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 47 } }
+                                            (Elm.Syntax.Expression.ParenthesizedExpression
+                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 46 } }
+                                                    (Elm.Syntax.Expression.Application
+                                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 25 } } (Elm.Syntax.Expression.FunctionOrValue [ "List" ] "concat")
+                                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 26 }, end = { row = 1, column = 46 } }
+                                                            (Elm.Syntax.Expression.ListExpr
+                                                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 28 }, end = { row = 1, column = 40 } }
+                                                                    (Elm.Syntax.Expression.ListExpr
+                                                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 30 }, end = { row = 1, column = 38 } } (Elm.Syntax.Expression.FunctionOrValue [] "fileName")
                                                                         ]
                                                                     )
-                                                                , Node { start = { row = 1, column = 42 }, end = { row = 1, column = 44 } } (ListExpr [])
+                                                                , Elm.Syntax.Node.Node { start = { row = 1, column = 42 }, end = { row = 1, column = 44 } } (Elm.Syntax.Expression.ListExpr [])
                                                                 ]
                                                             )
                                                         ]
@@ -275,314 +275,314 @@ all =
                             )
                         )
             )
-        , test "expressionNotApplication simple"
+        , Test.test "expressionNotApplication simple"
             (\() ->
                 "foo"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "foo"))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
             )
-        , test "unit application"
+        , Test.test "unit application"
             (\() ->
                 "Task.succeed ()"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
-                            (Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (FunctionOrValue [ "Task" ] "succeed")
-                                , Node { start = { row = 1, column = 14 }, end = { row = 1, column = 16 } } UnitExpr
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
+                            (Elm.Syntax.Expression.Application
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Elm.Syntax.Expression.FunctionOrValue [ "Task" ] "succeed")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 16 } } Elm.Syntax.Expression.UnitExpr
                                 ]
                             )
                         )
             )
-        , test "Function call"
+        , Test.test "Function call"
             (\() ->
                 "foo bar"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
-                            (Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "foo")
-                                , Node { start = { row = 1, column = 5 }, end = { row = 1, column = 8 } } (FunctionOrValue [] "bar")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
+                            (Elm.Syntax.Expression.Application
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar")
                                 ]
                             )
                         )
             )
-        , test "Function call with argument badly indented"
+        , Test.test "Function call with argument badly indented"
             (\() ->
                 "a = foo\nbar"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "ifBlockExpression"
+        , Test.test "ifBlockExpression"
             (\() ->
                 "if True then foo else bar"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 26 } }
-                            (IfBlock
-                                (Node { start = { row = 1, column = 4 }, end = { row = 1, column = 8 } } (FunctionOrValue [] "True"))
-                                (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 17 } } (FunctionOrValue [] "foo"))
-                                (Node { start = { row = 1, column = 23 }, end = { row = 1, column = 26 } } (FunctionOrValue [] "bar"))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 26 } }
+                            (Elm.Syntax.Expression.IfBlock
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "True"))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 17 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 23 }, end = { row = 1, column = 26 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
                             )
                         )
             )
-        , test "nestedIfExpression"
+        , Test.test "nestedIfExpression"
             (\() ->
                 "if True then if False then foo else baz else bar"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 49 } }
-                            (IfBlock
-                                (Node { start = { row = 1, column = 4 }, end = { row = 1, column = 8 } } (FunctionOrValue [] "True"))
-                                (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 40 } }
-                                    (IfBlock
-                                        (Node { start = { row = 1, column = 17 }, end = { row = 1, column = 22 } } (FunctionOrValue [] "False"))
-                                        (Node { start = { row = 1, column = 28 }, end = { row = 1, column = 31 } } (FunctionOrValue [] "foo"))
-                                        (Node { start = { row = 1, column = 37 }, end = { row = 1, column = 40 } } (FunctionOrValue [] "baz"))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 49 } }
+                            (Elm.Syntax.Expression.IfBlock
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "True"))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 40 } }
+                                    (Elm.Syntax.Expression.IfBlock
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 22 } } (Elm.Syntax.Expression.FunctionOrValue [] "False"))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 28 }, end = { row = 1, column = 31 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 37 }, end = { row = 1, column = 40 } } (Elm.Syntax.Expression.FunctionOrValue [] "baz"))
                                     )
                                 )
-                                (Node { start = { row = 1, column = 46 }, end = { row = 1, column = 49 } } (FunctionOrValue [] "bar"))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 46 }, end = { row = 1, column = 49 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
                             )
                         )
             )
-        , test "recordExpression"
+        , Test.test "recordExpression"
             (\() ->
                 "{ model = 0, view = view, update = update }"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 44 } }
-                            (RecordExpr
-                                [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
-                                    ( Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } "model"
-                                    , Node { start = { row = 1, column = 11 }, end = { row = 1, column = 12 } } (Integer 0)
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 44 } }
+                            (Elm.Syntax.Expression.RecordExpr
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
+                                    ( Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } "model"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.Integer 0)
                                     )
-                                , Node { start = { row = 1, column = 14 }, end = { row = 1, column = 25 } }
-                                    ( Node { start = { row = 1, column = 14 }, end = { row = 1, column = 18 } } "view"
-                                    , Node { start = { row = 1, column = 21 }, end = { row = 1, column = 25 } } (FunctionOrValue [] "view")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 25 } }
+                                    ( Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 18 } } "view"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 21 }, end = { row = 1, column = 25 } } (Elm.Syntax.Expression.FunctionOrValue [] "view")
                                     )
-                                , Node { start = { row = 1, column = 27 }, end = { row = 1, column = 43 } }
-                                    ( Node { start = { row = 1, column = 27 }, end = { row = 1, column = 33 } } "update"
-                                    , Node { start = { row = 1, column = 36 }, end = { row = 1, column = 42 } } (FunctionOrValue [] "update")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 43 } }
+                                    ( Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 33 } } "update"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 36 }, end = { row = 1, column = 42 } } (Elm.Syntax.Expression.FunctionOrValue [] "update")
                                     )
                                 ]
                             )
                         )
             )
-        , test "recordExpression with comment"
+        , Test.test "recordExpression with comment"
             (\() ->
                 "{ foo = 1 -- bar\n , baz = 2 }"
                     |> expectAstWithComments
                         { ast =
-                            Node { start = { row = 1, column = 1 }, end = { row = 2, column = 13 } }
-                                (RecordExpr
-                                    [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 10 } }
-                                        ( Node { start = { row = 1, column = 3 }, end = { row = 1, column = 6 } } "foo"
-                                        , Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Integer 1)
+                            Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 13 } }
+                                (Elm.Syntax.Expression.RecordExpr
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 10 } }
+                                        ( Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 6 } } "foo"
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.Integer 1)
                                         )
-                                    , Node { start = { row = 2, column = 4 }, end = { row = 2, column = 12 } }
-                                        ( Node { start = { row = 2, column = 4 }, end = { row = 2, column = 7 } } "baz"
-                                        , Node { start = { row = 2, column = 10 }, end = { row = 2, column = 11 } } (Integer 2)
+                                    , Elm.Syntax.Node.Node { start = { row = 2, column = 4 }, end = { row = 2, column = 12 } }
+                                        ( Elm.Syntax.Node.Node { start = { row = 2, column = 4 }, end = { row = 2, column = 7 } } "baz"
+                                        , Elm.Syntax.Node.Node { start = { row = 2, column = 10 }, end = { row = 2, column = 11 } } (Elm.Syntax.Expression.Integer 2)
                                         )
                                     ]
                                 )
-                        , comments = [ Node { start = { row = 1, column = 11 }, end = { row = 1, column = 17 } } "-- bar" ]
+                        , comments = [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 17 } } "-- bar" ]
                         }
             )
-        , test "listExpression"
+        , Test.test "listExpression"
             (\() ->
                 "[ class \"a\", text \"Foo\"]"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
-                            (ListExpr
-                                [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
-                                    (Application
-                                        [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } (FunctionOrValue [] "class")
-                                        , Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } (Literal "a")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
+                            (Elm.Syntax.Expression.ListExpr
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
+                                    (Elm.Syntax.Expression.Application
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "class")
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.Literal "a")
                                         ]
                                     )
-                                , Node { start = { row = 1, column = 14 }, end = { row = 1, column = 24 } }
-                                    (Application
-                                        [ Node { start = { row = 1, column = 14 }, end = { row = 1, column = 18 } } (FunctionOrValue [] "text")
-                                        , Node { start = { row = 1, column = 19 }, end = { row = 1, column = 24 } } (Literal "Foo")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 24 } }
+                                    (Elm.Syntax.Expression.Application
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 18 } } (Elm.Syntax.Expression.FunctionOrValue [] "text")
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 24 } } (Elm.Syntax.Expression.Literal "Foo")
                                         ]
                                     )
                                 ]
                             )
                         )
             )
-        , test "listExpression singleton with comment"
+        , Test.test "listExpression singleton with comment"
             (\() ->
                 "[ 1 {- Foo-} ]"
                     |> expectAstWithComments
                         { ast =
-                            Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
-                                (ListExpr
-                                    [ Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Integer 1)
+                            Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
+                                (Elm.Syntax.Expression.ListExpr
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 1)
                                     ]
                                 )
-                        , comments = [ Node { start = { row = 1, column = 5 }, end = { row = 1, column = 13 } } "{- Foo-}" ]
+                        , comments = [ Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 13 } } "{- Foo-}" ]
                         }
             )
-        , test "listExpression empty with comment"
+        , Test.test "listExpression empty with comment"
             (\() ->
                 "[{- Foo -}]"
                     |> expectAstWithComments
-                        { ast = Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (ListExpr [])
-                        , comments = [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 11 } } "{- Foo -}" ]
+                        { ast = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.ListExpr [])
+                        , comments = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 11 } } "{- Foo -}" ]
                         }
             )
-        , test "qualified expression"
+        , Test.test "qualified expression"
             (\() ->
                 "Html.text"
-                    |> expectAst (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (FunctionOrValue [ "Html" ] "text"))
+                    |> expectAst (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [ "Html" ] "text"))
             )
-        , test "record access"
+        , Test.test "record access"
             (\() ->
                 "foo.bar"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
-                            (RecordAccess
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "foo"))
-                                (Node { start = { row = 1, column = 5 }, end = { row = 1, column = 8 } } "bar")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
+                            (Elm.Syntax.Expression.RecordAccess
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 8 } } "bar")
                             )
                         )
             )
-        , test "multiple record access operations"
+        , Test.test "multiple record access operations"
             (\() ->
                 "foo.bar.baz"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
-                            (RecordAccess
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
-                                    (RecordAccess
-                                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "foo"))
-                                        (Node { start = { row = 1, column = 5 }, end = { row = 1, column = 8 } } "bar")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
+                            (Elm.Syntax.Expression.RecordAccess
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
+                                    (Elm.Syntax.Expression.RecordAccess
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 8 } } "bar")
                                     )
                                 )
-                                (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } "baz")
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } "baz")
                             )
                         )
             )
-        , test "multiple record access operations with module name"
+        , Test.test "multiple record access operations with module name"
             (\() ->
                 "A.B.foo.bar.baz"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
-                            (RecordAccess
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
-                                    (RecordAccess
-                                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (FunctionOrValue [ "A", "B" ] "foo"))
-                                        (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } "bar")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
+                            (Elm.Syntax.Expression.RecordAccess
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
+                                    (Elm.Syntax.Expression.RecordAccess
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [ "A", "B" ] "foo"))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } "bar")
                                     )
                                 )
-                                (Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } "baz")
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } "baz")
                             )
                         )
             )
-        , test "record update"
+        , Test.test "record update"
             (\() ->
                 "{ model | count = 1, loading = True }"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
-                            (RecordUpdateExpression
-                                (Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } "model")
-                                [ Node { start = { row = 1, column = 11 }, end = { row = 1, column = 20 } }
-                                    ( Node { start = { row = 1, column = 11 }, end = { row = 1, column = 16 } } "count"
-                                    , Node { start = { row = 1, column = 19 }, end = { row = 1, column = 20 } } (Integer 1)
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
+                            (Elm.Syntax.Expression.RecordUpdateExpression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } "model")
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 20 } }
+                                    ( Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 16 } } "count"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 20 } } (Elm.Syntax.Expression.Integer 1)
                                     )
-                                , Node { start = { row = 1, column = 22 }, end = { row = 1, column = 37 } }
-                                    ( Node { start = { row = 1, column = 22 }, end = { row = 1, column = 29 } } "loading"
-                                    , Node { start = { row = 1, column = 32 }, end = { row = 1, column = 36 } } (FunctionOrValue [] "True")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 37 } }
+                                    ( Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 29 } } "loading"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 32 }, end = { row = 1, column = 36 } } (Elm.Syntax.Expression.FunctionOrValue [] "True")
                                     )
                                 ]
                             )
                         )
             )
-        , test "record update no spacing"
+        , Test.test "record update no spacing"
             (\() ->
                 "{model| count = 1, loading = True }"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 36 } }
-                            (RecordUpdateExpression
-                                (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } "model")
-                                [ Node { start = { row = 1, column = 9 }, end = { row = 1, column = 18 } }
-                                    ( Node { start = { row = 1, column = 9 }, end = { row = 1, column = 14 } } "count"
-                                    , Node { start = { row = 1, column = 17 }, end = { row = 1, column = 18 } } (Integer 1)
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 36 } }
+                            (Elm.Syntax.Expression.RecordUpdateExpression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } "model")
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 18 } }
+                                    ( Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 14 } } "count"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 18 } } (Elm.Syntax.Expression.Integer 1)
                                     )
-                                , Node { start = { row = 1, column = 20 }, end = { row = 1, column = 35 } }
-                                    ( Node { start = { row = 1, column = 20 }, end = { row = 1, column = 27 } } "loading"
-                                    , Node { start = { row = 1, column = 30 }, end = { row = 1, column = 34 } } (FunctionOrValue [] "True")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 20 }, end = { row = 1, column = 35 } }
+                                    ( Elm.Syntax.Node.Node { start = { row = 1, column = 20 }, end = { row = 1, column = 27 } } "loading"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 30 }, end = { row = 1, column = 34 } } (Elm.Syntax.Expression.FunctionOrValue [] "True")
                                     )
                                 ]
                             )
                         )
             )
-        , test "record access as function"
+        , Test.test "record access as function"
             (\() ->
                 "List.map .name people"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 22 } }
-                            (Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } } (FunctionOrValue [ "List" ] "map")
-                                , Node { start = { row = 1, column = 10 }, end = { row = 1, column = 15 } } (RecordAccessFunction ".name")
-                                , Node { start = { row = 1, column = 16 }, end = { row = 1, column = 22 } } (FunctionOrValue [] "people")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 22 } }
+                            (Elm.Syntax.Expression.Application
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [ "List" ] "map")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 15 } } (Elm.Syntax.Expression.RecordAccessFunction ".name")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 22 } } (Elm.Syntax.Expression.FunctionOrValue [] "people")
                                 ]
                             )
                         )
             )
-        , test "record access direct"
+        , Test.test "record access direct"
             (\() ->
                 "(.spaceEvenly Internal.Style.classes)"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
-                            (ParenthesizedExpression
-                                (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 37 } }
-                                    (Application
-                                        [ Node { start = { row = 1, column = 2 }, end = { row = 1, column = 14 } } (RecordAccessFunction ".spaceEvenly")
-                                        , Node { start = { row = 1, column = 15 }, end = { row = 1, column = 37 } } (FunctionOrValue [ "Internal", "Style" ] "classes")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
+                            (Elm.Syntax.Expression.ParenthesizedExpression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 37 } }
+                                    (Elm.Syntax.Expression.Application
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 14 } } (Elm.Syntax.Expression.RecordAccessFunction ".spaceEvenly")
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 37 } } (Elm.Syntax.Expression.FunctionOrValue [ "Internal", "Style" ] "classes")
                                         ]
                                     )
                                 )
                             )
                         )
             )
-        , test "positive integer should be invalid"
+        , Test.test "positive integer should be invalid"
             (\() ->
                 "a = +1"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "expression ending with an operator should not be valid"
+        , Test.test "expression ending with an operator should not be valid"
             (\() ->
                 "a = 1++"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "multiple < in a row should not be valid"
+        , Test.test "multiple < in a row should not be valid"
             (\() ->
                 "z = a < b < c"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "multiple > in a row should not be valid"
+        , Test.test "multiple > in a row should not be valid"
             (\() ->
                 "z = a > b > c"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "multiple == in a row should not be valid"
+        , Test.test "multiple == in a row should not be valid"
             (\() ->
                 "z = a == b == c"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "multiple /= in a row should not be valid"
+        , Test.test "multiple /= in a row should not be valid"
             (\() ->
                 "z = a /= b /= c"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "multiple >= in a row should not be valid"
+        , Test.test "multiple >= in a row should not be valid"
             (\() ->
                 "z = a >= b >= c"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "multiple <= in a row should not be valid"
+        , Test.test "multiple <= in a row should not be valid"
             (\() ->
                 "z = a <= b <= c"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "mixing comparison operators without parenthesis should not be valid"
+        , Test.test "mixing comparison operators without parenthesis should not be valid"
             (\() ->
                 "z = a < b == c"
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
 
         -- TODO introduce validation step for
@@ -602,64 +602,64 @@ all =
         --     \() ->
         --         "z = a >> b << c"
         --             |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
-        , test "prefix notation"
+        , Test.test "prefix notation"
             (\() ->
                 "(::) x"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
-                            (Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (PrefixOperator "::")
-                                , Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (FunctionOrValue [] "x")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
+                            (Elm.Syntax.Expression.Application
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.PrefixOperator "::")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "x")
                                 ]
                             )
                         )
             )
-        , test "subtraction without spaces"
+        , Test.test "subtraction without spaces"
             (\() ->
                 "2-1"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
-                            (OperatorApplication "-"
-                                Left
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Integer 2))
-                                (Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Integer 1))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
+                            (Elm.Syntax.Expression.OperatorApplication "-"
+                                Elm.Syntax.Infix.Left
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Expression.Integer 2))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 1))
                             )
                         )
             )
-        , test "negated expression for value"
+        , Test.test "negated expression for value"
             (\() ->
                 "-x"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } }
-                            (Negation (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (FunctionOrValue [] "x")))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } }
+                            (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.FunctionOrValue [] "x")))
                         )
             )
-        , test "negated expression in application"
+        , Test.test "negated expression in application"
             (\() ->
                 "toFloat -5"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
-                            (Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (FunctionOrValue [] "toFloat")
-                                , Node { start = { row = 1, column = 9 }, end = { row = 1, column = 11 } }
-                                    (Negation (Node { start = { row = 1, column = 10 }, end = { row = 1, column = 11 } } (Integer 5)))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
+                            (Elm.Syntax.Expression.Application
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "toFloat")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 11 } }
+                                    (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 11 } } (Elm.Syntax.Expression.Integer 5)))
                                 ]
                             )
                         )
             )
-        , test "negated expression for parenthesized"
+        , Test.test "negated expression for parenthesized"
             (\() ->
                 "-(x - y)"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } }
-                            (Negation
-                                (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 9 } }
-                                    (ParenthesizedExpression
-                                        (Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } }
-                                            (OperatorApplication "-"
-                                                Left
-                                                (Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "x"))
-                                                (Node { start = { row = 1, column = 7 }, end = { row = 1, column = 8 } } (FunctionOrValue [] "y"))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } }
+                            (Elm.Syntax.Expression.Negation
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 9 } }
+                                    (Elm.Syntax.Expression.ParenthesizedExpression
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } }
+                                            (Elm.Syntax.Expression.OperatorApplication "-"
+                                                Elm.Syntax.Infix.Left
+                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "x"))
+                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "y"))
                                             )
                                         )
                                     )
@@ -667,118 +667,118 @@ all =
                             )
                         )
             )
-        , test "negated expression with other operations"
+        , Test.test "negated expression with other operations"
             (\() ->
                 "-1 + -10 * -100^2 == -100001"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 29 } }
-                            (OperatorApplication "=="
-                                Non
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 18 } }
-                                    (OperatorApplication "+"
-                                        Left
-                                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } }
-                                            (Negation (Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Integer 1)))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 29 } }
+                            (Elm.Syntax.Expression.OperatorApplication "=="
+                                Elm.Syntax.Infix.Non
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 18 } }
+                                    (Elm.Syntax.Expression.OperatorApplication "+"
+                                        Elm.Syntax.Infix.Left
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } }
+                                            (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.Integer 1)))
                                         )
-                                        (Node { start = { row = 1, column = 6 }, end = { row = 1, column = 18 } }
-                                            (OperatorApplication "*"
-                                                Left
-                                                (Node { start = { row = 1, column = 6 }, end = { row = 1, column = 9 } }
-                                                    (Negation (Node { start = { row = 1, column = 7 }, end = { row = 1, column = 9 } } (Integer 10)))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 18 } }
+                                            (Elm.Syntax.Expression.OperatorApplication "*"
+                                                Elm.Syntax.Infix.Left
+                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 9 } }
+                                                    (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 9 } } (Elm.Syntax.Expression.Integer 10)))
                                                 )
-                                                (Node { start = { row = 1, column = 12 }, end = { row = 1, column = 18 } }
-                                                    (OperatorApplication "^"
-                                                        Right
-                                                        (Node { start = { row = 1, column = 12 }, end = { row = 1, column = 16 } }
-                                                            (Negation
-                                                                (Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } (Integer 100))
+                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 18 } }
+                                                    (Elm.Syntax.Expression.OperatorApplication "^"
+                                                        Elm.Syntax.Infix.Right
+                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 16 } }
+                                                            (Elm.Syntax.Expression.Negation
+                                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } (Elm.Syntax.Expression.Integer 100))
                                                             )
                                                         )
-                                                        (Node { start = { row = 1, column = 17 }, end = { row = 1, column = 18 } } (Integer 2))
+                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 18 } } (Elm.Syntax.Expression.Integer 2))
                                                     )
                                                 )
                                             )
                                         )
                                     )
                                 )
-                                (Node { start = { row = 1, column = 22 }, end = { row = 1, column = 29 } }
-                                    (Negation (Node { start = { row = 1, column = 23 }, end = { row = 1, column = 29 } } (Integer 100001)))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 29 } }
+                                    (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 23 }, end = { row = 1, column = 29 } } (Elm.Syntax.Expression.Integer 100001)))
                                 )
                             )
                         )
             )
-        , test "plus and minus in the same expression"
+        , Test.test "plus and minus in the same expression"
             (\() ->
                 "1 + 2 - 3"
                     |> expectAst
-                        (Node
+                        (Elm.Syntax.Node.Node
                             { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
-                            (OperatorApplication "-"
-                                Left
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
-                                    (OperatorApplication "+"
-                                        Left
-                                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Integer 1))
-                                        (Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } } (Integer 2))
+                            (Elm.Syntax.Expression.OperatorApplication "-"
+                                Elm.Syntax.Infix.Left
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
+                                    (Elm.Syntax.Expression.OperatorApplication "+"
+                                        Elm.Syntax.Infix.Left
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Expression.Integer 1))
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.Integer 2))
                                     )
                                 )
-                                (Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Integer 3))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.Integer 3))
                             )
                         )
             )
-        , test "pipe operation"
+        , Test.test "pipe operation"
             (\() ->
                 "a |> b"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
-                            (OperatorApplication "|>"
-                                Left
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (FunctionOrValue [] "a"))
-                                (Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (FunctionOrValue [] "b"))
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
+                            (Elm.Syntax.Expression.OperatorApplication "|>"
+                                Elm.Syntax.Infix.Left
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Expression.FunctionOrValue [] "a"))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "b"))
                             )
                         )
             )
-        , test "function with higher order"
+        , Test.test "function with higher order"
             (\() ->
                 "chompWhile (\\c -> c == ' ' || c == '\\n' || c == '\\r')"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 54 } }
-                            (Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } } (FunctionOrValue [] "chompWhile")
-                                , Node { start = { row = 1, column = 12 }, end = { row = 1, column = 54 } }
-                                    (ParenthesizedExpression
-                                        (Node { start = { row = 1, column = 13 }, end = { row = 1, column = 53 } }
-                                            (LambdaExpression
-                                                { args = [ Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (VarPattern "c") ]
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 54 } }
+                            (Elm.Syntax.Expression.Application
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } } (Elm.Syntax.Expression.FunctionOrValue [] "chompWhile")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 54 } }
+                                    (Elm.Syntax.Expression.ParenthesizedExpression
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 53 } }
+                                            (Elm.Syntax.Expression.LambdaExpression
+                                                { args = [ Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } } (Elm.Syntax.Pattern.VarPattern "c") ]
                                                 , expression =
-                                                    Node { start = { row = 1, column = 19 }, end = { row = 1, column = 53 } }
-                                                        (OperatorApplication "||"
-                                                            Right
-                                                            (Node { start = { row = 1, column = 19 }, end = { row = 1, column = 27 } }
-                                                                (OperatorApplication "=="
-                                                                    Non
-                                                                    (Node { start = { row = 1, column = 19 }, end = { row = 1, column = 20 } } (FunctionOrValue [] "c"))
-                                                                    (Node { start = { row = 1, column = 24 }, end = { row = 1, column = 27 } } (CharLiteral ' '))
+                                                    Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 53 } }
+                                                        (Elm.Syntax.Expression.OperatorApplication "||"
+                                                            Elm.Syntax.Infix.Right
+                                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 27 } }
+                                                                (Elm.Syntax.Expression.OperatorApplication "=="
+                                                                    Elm.Syntax.Infix.Non
+                                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 20 } } (Elm.Syntax.Expression.FunctionOrValue [] "c"))
+                                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 24 }, end = { row = 1, column = 27 } } (Elm.Syntax.Expression.CharLiteral ' '))
                                                                 )
                                                             )
-                                                            (Node { start = { row = 1, column = 31 }, end = { row = 1, column = 53 } }
-                                                                (OperatorApplication "||"
-                                                                    Right
-                                                                    (Node { start = { row = 1, column = 31 }, end = { row = 1, column = 40 } }
-                                                                        (OperatorApplication "=="
-                                                                            Non
-                                                                            (Node { start = { row = 1, column = 31 }, end = { row = 1, column = 32 } } (FunctionOrValue [] "c"))
-                                                                            (Node { start = { row = 1, column = 36 }, end = { row = 1, column = 40 } }
-                                                                                (CharLiteral '\n')
+                                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 31 }, end = { row = 1, column = 53 } }
+                                                                (Elm.Syntax.Expression.OperatorApplication "||"
+                                                                    Elm.Syntax.Infix.Right
+                                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 31 }, end = { row = 1, column = 40 } }
+                                                                        (Elm.Syntax.Expression.OperatorApplication "=="
+                                                                            Elm.Syntax.Infix.Non
+                                                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 31 }, end = { row = 1, column = 32 } } (Elm.Syntax.Expression.FunctionOrValue [] "c"))
+                                                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 36 }, end = { row = 1, column = 40 } }
+                                                                                (Elm.Syntax.Expression.CharLiteral '\n')
                                                                             )
                                                                         )
                                                                     )
-                                                                    (Node { start = { row = 1, column = 44 }, end = { row = 1, column = 53 } }
-                                                                        (OperatorApplication "=="
-                                                                            Non
-                                                                            (Node { start = { row = 1, column = 44 }, end = { row = 1, column = 45 } } (FunctionOrValue [] "c"))
-                                                                            (Node { start = { row = 1, column = 49 }, end = { row = 1, column = 53 } }
-                                                                                (CharLiteral '\u{000D}')
+                                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 44 }, end = { row = 1, column = 53 } }
+                                                                        (Elm.Syntax.Expression.OperatorApplication "=="
+                                                                            Elm.Syntax.Infix.Non
+                                                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 44 }, end = { row = 1, column = 45 } } (Elm.Syntax.Expression.FunctionOrValue [] "c"))
+                                                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 49 }, end = { row = 1, column = 53 } }
+                                                                                (Elm.Syntax.Expression.CharLiteral '\u{000D}')
                                                                             )
                                                                         )
                                                                     )
@@ -793,76 +793,76 @@ all =
                             )
                         )
             )
-        , test "application should be lower-priority than field access"
+        , Test.test "application should be lower-priority than field access"
             (\() ->
                 "foo { d | b = f x y }.b"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
-                            (Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (FunctionOrValue [] "foo")
-                                , Node { start = { row = 1, column = 5 }, end = { row = 1, column = 24 } }
-                                    (RecordAccess
-                                        (Node { start = { row = 1, column = 5 }, end = { row = 1, column = 22 } }
-                                            (RecordUpdateExpression (Node { start = { row = 1, column = 7 }, end = { row = 1, column = 8 } } "d")
-                                                [ Node { start = { row = 1, column = 11 }, end = { row = 1, column = 21 } }
-                                                    ( Node { start = { row = 1, column = 11 }, end = { row = 1, column = 12 } } "b"
-                                                    , Node { start = { row = 1, column = 15 }, end = { row = 1, column = 20 } }
-                                                        (Application
-                                                            [ Node { start = { row = 1, column = 15 }, end = { row = 1, column = 16 } } (FunctionOrValue [] "f")
-                                                            , Node { start = { row = 1, column = 17 }, end = { row = 1, column = 18 } } (FunctionOrValue [] "x")
-                                                            , Node { start = { row = 1, column = 19 }, end = { row = 1, column = 20 } } (FunctionOrValue [] "y")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
+                            (Elm.Syntax.Expression.Application
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 24 } }
+                                    (Elm.Syntax.Expression.RecordAccess
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 22 } }
+                                            (Elm.Syntax.Expression.RecordUpdateExpression (Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 8 } } "d")
+                                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 21 } }
+                                                    ( Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 12 } } "b"
+                                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 20 } }
+                                                        (Elm.Syntax.Expression.Application
+                                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 16 } } (Elm.Syntax.Expression.FunctionOrValue [] "f")
+                                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 18 } } (Elm.Syntax.Expression.FunctionOrValue [] "x")
+                                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 20 } } (Elm.Syntax.Expression.FunctionOrValue [] "y")
                                                             ]
                                                         )
                                                     )
                                                 ]
                                             )
                                         )
-                                        (Node { start = { row = 1, column = 23 }, end = { row = 1, column = 24 } } "b")
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 23 }, end = { row = 1, column = 24 } } "b")
                                     )
                                 ]
                             )
                         )
             )
-        , test "should not consider a negative number parameter as the start of a new application"
+        , Test.test "should not consider a negative number parameter as the start of a new application"
             (\() ->
                 "Random.list -1 generator"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
-                            (Application
-                                [ Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (FunctionOrValue [ "Random" ] "list")
-                                , Node { start = { row = 1, column = 13 }, end = { row = 1, column = 15 } }
-                                    (Negation
-                                        (Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } }
-                                            (Integer 1)
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
+                            (Elm.Syntax.Expression.Application
+                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [ "Random" ] "list")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 15 } }
+                                    (Elm.Syntax.Expression.Negation
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 15 } }
+                                            (Elm.Syntax.Expression.Integer 1)
                                         )
                                     )
-                                , Node { start = { row = 1, column = 16 }, end = { row = 1, column = 25 } } (FunctionOrValue [] "generator")
+                                , Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 25 } } (Elm.Syntax.Expression.FunctionOrValue [] "generator")
                                 ]
                             )
                         )
             )
-        , test "negation can be applied on record access"
+        , Test.test "negation can be applied on record access"
             (\() ->
                 "1 + -{x = 10}.x"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
-                            (OperatorApplication "+"
-                                Left
-                                (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Integer 1))
-                                (Node { start = { row = 1, column = 5 }, end = { row = 1, column = 16 } }
-                                    (Negation
-                                        (Node { start = { row = 1, column = 6 }, end = { row = 1, column = 16 } }
-                                            (RecordAccess
-                                                (Node { start = { row = 1, column = 6 }, end = { row = 1, column = 14 } }
-                                                    (RecordExpr
-                                                        [ Node { start = { row = 1, column = 7 }, end = { row = 1, column = 13 } }
-                                                            ( Node { start = { row = 1, column = 7 }, end = { row = 1, column = 8 } } "x"
-                                                            , Node { start = { row = 1, column = 11 }, end = { row = 1, column = 13 } } (Integer 10)
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
+                            (Elm.Syntax.Expression.OperatorApplication "+"
+                                Elm.Syntax.Infix.Left
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Expression.Integer 1))
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 16 } }
+                                    (Elm.Syntax.Expression.Negation
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 16 } }
+                                            (Elm.Syntax.Expression.RecordAccess
+                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 14 } }
+                                                    (Elm.Syntax.Expression.RecordExpr
+                                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 13 } }
+                                                            ( Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 8 } } "x"
+                                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 13 } } (Elm.Syntax.Expression.Integer 10)
                                                             )
                                                         ]
                                                     )
                                                 )
-                                                (Node { start = { row = 1, column = 15 }, end = { row = 1, column = 16 } } "x")
+                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 16 } } "x")
                                             )
                                         )
                                     )
@@ -870,7 +870,7 @@ all =
                             )
                         )
             )
-        , test "fail if condition not positively indented"
+        , Test.test "fail if condition not positively indented"
             (\() ->
                 """a =
     let
@@ -879,9 +879,9 @@ all =
         f y then  1 else 0
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if `then` not positively indented"
+        , Test.test "fail if `then` not positively indented"
             (\() ->
                 """a =
     let
@@ -890,9 +890,9 @@ all =
        then  1 else 0
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if if-true-branch not positively indented"
+        , Test.test "fail if if-true-branch not positively indented"
             (\() ->
                 """a =
     let
@@ -901,9 +901,9 @@ all =
         1   else 0
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if `else` not positively indented"
+        , Test.test "fail if `else` not positively indented"
             (\() ->
                 """a =
     let
@@ -912,9 +912,9 @@ all =
        else 0
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if if-false-branch not positively indented"
+        , Test.test "fail if if-false-branch not positively indented"
             (\() ->
                 """ a =
     let
@@ -923,9 +923,9 @@ all =
         0
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if record closing curly not positively indented"
+        , Test.test "fail if record closing curly not positively indented"
             (\() ->
                 """a =
     let
@@ -934,9 +934,9 @@ all =
         }
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if record field value not positively indented"
+        , Test.test "fail if record field value not positively indented"
             (\() ->
                 """a =
     let
@@ -945,9 +945,9 @@ all =
         1 }
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if record field name not positively indented"
+        , Test.test "fail if record field name not positively indented"
             (\() ->
                 """a =
     let
@@ -956,9 +956,9 @@ all =
         b       = 1 }
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if record field `=` not positively indented"
+        , Test.test "fail if record field `=` not positively indented"
             (\() ->
                 """a =
     let
@@ -967,9 +967,9 @@ all =
         =         1 }
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if tuple closing parens not positively indented"
+        , Test.test "fail if tuple closing parens not positively indented"
             (\() ->
                 """a =
     let
@@ -978,9 +978,9 @@ all =
         )
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if first tuple part not positively indented"
+        , Test.test "fail if first tuple part not positively indented"
             (\() ->
                 """a =
     let
@@ -990,9 +990,9 @@ all =
             )
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if second tuple part not positively indented"
+        , Test.test "fail if second tuple part not positively indented"
             (\() ->
                 """a =
     let
@@ -1001,9 +1001,9 @@ all =
         1   )
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if operator not positively indented"
+        , Test.test "fail if operator not positively indented"
             (\() ->
                 """a =
     let
@@ -1012,9 +1012,9 @@ all =
         + 1
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if function call argument not positively indented"
+        , Test.test "fail if function call argument not positively indented"
             (\() ->
                 """a =
     let
@@ -1023,9 +1023,9 @@ all =
         1
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if lambda result not positively indented"
+        , Test.test "fail if lambda result not positively indented"
             (\() ->
                 """a =
     let
@@ -1034,24 +1034,24 @@ all =
         y
     in
     x"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
-        , test "fail if case branch result call argument not positively indented"
+        , Test.test "fail if case branch result call argument not positively indented"
             (\() ->
                 """foo = 
     case Nothing of
         Nothing -> a
   b"""
-                    |> ParserWithCommentsUtil.expectInvalid Elm.Parser.Declarations.declaration
+                    |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid Elm.Parser.Declarations.declaration
             )
         ]
 
 
-expectAst : Node Expression -> String -> Expect.Expectation
+expectAst : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> String -> Expect.Expectation
 expectAst =
-    ParserWithCommentsUtil.expectAst expressionFollowedByOptimisticLayout
+    Elm.Parser.ParserWithCommentsTestUtil.expectAst Elm.Parser.Expression.expressionFollowedByOptimisticLayout
 
 
-expectAstWithComments : { ast : Node Expression, comments : List (Node String) } -> String -> Expect.Expectation
+expectAstWithComments : { ast : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression, comments : List (Elm.Syntax.Node.Node String) } -> String -> Expect.Expectation
 expectAstWithComments =
-    ParserWithCommentsUtil.expectAstWithComments expressionFollowedByOptimisticLayout
+    Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments Elm.Parser.Expression.expressionFollowedByOptimisticLayout

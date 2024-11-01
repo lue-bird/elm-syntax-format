@@ -1,27 +1,27 @@
 module Elm.Parser.GlslTests exposing (all)
 
-import Elm.Parser.Expression exposing (expressionFollowedByOptimisticLayout)
-import Elm.Parser.ParserWithCommentsTestUtil as ParserWithCommentsUtil
-import Elm.Syntax.Expression exposing (..)
-import Elm.Syntax.Node exposing (Node(..))
+import Elm.Parser.Expression
+import Elm.Parser.ParserWithCommentsTestUtil
+import Elm.Syntax.Expression
+import Elm.Syntax.Node
 import Expect
-import Test exposing (..)
+import Test
 
 
-all : Test
+all : Test.Test
 all =
-    describe "GlslTests"
-        [ test "case block"
+    Test.describe "GlslTests"
+        [ Test.test "case block"
             (\() ->
                 "[glsl| precision mediump float; |]"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 37 } }
-                            (GLSLExpression " precision mediump float; ")
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 37 } }
+                            (Elm.Syntax.Expression.GLSLExpression " precision mediump float; ")
                         )
             )
         ]
 
 
-expectAst : Node Expression -> String -> Expect.Expectation
+expectAst : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> String -> Expect.Expectation
 expectAst =
-    ParserWithCommentsUtil.expectAst expressionFollowedByOptimisticLayout
+    Elm.Parser.ParserWithCommentsTestUtil.expectAst Elm.Parser.Expression.expressionFollowedByOptimisticLayout

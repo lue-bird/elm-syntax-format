@@ -1,124 +1,124 @@
 module Elm.Parser.ModuleTests exposing (all)
 
-import Elm.Parser.Modules as Parser
-import Elm.Parser.ParserWithCommentsTestUtil as ParserWithCommentsUtil exposing (..)
-import Elm.Syntax.Declaration exposing (Declaration(..))
-import Elm.Syntax.Exposing exposing (..)
-import Elm.Syntax.Expression exposing (Expression(..))
-import Elm.Syntax.Infix exposing (InfixDirection(..))
-import Elm.Syntax.Module exposing (..)
-import Elm.Syntax.Node as Node exposing (Node(..))
-import Elm.Syntax.Pattern exposing (Pattern(..))
-import Elm.Syntax.TypeAnnotation exposing (TypeAnnotation(..))
+import Elm.Parser.Modules
+import Elm.Parser.ParserWithCommentsTestUtil
+import Elm.Syntax.Declaration
+import Elm.Syntax.Exposing
+import Elm.Syntax.Expression
+import Elm.Syntax.Infix
+import Elm.Syntax.Module
+import Elm.Syntax.Node
+import Elm.Syntax.Pattern
+import Elm.Syntax.TypeAnnotation
 import ElmSyntaxParserLenient
 import Expect
 import ParserFast
-import Test exposing (..)
+import Test
 
 
-all : Test
+all : Test.Test
 all =
-    describe "ModuleTests"
-        [ test "formatted moduleDefinition"
+    Test.describe "ModuleTests"
+        [ Test.test "formatted moduleDefinition"
             (\() ->
                 "module Foo exposing (Bar)"
                     |> expectAst
-                        (NormalModule
-                            { moduleName = Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
+                        (Elm.Syntax.Module.NormalModule
+                            { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
                             , exposingList =
-                                Node { start = { row = 1, column = 12 }, end = { row = 1, column = 26 } }
-                                    (Explicit
-                                        [ Node { start = { row = 1, column = 22 }, end = { row = 1, column = 25 } } (TypeOrAliasExpose "Bar")
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 26 } }
+                                    (Elm.Syntax.Exposing.Explicit
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 25 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar")
                                         ]
                                     )
                             }
                         )
             )
-        , test "port moduleDefinition"
+        , Test.test "port moduleDefinition"
             (\() ->
                 "port module Foo exposing (Bar)"
                     |> expectAst
-                        (PortModule
-                            { moduleName = Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } [ "Foo" ]
+                        (Elm.Syntax.Module.PortModule
+                            { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } [ "Foo" ]
                             , exposingList =
-                                Node { start = { row = 1, column = 17 }, end = { row = 1, column = 31 } }
-                                    (Explicit
-                                        [ Node { start = { row = 1, column = 27 }, end = { row = 1, column = 30 } } (TypeOrAliasExpose "Bar") ]
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 31 } }
+                                    (Elm.Syntax.Exposing.Explicit
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 30 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar") ]
                                     )
                             }
                         )
             )
-        , test "port moduleDefinition with spacing"
+        , Test.test "port moduleDefinition with spacing"
             (\() ->
                 "port module Foo exposing ( Bar )"
                     |> expectAst
-                        (PortModule
-                            { moduleName = Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } [ "Foo" ]
+                        (Elm.Syntax.Module.PortModule
+                            { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } [ "Foo" ]
                             , exposingList =
-                                Node { start = { row = 1, column = 17 }, end = { row = 1, column = 33 } }
-                                    (Explicit
-                                        [ Node { start = { row = 1, column = 28 }, end = { row = 1, column = 31 } } (TypeOrAliasExpose "Bar") ]
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 33 } }
+                                    (Elm.Syntax.Exposing.Explicit
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 28 }, end = { row = 1, column = 31 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar") ]
                                     )
                             }
                         )
             )
-        , test "effect moduleDefinition"
+        , Test.test "effect moduleDefinition"
             (\() ->
                 "effect module Foo where {command = MyCmd, subscription = MySub } exposing (Bar)"
                     |> expectAst
-                        (EffectModule
-                            { moduleName = Node { start = { row = 1, column = 15 }, end = { row = 1, column = 18 } } [ "Foo" ]
-                            , exposingList = Node { start = { row = 1, column = 66 }, end = { row = 1, column = 80 } } (Explicit [ Node { start = { row = 1, column = 76 }, end = { row = 1, column = 79 } } (TypeOrAliasExpose "Bar") ])
-                            , command = Just (Node { start = { row = 1, column = 36 }, end = { row = 1, column = 41 } } "MyCmd")
-                            , subscription = Just (Node { start = { row = 1, column = 58 }, end = { row = 1, column = 63 } } "MySub")
+                        (Elm.Syntax.Module.EffectModule
+                            { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 18 } } [ "Foo" ]
+                            , exposingList = Elm.Syntax.Node.Node { start = { row = 1, column = 66 }, end = { row = 1, column = 80 } } (Elm.Syntax.Exposing.Explicit [ Elm.Syntax.Node.Node { start = { row = 1, column = 76 }, end = { row = 1, column = 79 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar") ])
+                            , command = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 36 }, end = { row = 1, column = 41 } } "MyCmd")
+                            , subscription = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 58 }, end = { row = 1, column = 63 } } "MySub")
                             }
                         )
             )
-        , test "unformatted"
+        , Test.test "unformatted"
             (\() ->
                 "module \n Foo \n exposing  (..)"
                     |> expectAst
-                        (NormalModule
-                            { moduleName = Node { start = { row = 2, column = 2 }, end = { row = 2, column = 5 } } [ "Foo" ]
+                        (Elm.Syntax.Module.NormalModule
+                            { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 2 }, end = { row = 2, column = 5 } } [ "Foo" ]
                             , exposingList =
-                                Node { start = { row = 3, column = 2 }, end = { row = 3, column = 16 } }
-                                    (All { start = { row = 3, column = 13 }, end = { row = 3, column = 15 } })
+                                Elm.Syntax.Node.Node { start = { row = 3, column = 2 }, end = { row = 3, column = 16 } }
+                                    (Elm.Syntax.Exposing.All { start = { row = 3, column = 13 }, end = { row = 3, column = 15 } })
                             }
                         )
             )
-        , test "unformatted wrong"
+        , Test.test "unformatted wrong"
             (\() ->
-                parse "module \nFoo \n exposing  (..)" Parser.moduleDefinition
+                Elm.Parser.ParserWithCommentsTestUtil.parse "module \nFoo \n exposing  (..)" Elm.Parser.Modules.moduleDefinition
                     |> Expect.equal Nothing
             )
-        , test "exposing all"
+        , Test.test "exposing all"
             (\() ->
                 "module Foo exposing (..)"
                     |> expectAst
-                        (NormalModule
-                            { moduleName = Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
+                        (Elm.Syntax.Module.NormalModule
+                            { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
                             , exposingList =
-                                Node { start = { row = 1, column = 12 }, end = { row = 1, column = 25 } }
-                                    (All { start = { row = 1, column = 22 }, end = { row = 1, column = 24 } })
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 25 } }
+                                    (Elm.Syntax.Exposing.All { start = { row = 1, column = 22 }, end = { row = 1, column = 24 } })
                             }
                         )
             )
-        , test "module name with _"
+        , Test.test "module name with _"
             (\() ->
                 "module I_en_gb exposing (..)"
                     |> expectAst
-                        (NormalModule
-                            { moduleName = Node { start = { row = 1, column = 8 }, end = { row = 1, column = 15 } } [ "I_en_gb" ]
+                        (Elm.Syntax.Module.NormalModule
+                            { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 15 } } [ "I_en_gb" ]
                             , exposingList =
-                                Node { start = { row = 1, column = 16 }, end = { row = 1, column = 29 } }
-                                    (All { start = { row = 1, column = 26 }, end = { row = 1, column = 28 } })
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 29 } }
+                                    (Elm.Syntax.Exposing.All { start = { row = 1, column = 26 }, end = { row = 1, column = 28 } })
                             }
                         )
             )
-        , test "Regression test for Incorrect range in if expression"
+        , Test.test "Regression test for Incorrect range in if expression"
             (\() ->
                 parseCore
-                    (String.filter ((/=) '\u{000D}') """module TestModule exposing (..)
+                    """module TestModule exposing (..)
 
 a =
     if cond then
@@ -131,75 +131,75 @@ a =
 {-| doc
 -}
 b = 3
-""")
+"""
                     ElmSyntaxParserLenient.module_
                     |> Expect.equal
                         (Just
                             { moduleDefinition =
-                                Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
-                                    (NormalModule
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
+                                    (Elm.Syntax.Module.NormalModule
                                         { moduleName =
-                                            Node
+                                            Elm.Syntax.Node.Node
                                                 { start = { row = 1, column = 8 }
                                                 , end = { row = 1, column = 18 }
                                                 }
                                                 [ "TestModule" ]
                                         , exposingList =
-                                            Node
+                                            Elm.Syntax.Node.Node
                                                 { start = { row = 1, column = 19 }
                                                 , end =
                                                     { row = 1
                                                     , column = 32
                                                     }
                                                 }
-                                                (All { start = { row = 1, column = 29 }, end = { row = 1, column = 31 } })
+                                                (Elm.Syntax.Exposing.All { start = { row = 1, column = 29 }, end = { row = 1, column = 31 } })
                                         }
                                     )
                             , imports = []
                             , declarations =
-                                [ Node { start = { row = 3, column = 1 }, end = { row = 7, column = 10 } }
-                                    (FunctionDeclaration
+                                [ Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 7, column = 10 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 3, column = 1 }, end = { row = 7, column = 10 } }
-                                                { name = Node { start = { row = 3, column = 1 }, end = { row = 3, column = 2 } } "a"
+                                            Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 7, column = 10 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 3, column = 2 } } "a"
                                                 , arguments = []
                                                 , expression =
-                                                    Node { start = { row = 4, column = 5 }, end = { row = 7, column = 10 } }
-                                                        (IfBlock
-                                                            (Node { start = { row = 4, column = 8 }, end = { row = 4, column = 12 } }
-                                                                (FunctionOrValue [] "cond")
+                                                    Elm.Syntax.Node.Node { start = { row = 4, column = 5 }, end = { row = 7, column = 10 } }
+                                                        (Elm.Syntax.Expression.IfBlock
+                                                            (Elm.Syntax.Node.Node { start = { row = 4, column = 8 }, end = { row = 4, column = 12 } }
+                                                                (Elm.Syntax.Expression.FunctionOrValue [] "cond")
                                                             )
-                                                            (Node { start = { row = 5, column = 9 }, end = { row = 5, column = 10 } } (Integer 1))
-                                                            (Node
+                                                            (Elm.Syntax.Node.Node { start = { row = 5, column = 9 }, end = { row = 5, column = 10 } } (Elm.Syntax.Expression.Integer 1))
+                                                            (Elm.Syntax.Node.Node
                                                                 { start =
                                                                     { row = 7
                                                                     , column = 9
                                                                     }
                                                                 , end = { row = 7, column = 10 }
                                                                 }
-                                                                (Integer 2)
+                                                                (Elm.Syntax.Expression.Integer 2)
                                                             )
                                                         )
                                                 }
                                         }
                                     )
-                                , Node { start = { row = 11, column = 1 }, end = { row = 13, column = 6 } }
-                                    (FunctionDeclaration
-                                        { documentation = Just (Node { start = { row = 11, column = 1 }, end = { row = 12, column = 3 } } "{-| doc\n-}")
+                                , Elm.Syntax.Node.Node { start = { row = 11, column = 1 }, end = { row = 13, column = 6 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
+                                        { documentation = Just (Elm.Syntax.Node.Node { start = { row = 11, column = 1 }, end = { row = 12, column = 3 } } "{-| doc\n-}")
                                         , signature = Nothing
                                         , declaration =
-                                            Node
+                                            Elm.Syntax.Node.Node
                                                 { start = { row = 13, column = 1 }
                                                 , end =
                                                     { row = 13
                                                     , column = 6
                                                     }
                                                 }
-                                                { name = Node { start = { row = 13, column = 1 }, end = { row = 13, column = 2 } } "b"
+                                                { name = Elm.Syntax.Node.Node { start = { row = 13, column = 1 }, end = { row = 13, column = 2 } } "b"
                                                 , arguments = []
-                                                , expression = Node { start = { row = 13, column = 5 }, end = { row = 13, column = 6 } } (Integer 3)
+                                                , expression = Elm.Syntax.Node.Node { start = { row = 13, column = 5 }, end = { row = 13, column = 6 } } (Elm.Syntax.Expression.Integer 3)
                                                 }
                                         }
                                     )
@@ -208,10 +208,10 @@ b = 3
                             }
                         )
             )
-        , test "Simple module range test"
+        , Test.test "Simple module range test"
             (\() ->
                 parseCore
-                    (String.filter ((/=) '\u{000D}') """module TestModule exposing (..)
+                    """module TestModule exposing (..)
 
 a =
     2
@@ -221,17 +221,17 @@ a =
 {-| doc
 -}
 b = 3
-""")
+"""
                     ElmSyntaxParserLenient.module_
                     |> Expect.equal
                         (Just
                             { moduleDefinition =
-                                Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
-                                    (NormalModule
-                                        { moduleName = Node { start = { row = 1, column = 8 }, end = { row = 1, column = 18 } } [ "TestModule" ]
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
+                                    (Elm.Syntax.Module.NormalModule
+                                        { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 18 } } [ "TestModule" ]
                                         , exposingList =
-                                            Node { start = { row = 1, column = 19 }, end = { row = 1, column = 32 } }
-                                                (All
+                                            Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 32 } }
+                                                (Elm.Syntax.Exposing.All
                                                     { start = { row = 1, column = 29 }
                                                     , end = { row = 1, column = 31 }
                                                     }
@@ -240,43 +240,43 @@ b = 3
                                     )
                             , imports = []
                             , declarations =
-                                [ Node
+                                [ Elm.Syntax.Node.Node
                                     { start = { row = 3, column = 1 }
                                     , end = { row = 4, column = 6 }
                                     }
-                                    (FunctionDeclaration
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 3, column = 1 }, end = { row = 4, column = 6 } }
-                                                { name = Node { start = { row = 3, column = 1 }, end = { row = 3, column = 2 } } "a"
+                                            Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 4, column = 6 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 3, column = 2 } } "a"
                                                 , arguments = []
                                                 , expression =
-                                                    Node
+                                                    Elm.Syntax.Node.Node
                                                         { start = { row = 4, column = 5 }
                                                         , end = { row = 4, column = 6 }
                                                         }
-                                                        (Integer 2)
+                                                        (Elm.Syntax.Expression.Integer 2)
                                                 }
                                         }
                                     )
-                                , Node
+                                , Elm.Syntax.Node.Node
                                     { start = { row = 8, column = 1 }
                                     , end = { row = 10, column = 6 }
                                     }
-                                    (FunctionDeclaration
-                                        { documentation = Just (Node { start = { row = 8, column = 1 }, end = { row = 9, column = 3 } } "{-| doc\n-}")
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
+                                        { documentation = Just (Elm.Syntax.Node.Node { start = { row = 8, column = 1 }, end = { row = 9, column = 3 } } "{-| doc\n-}")
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 10, column = 1 }, end = { row = 10, column = 6 } }
-                                                { name = Node { start = { row = 10, column = 1 }, end = { row = 10, column = 2 } } "b"
+                                            Elm.Syntax.Node.Node { start = { row = 10, column = 1 }, end = { row = 10, column = 6 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 10, column = 1 }, end = { row = 10, column = 2 } } "b"
                                                 , arguments = []
                                                 , expression =
-                                                    Node
+                                                    Elm.Syntax.Node.Node
                                                         { start = { row = 10, column = 5 }
                                                         , end = { row = 10, column = 6 }
                                                         }
-                                                        (Integer 3)
+                                                        (Elm.Syntax.Expression.Integer 3)
                                                 }
                                         }
                                     )
@@ -285,7 +285,7 @@ b = 3
                             }
                         )
             )
-        , test "File with multiple imports"
+        , Test.test "File with multiple imports"
             (\() ->
                 parseCore
                     """module TestModule exposing (..)
@@ -298,36 +298,36 @@ a = 1
                     |> Expect.equal
                         (Just
                             { moduleDefinition =
-                                Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
-                                    (NormalModule
-                                        { moduleName = Node { start = { row = 1, column = 8 }, end = { row = 1, column = 18 } } [ "TestModule" ]
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
+                                    (Elm.Syntax.Module.NormalModule
+                                        { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 18 } } [ "TestModule" ]
                                         , exposingList =
-                                            Node { start = { row = 1, column = 19 }, end = { row = 1, column = 32 } }
-                                                (All { start = { row = 1, column = 29 }, end = { row = 1, column = 31 } })
+                                            Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 32 } }
+                                                (Elm.Syntax.Exposing.All { start = { row = 1, column = 29 }, end = { row = 1, column = 31 } })
                                         }
                                     )
                             , imports =
-                                [ Node { start = { row = 2, column = 1 }, end = { row = 2, column = 9 } }
-                                    { moduleName = Node { start = { row = 2, column = 8 }, end = { row = 2, column = 9 } } [ "A" ]
+                                [ Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 9 } }
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 8 }, end = { row = 2, column = 9 } } [ "A" ]
                                     , moduleAlias = Nothing
                                     , exposingList = Nothing
                                     }
-                                , Node { start = { row = 3, column = 1 }, end = { row = 3, column = 9 } }
-                                    { moduleName = Node { start = { row = 3, column = 8 }, end = { row = 3, column = 9 } } [ "B" ]
+                                , Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 3, column = 9 } }
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 3, column = 8 }, end = { row = 3, column = 9 } } [ "B" ]
                                     , moduleAlias = Nothing
                                     , exposingList = Nothing
                                     }
                                 ]
                             , declarations =
-                                [ Node { start = { row = 5, column = 1 }, end = { row = 5, column = 6 } }
-                                    (FunctionDeclaration
+                                [ Elm.Syntax.Node.Node { start = { row = 5, column = 1 }, end = { row = 5, column = 6 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 5, column = 1 }, end = { row = 5, column = 6 } }
-                                                { name = Node { start = { row = 5, column = 1 }, end = { row = 5, column = 2 } } "a"
+                                            Elm.Syntax.Node.Node { start = { row = 5, column = 1 }, end = { row = 5, column = 6 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 5, column = 1 }, end = { row = 5, column = 2 } } "a"
                                                 , arguments = []
-                                                , expression = Node { start = { row = 5, column = 5 }, end = { row = 5, column = 6 } } (Integer 1)
+                                                , expression = Elm.Syntax.Node.Node { start = { row = 5, column = 5 }, end = { row = 5, column = 6 } } (Elm.Syntax.Expression.Integer 1)
                                                 }
                                         }
                                     )
@@ -336,7 +336,7 @@ a = 1
                             }
                         )
             )
-        , test "File with multiple declarations"
+        , Test.test "File with multiple declarations"
             (\() ->
                 parseCore
                     """module TestModule exposing (..)
@@ -350,68 +350,68 @@ b = 2
                     |> Expect.equal
                         (Just
                             { moduleDefinition =
-                                Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
-                                    (NormalModule
-                                        { moduleName = Node { start = { row = 1, column = 8 }, end = { row = 1, column = 18 } } [ "TestModule" ]
-                                        , exposingList = Node { start = { row = 1, column = 19 }, end = { row = 1, column = 32 } } (All { start = { row = 1, column = 29 }, end = { row = 1, column = 31 } })
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
+                                    (Elm.Syntax.Module.NormalModule
+                                        { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 18 } } [ "TestModule" ]
+                                        , exposingList = Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 32 } } (Elm.Syntax.Exposing.All { start = { row = 1, column = 29 }, end = { row = 1, column = 31 } })
                                         }
                                     )
                             , imports = []
                             , declarations =
-                                [ Node { start = { row = 2, column = 1 }, end = { row = 2, column = 15 } }
-                                    (CustomTypeDeclaration
+                                [ Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 15 } }
+                                    (Elm.Syntax.Declaration.CustomTypeDeclaration
                                         { documentation = Nothing
-                                        , name = Node { start = { row = 2, column = 6 }, end = { row = 2, column = 7 } } "A"
+                                        , name = Elm.Syntax.Node.Node { start = { row = 2, column = 6 }, end = { row = 2, column = 7 } } "A"
                                         , generics = []
                                         , constructors =
-                                            [ Node { start = { row = 2, column = 10 }, end = { row = 2, column = 11 } }
-                                                { name = Node { start = { row = 2, column = 10 }, end = { row = 2, column = 11 } } "B"
+                                            [ Elm.Syntax.Node.Node { start = { row = 2, column = 10 }, end = { row = 2, column = 11 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 2, column = 10 }, end = { row = 2, column = 11 } } "B"
                                                 , arguments = []
                                                 }
-                                            , Node { start = { row = 2, column = 14 }, end = { row = 2, column = 15 } }
-                                                { name = Node { start = { row = 2, column = 14 }, end = { row = 2, column = 15 } } "C"
+                                            , Elm.Syntax.Node.Node { start = { row = 2, column = 14 }, end = { row = 2, column = 15 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 2, column = 14 }, end = { row = 2, column = 15 } } "C"
                                                 , arguments = []
                                                 }
                                             ]
                                         }
                                     )
-                                , Node { start = { row = 3, column = 1 }, end = { row = 3, column = 6 } }
-                                    (FunctionDeclaration
+                                , Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 3, column = 6 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 3, column = 1 }, end = { row = 3, column = 6 } }
-                                                { name = Node { start = { row = 3, column = 1 }, end = { row = 3, column = 2 } } "a"
+                                            Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 3, column = 6 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 3, column = 2 } } "a"
                                                 , arguments = []
-                                                , expression = Node { start = { row = 3, column = 5 }, end = { row = 3, column = 6 } } (Integer 1)
+                                                , expression = Elm.Syntax.Node.Node { start = { row = 3, column = 5 }, end = { row = 3, column = 6 } } (Elm.Syntax.Expression.Integer 1)
                                                 }
                                         }
                                     )
-                                , Node { start = { row = 4, column = 1 }, end = { row = 4, column = 17 } }
-                                    (AliasDeclaration
+                                , Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 4, column = 17 } }
+                                    (Elm.Syntax.Declaration.AliasDeclaration
                                         { documentation = Nothing
-                                        , name = Node { start = { row = 4, column = 12 }, end = { row = 4, column = 13 } } "B"
+                                        , name = Elm.Syntax.Node.Node { start = { row = 4, column = 12 }, end = { row = 4, column = 13 } } "B"
                                         , generics = []
                                         , typeAnnotation =
-                                            Node { start = { row = 4, column = 16 }, end = { row = 4, column = 17 } }
-                                                (Typed (Node { start = { row = 4, column = 16 }, end = { row = 4, column = 17 } } ( [], "A" )) [])
+                                            Elm.Syntax.Node.Node { start = { row = 4, column = 16 }, end = { row = 4, column = 17 } }
+                                                (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 4, column = 16 }, end = { row = 4, column = 17 } } ( [], "A" )) [])
                                         }
                                     )
-                                , Node { start = { row = 5, column = 1 }, end = { row = 6, column = 6 } }
-                                    (FunctionDeclaration
+                                , Elm.Syntax.Node.Node { start = { row = 5, column = 1 }, end = { row = 6, column = 6 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature =
                                             Just
-                                                (Node { start = { row = 5, column = 1 }, end = { row = 5, column = 8 } }
-                                                    { name = Node { start = { row = 5, column = 1 }, end = { row = 5, column = 2 } } "b"
-                                                    , typeAnnotation = Node { start = { row = 5, column = 5 }, end = { row = 5, column = 8 } } (Typed (Node { start = { row = 5, column = 5 }, end = { row = 5, column = 8 } } ( [], "Int" )) [])
+                                                (Elm.Syntax.Node.Node { start = { row = 5, column = 1 }, end = { row = 5, column = 8 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 5, column = 1 }, end = { row = 5, column = 2 } } "b"
+                                                    , typeAnnotation = Elm.Syntax.Node.Node { start = { row = 5, column = 5 }, end = { row = 5, column = 8 } } (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 5, column = 5 }, end = { row = 5, column = 8 } } ( [], "Int" )) [])
                                                     }
                                                 )
                                         , declaration =
-                                            Node { start = { row = 6, column = 1 }, end = { row = 6, column = 6 } }
-                                                { name = Node { start = { row = 6, column = 1 }, end = { row = 6, column = 2 } } "b"
+                                            Elm.Syntax.Node.Node { start = { row = 6, column = 1 }, end = { row = 6, column = 6 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 6, column = 1 }, end = { row = 6, column = 2 } } "b"
                                                 , arguments = []
-                                                , expression = Node { start = { row = 6, column = 5 }, end = { row = 6, column = 6 } } (Integer 2)
+                                                , expression = Elm.Syntax.Node.Node { start = { row = 6, column = 5 }, end = { row = 6, column = 6 } } (Elm.Syntax.Expression.Integer 2)
                                                 }
                                         }
                                     )
@@ -420,7 +420,7 @@ b = 2
                             }
                         )
             )
-        , test "should fail to parse two signatures in a row"
+        , Test.test "should fail to parse two signatures in a row"
             (\() ->
                 """module TestModule exposing (..)
 a : Int
@@ -429,7 +429,7 @@ b = 2
 """
                     |> expectInvalid
             )
-        , test "should fail to parse signature for a different function"
+        , Test.test "should fail to parse signature for a different function"
             (\() ->
                 """module TestModule exposing (..)
 a : Int
@@ -437,7 +437,7 @@ b = 2
 """
                     |> expectInvalid
             )
-        , test "trailing comments at the end of declarations"
+        , Test.test "trailing comments at the end of declarations"
             (\() ->
                 parseCore """module A exposing (fun1, fun2)
 
@@ -451,32 +451,32 @@ fun2 n =
                     ElmSyntaxParserLenient.module_
                     |> Expect.equal
                         (Just
-                            { moduleDefinition = Node { start = { row = 1, column = 1 }, end = { row = 1, column = 31 } } (NormalModule { moduleName = Node { start = { row = 1, column = 8 }, end = { row = 1, column = 9 } } [ "A" ], exposingList = Node { start = { row = 1, column = 10 }, end = { row = 1, column = 31 } } (Explicit [ Node { start = { row = 1, column = 20 }, end = { row = 1, column = 24 } } (FunctionExpose "fun1"), Node { start = { row = 1, column = 26 }, end = { row = 1, column = 30 } } (FunctionExpose "fun2") ]) })
+                            { moduleDefinition = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 31 } } (Elm.Syntax.Module.NormalModule { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 9 } } [ "A" ], exposingList = Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 31 } } (Elm.Syntax.Exposing.Explicit [ Elm.Syntax.Node.Node { start = { row = 1, column = 20 }, end = { row = 1, column = 24 } } (Elm.Syntax.Exposing.FunctionExpose "fun1"), Elm.Syntax.Node.Node { start = { row = 1, column = 26 }, end = { row = 1, column = 30 } } (Elm.Syntax.Exposing.FunctionExpose "fun2") ]) })
                             , imports = []
                             , declarations =
-                                [ Node { start = { row = 3, column = 1 }, end = { row = 5, column = 11 } }
-                                    (FunctionDeclaration
+                                [ Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 5, column = 11 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 3, column = 1 }, end = { row = 5, column = 11 } }
-                                                { name = Node { start = { row = 3, column = 1 }, end = { row = 3, column = 5 } } "fun1"
-                                                , arguments = [ Node { start = { row = 3, column = 6 }, end = { row = 3, column = 7 } } (VarPattern "n") ]
+                                            Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 5, column = 11 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 3, column = 5 } } "fun1"
+                                                , arguments = [ Elm.Syntax.Node.Node { start = { row = 3, column = 6 }, end = { row = 3, column = 7 } } (Elm.Syntax.Pattern.VarPattern "n") ]
                                                 , expression =
-                                                    Node { start = { row = 4, column = 3 }, end = { row = 5, column = 11 } }
-                                                        (OperatorApplication "+"
-                                                            Left
-                                                            (Node { start = { row = 4, column = 3 }, end = { row = 4, column = 9 } }
-                                                                (Application
-                                                                    [ Node { start = { row = 4, column = 3 }, end = { row = 4, column = 7 } } (FunctionOrValue [] "fun2")
-                                                                    , Node { start = { row = 4, column = 8 }, end = { row = 4, column = 9 } } (FunctionOrValue [] "n")
+                                                    Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 5, column = 11 } }
+                                                        (Elm.Syntax.Expression.OperatorApplication "+"
+                                                            Elm.Syntax.Infix.Left
+                                                            (Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 9 } }
+                                                                (Elm.Syntax.Expression.Application
+                                                                    [ Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "fun2")
+                                                                    , Elm.Syntax.Node.Node { start = { row = 4, column = 8 }, end = { row = 4, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [] "n")
                                                                     ]
                                                                 )
                                                             )
-                                                            (Node { start = { row = 5, column = 5 }, end = { row = 5, column = 11 } }
-                                                                (Application
-                                                                    [ Node { start = { row = 5, column = 5 }, end = { row = 5, column = 9 } } (FunctionOrValue [] "fun2")
-                                                                    , Node { start = { row = 5, column = 10 }, end = { row = 5, column = 11 } } (FunctionOrValue [] "n")
+                                                            (Elm.Syntax.Node.Node { start = { row = 5, column = 5 }, end = { row = 5, column = 11 } }
+                                                                (Elm.Syntax.Expression.Application
+                                                                    [ Elm.Syntax.Node.Node { start = { row = 5, column = 5 }, end = { row = 5, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [] "fun2")
+                                                                    , Elm.Syntax.Node.Node { start = { row = 5, column = 10 }, end = { row = 5, column = 11 } } (Elm.Syntax.Expression.FunctionOrValue [] "n")
                                                                     ]
                                                                 )
                                                             )
@@ -484,35 +484,35 @@ fun2 n =
                                                 }
                                         }
                                     )
-                                , Node { start = { row = 7, column = 1 }, end = { row = 8, column = 9 } }
-                                    (FunctionDeclaration
+                                , Elm.Syntax.Node.Node { start = { row = 7, column = 1 }, end = { row = 8, column = 9 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
                                         { documentation = Nothing
                                         , signature = Nothing
                                         , declaration =
-                                            Node { start = { row = 7, column = 1 }, end = { row = 8, column = 9 } }
-                                                { name = Node { start = { row = 7, column = 1 }, end = { row = 7, column = 5 } } "fun2"
-                                                , arguments = [ Node { start = { row = 7, column = 6 }, end = { row = 7, column = 7 } } (VarPattern "n") ]
+                                            Elm.Syntax.Node.Node { start = { row = 7, column = 1 }, end = { row = 8, column = 9 } }
+                                                { name = Elm.Syntax.Node.Node { start = { row = 7, column = 1 }, end = { row = 7, column = 5 } } "fun2"
+                                                , arguments = [ Elm.Syntax.Node.Node { start = { row = 7, column = 6 }, end = { row = 7, column = 7 } } (Elm.Syntax.Pattern.VarPattern "n") ]
                                                 , expression =
-                                                    Node { start = { row = 8, column = 3 }, end = { row = 8, column = 9 } }
-                                                        (Application
-                                                            [ Node { start = { row = 8, column = 3 }, end = { row = 8, column = 7 } } (FunctionOrValue [] "fun1")
-                                                            , Node { start = { row = 8, column = 8 }, end = { row = 8, column = 9 } } (FunctionOrValue [] "n")
+                                                    Elm.Syntax.Node.Node { start = { row = 8, column = 3 }, end = { row = 8, column = 9 } }
+                                                        (Elm.Syntax.Expression.Application
+                                                            [ Elm.Syntax.Node.Node { start = { row = 8, column = 3 }, end = { row = 8, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "fun1")
+                                                            , Elm.Syntax.Node.Node { start = { row = 8, column = 8 }, end = { row = 8, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [] "n")
                                                             ]
                                                         )
                                                 }
                                         }
                                     )
                                 ]
-                            , comments = [ Node { start = { row = 5, column = 13 }, end = { row = 5, column = 17 } } "-- a", Node { start = { row = 8, column = 13 }, end = { row = 8, column = 17 } } "-- b" ]
+                            , comments = [ Elm.Syntax.Node.Node { start = { row = 5, column = 13 }, end = { row = 5, column = 17 } } "-- a", Elm.Syntax.Node.Node { start = { row = 8, column = 13 }, end = { row = 8, column = 17 } } "-- b" ]
                             }
                         )
             )
         ]
 
 
-expectAst : Module -> String -> Expect.Expectation
+expectAst : Elm.Syntax.Module.Module -> String -> Expect.Expectation
 expectAst =
-    ParserWithCommentsUtil.expectAst (ParserFast.map (\mod -> { comments = mod.comments, syntax = Node.value mod.syntax }) Parser.moduleDefinition)
+    Elm.Parser.ParserWithCommentsTestUtil.expectAst (ParserFast.map (\mod -> { comments = mod.comments, syntax = Elm.Syntax.Node.value mod.syntax }) Elm.Parser.Modules.moduleDefinition)
 
 
 parseCore : String -> ParserFast.Parser a -> Maybe a

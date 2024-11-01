@@ -1,55 +1,55 @@
 module Elm.Parser.InfixTests exposing (all)
 
-import Elm.Parser.Declarations exposing (declaration)
-import Elm.Parser.ParserWithCommentsTestUtil as ParserWithCommentsUtil
-import Elm.Syntax.Declaration as Declaration exposing (Declaration)
-import Elm.Syntax.Infix exposing (..)
-import Elm.Syntax.Node exposing (Node(..))
+import Elm.Parser.Declarations
+import Elm.Parser.ParserWithCommentsTestUtil
+import Elm.Syntax.Declaration
+import Elm.Syntax.Infix
+import Elm.Syntax.Node
 import Expect
-import Test exposing (..)
+import Test
 
 
-all : Test
+all : Test.Test
 all =
-    describe "InfixTests"
-        [ test "right infix"
+    Test.describe "InfixTests"
+        [ Test.test "right infix"
             (\() ->
                 "infix right 7 (</>) = slash"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
-                            (Declaration.InfixDeclaration
-                                { direction = Node { start = { row = 1, column = 7 }, end = { row = 1, column = 12 } } Right
-                                , precedence = Node { start = { row = 1, column = 13 }, end = { row = 1, column = 14 } } 7
-                                , operator = Node { start = { row = 1, column = 15 }, end = { row = 1, column = 20 } } "</>"
-                                , function = Node { start = { row = 1, column = 23 }, end = { row = 1, column = 28 } } "slash"
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
+                            (Elm.Syntax.Declaration.InfixDeclaration
+                                { direction = Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 12 } } Elm.Syntax.Infix.Right
+                                , precedence = Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 14 } } 7
+                                , operator = Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 20 } } "</>"
+                                , function = Elm.Syntax.Node.Node { start = { row = 1, column = 23 }, end = { row = 1, column = 28 } } "slash"
                                 }
                             )
                         )
             )
-        , test "left infix"
+        , Test.test "left infix"
             (\() ->
                 "infix left  8 (<?>) = questionMark"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 35 } }
-                            (Declaration.InfixDeclaration
-                                { direction = Node { start = { row = 1, column = 7 }, end = { row = 1, column = 11 } } Left
-                                , precedence = Node { start = { row = 1, column = 13 }, end = { row = 1, column = 14 } } 8
-                                , operator = Node { start = { row = 1, column = 15 }, end = { row = 1, column = 20 } } "<?>"
-                                , function = Node { start = { row = 1, column = 23 }, end = { row = 1, column = 35 } } "questionMark"
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 35 } }
+                            (Elm.Syntax.Declaration.InfixDeclaration
+                                { direction = Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 11 } } Elm.Syntax.Infix.Left
+                                , precedence = Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 14 } } 8
+                                , operator = Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 20 } } "<?>"
+                                , function = Elm.Syntax.Node.Node { start = { row = 1, column = 23 }, end = { row = 1, column = 35 } } "questionMark"
                                 }
                             )
                         )
             )
-        , test "non infix"
+        , Test.test "non infix"
             (\() ->
                 "infix non   4 (==) = eq"
                     |> expectAst
-                        (Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
-                            (Declaration.InfixDeclaration
-                                { direction = Node { start = { row = 1, column = 7 }, end = { row = 1, column = 10 } } Non
-                                , precedence = Node { start = { row = 1, column = 13 }, end = { row = 1, column = 14 } } 4
-                                , operator = Node { start = { row = 1, column = 15 }, end = { row = 1, column = 19 } } "=="
-                                , function = Node { start = { row = 1, column = 22 }, end = { row = 1, column = 24 } } "eq"
+                        (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
+                            (Elm.Syntax.Declaration.InfixDeclaration
+                                { direction = Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 10 } } Elm.Syntax.Infix.Non
+                                , precedence = Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 14 } } 4
+                                , operator = Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 19 } } "=="
+                                , function = Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 24 } } "eq"
                                 }
                             )
                         )
@@ -57,6 +57,6 @@ all =
         ]
 
 
-expectAst : Node Declaration -> String -> Expect.Expectation
+expectAst : Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration -> String -> Expect.Expectation
 expectAst =
-    ParserWithCommentsUtil.expectAst declaration
+    Elm.Parser.ParserWithCommentsTestUtil.expectAst Elm.Parser.Declarations.declaration
