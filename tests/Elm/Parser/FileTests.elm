@@ -1,7 +1,6 @@
 module Elm.Parser.FileTests exposing (all)
 
 import Elm.Parser
-import Elm.Parser.File as Parser
 import Elm.Parser.Samples as Samples
 import Elm.RawFile as RawFile exposing (RawFile)
 import Elm.Syntax.Declaration exposing (Declaration(..))
@@ -12,6 +11,7 @@ import Elm.Syntax.Module exposing (Module(..))
 import Elm.Syntax.Node exposing (Node(..))
 import Elm.Syntax.Pattern exposing (Pattern(..))
 import Elm.Syntax.TypeAnnotation exposing (TypeAnnotation(..))
+import ElmSyntaxParserLenient as Parser
 import Expect
 import ParserFast
 import Test exposing (..)
@@ -25,7 +25,7 @@ all =
                 (\( n, s ) ->
                     test ("sample " ++ String.fromInt n)
                         (\() ->
-                            case ParserFast.run Parser.file s of
+                            case ParserFast.run Parser.module_ s of
                                 Nothing ->
                                     Expect.fail "failed to parse"
 

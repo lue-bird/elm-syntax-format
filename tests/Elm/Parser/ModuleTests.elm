@@ -1,6 +1,5 @@
 module Elm.Parser.ModuleTests exposing (all)
 
-import Elm.Parser.File as File
 import Elm.Parser.Modules as Parser
 import Elm.Parser.ParserWithCommentsTestUtil as ParserWithCommentsUtil exposing (..)
 import Elm.Syntax.Declaration exposing (Declaration(..))
@@ -11,6 +10,7 @@ import Elm.Syntax.Module exposing (..)
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Pattern exposing (Pattern(..))
 import Elm.Syntax.TypeAnnotation exposing (TypeAnnotation(..))
+import ElmSyntaxParserLenient
 import Expect
 import ParserFast
 import Test exposing (..)
@@ -132,7 +132,7 @@ a =
 -}
 b = 3
 """)
-                    File.file
+                    ElmSyntaxParserLenient.module_
                     |> Expect.equal
                         (Just
                             { moduleDefinition =
@@ -222,7 +222,7 @@ a =
 -}
 b = 3
 """)
-                    File.file
+                    ElmSyntaxParserLenient.module_
                     |> Expect.equal
                         (Just
                             { moduleDefinition =
@@ -294,7 +294,7 @@ import B
 
 a = 1
 """
-                    File.file
+                    ElmSyntaxParserLenient.module_
                     |> Expect.equal
                         (Just
                             { moduleDefinition =
@@ -346,7 +346,7 @@ type alias B = A
 b : Int
 b = 2
 """
-                    File.file
+                    ElmSyntaxParserLenient.module_
                     |> Expect.equal
                         (Just
                             { moduleDefinition =
@@ -448,7 +448,7 @@ fun1 n =
 fun2 n =
   fun1 n    -- b
 """
-                    File.file
+                    ElmSyntaxParserLenient.module_
                     |> Expect.equal
                         (Just
                             { moduleDefinition = Node { start = { row = 1, column = 1 }, end = { row = 1, column = 31 } } (NormalModule { moduleName = Node { start = { row = 1, column = 8 }, end = { row = 1, column = 9 } } [ "A" ], exposingList = Node { start = { row = 1, column = 10 }, end = { row = 1, column = 31 } } (Explicit [ Node { start = { row = 1, column = 20 }, end = { row = 1, column = 24 } } (FunctionExpose "fun1"), Node { start = { row = 1, column = 26 }, end = { row = 1, column = 30 } } (FunctionExpose "fun2") ]) })
@@ -522,7 +522,7 @@ parseCore source parser =
 
 expectInvalid : String -> Expect.Expectation
 expectInvalid source =
-    case ParserFast.run File.file source of
+    case ParserFast.run ElmSyntaxParserLenient.module_ source of
         Nothing ->
             Expect.pass
 

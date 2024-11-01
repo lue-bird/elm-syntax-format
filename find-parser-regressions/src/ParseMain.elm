@@ -41,7 +41,7 @@ update version (GotFile source) =
         json =
             case parseAndBenchmark version source of
                 Ok ast ->
-                    Elm.Syntax.File.encode ast
+                    ElmSyntaxParserLenient.encode ast
 
                 Err _ ->
                     Encode.null
