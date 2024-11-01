@@ -1,4 +1,4 @@
-module Tests exposing (suite)
+module ElmSyntaxPrintTests exposing (suite)
 
 import Elm.Parser
 import ElmSyntaxPrint
