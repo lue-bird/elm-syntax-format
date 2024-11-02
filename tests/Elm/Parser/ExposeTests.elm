@@ -1,6 +1,5 @@
 module Elm.Parser.ExposeTests exposing (all)
 
-import Elm.Parser.Layout
 import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Syntax.Exposing
 import Elm.Syntax.Node
@@ -178,5 +177,5 @@ exposeDefinition =
             , syntax = Elm.Syntax.Node.Node range exposingListInnerResult.syntax
             }
         )
-        (ParserFast.symbolFollowedBy "exposing" Elm.Parser.Layout.whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.symbolFollowedBy "exposing" ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented)
         ElmSyntaxParserLenient.exposing_
