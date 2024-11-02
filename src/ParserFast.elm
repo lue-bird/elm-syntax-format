@@ -6,7 +6,7 @@ module ParserFast exposing
     , integerDecimalMapWithRange, integerDecimalOrHexadecimalMapWithRange, floatOrIntegerDecimalOrHexadecimalMapWithRange
     , skipWhileWhitespaceBacktrackableFollowedBy, followedBySkipWhileWhitespace, nestableMultiCommentMapWithRange
     , map, validate, lazy
-    , map2, map2WithStartLocation, map2WithRange, map3, map3WithStartLocation, map3WithRange, map4, map4WithStartLocation, map4WithRange, map5, map5WithStartLocation, map5WithRange, map6, map6WithStartLocation, map6WithRange, map7WithRange, map9WithRange
+    , map2, map2WithStartLocation, map2WithRange, map3, map3WithStartLocation, map3WithRange, map4, map4WithStartLocation, map4WithRange, map5, map5WithStartLocation, map5WithRange, map6, map6WithStartLocation, map6WithRange, map7, map7WithRange, map9WithRange
     , loopWhileSucceeds, loopWhileSucceedsOntoResultFromParser, loopWhileSucceedsOntoResultFromParserRightToLeftStackUnsafe, loopWhileSucceedsRightToLeftStackUnsafe, loopUntil
     , orSucceed, map2OrSucceed, map2WithRangeOrSucceed, map3OrSucceed, map4OrSucceed, oneOf2, oneOf2Map, oneOf2MapWithStartRowColumnAndEndRowColumn, oneOf3, oneOf4, oneOf5, oneOf7, oneOf9
     , withIndentSetToColumn, columnIndentAndThen, validateEndColumnIndentation
@@ -82,7 +82,7 @@ With `ParserFast`, you need to either
 
 ## sequence
 
-@docs map2, map2WithStartLocation, map2WithRange, map3, map3WithStartLocation, map3WithRange, map4, map4WithStartLocation, map4WithRange, map5, map5WithStartLocation, map5WithRange, map6, map6WithStartLocation, map6WithRange, map7WithRange, map9WithRange
+@docs map2, map2WithStartLocation, map2WithRange, map3, map3WithStartLocation, map3WithRange, map4, map4WithStartLocation, map4WithRange, map5, map5WithStartLocation, map5WithRange, map6, map6WithStartLocation, map6WithRange, map7, map7WithRange, map9WithRange
 
 @docs loopWhileSucceeds, loopWhileSucceedsOntoResultFromParser, loopWhileSucceedsOntoResultFromParserRightToLeftStackUnsafe, loopWhileSucceedsRightToLeftStackUnsafe, loopUntil
 
@@ -775,6 +775,49 @@ map6WithRange func (Parser parseA) (Parser parseB) (Parser parseC) (Parser parse
         )
 
 
+map7 : (a -> b -> c -> d -> e -> f -> g -> value) -> Parser a -> Parser b -> Parser c -> Parser d -> Parser e -> Parser f -> Parser g -> Parser value
+map7 func (Parser parseA) (Parser parseB) (Parser parseC) (Parser parseD) (Parser parseE) (Parser parseF) (Parser parseG) =
+    Parser
+        (\s0 ->
+            case parseA s0 of
+                Bad committed x ->
+                    Bad committed x
+
+                Good a s1 ->
+                    case parseB s1 of
+                        Bad _ x ->
+                            Bad True x
+
+                        Good b s2 ->
+                            case parseC s2 of
+                                Bad _ x ->
+                                    Bad True x
+
+                                Good c s3 ->
+                                    case parseD s3 of
+                                        Bad _ x ->
+                                            Bad True x
+
+                                        Good d s4 ->
+                                            case parseE s4 of
+                                                Bad _ x ->
+                                                    Bad True x
+
+                                                Good e s5 ->
+                                                    case parseF s5 of
+                                                        Bad _ x ->
+                                                            Bad True x
+
+                                                        Good f s6 ->
+                                                            case parseG s6 of
+                                                                Bad _ x ->
+                                                                    Bad True x
+
+                                                                Good g s7 ->
+                                                                    Good (func a b c d e f g) s7
+        )
+
+
 map7WithRange : (Elm.Syntax.Range.Range -> a -> b -> c -> d -> e -> f -> g -> value) -> Parser a -> Parser b -> Parser c -> Parser d -> Parser e -> Parser f -> Parser g -> Parser value
 map7WithRange func (Parser parseA) (Parser parseB) (Parser parseC) (Parser parseD) (Parser parseE) (Parser parseF) (Parser parseG) =
     Parser
@@ -890,10 +933,10 @@ pStepBadCommitting =
 
 
 orSucceed : Parser a -> a -> Parser a
-orSucceed (Parser attemptFirst) secondRes =
+orSucceed (Parser attempt) fallbackResult =
     Parser
         (\s ->
-            case attemptFirst s of
+            case attempt s of
                 (Good _ _) as firstGood ->
                     firstGood
 
@@ -902,7 +945,7 @@ orSucceed (Parser attemptFirst) secondRes =
                         firstBad
 
                     else
-                        Good secondRes s
+                        Good fallbackResult s
         )
 
 

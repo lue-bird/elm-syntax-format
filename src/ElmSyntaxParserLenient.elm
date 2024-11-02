@@ -1211,12 +1211,13 @@ typeAliasDefinitionAfterDocumentationAfterTypePrefix =
 
 customTypeDefinitionAfterDocumentationAfterTypePrefix : Parser (WithComments DeclarationAfterDocumentation)
 customTypeDefinitionAfterDocumentationAfterTypePrefix =
-    ParserFast.map6
-        (\name commentsAfterName parameters commentsAfterEqual headVariant tailVariantsReverse ->
+    ParserFast.map7
+        (\name commentsAfterName parameters commentsAfterEqual commentsBeforeHeadVariant headVariant tailVariantsReverse ->
             { comments =
                 commentsAfterName
                     |> Rope.prependTo parameters.comments
                     |> Rope.prependTo commentsAfterEqual
+                    |> Rope.prependTo commentsBeforeHeadVariant
                     |> Rope.prependTo headVariant.comments
                     |> Rope.prependTo tailVariantsReverse.comments
             , syntax =
@@ -1232,7 +1233,11 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
         whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         whitespaceAndCommentsEndsPositivelyIndented
-        valueConstructorOptimisticLayout
+        (ParserFast.orSucceed
+            (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
+            Rope.empty
+        )
+        variantDeclarationFollowedByOptimisticLayout
         (manyWithoutReverseWithComments
             (ParserFast.symbolFollowedBy "|"
                 (positivelyIndentedPlusFollowedBy 1
@@ -1245,7 +1250,7 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
                             }
                         )
                         whitespaceAndCommentsEndsPositivelyIndented
-                        valueConstructorOptimisticLayout
+                        variantDeclarationFollowedByOptimisticLayout
                     )
                 )
             )
@@ -1345,12 +1350,13 @@ typeAliasDefinitionWithoutDocumentationAfterTypePrefix =
 
 customTypeDefinitionWithoutDocumentationAfterTypePrefix : Parser (WithComments TypeOrTypeAliasDeclarationWithoutDocumentation)
 customTypeDefinitionWithoutDocumentationAfterTypePrefix =
-    ParserFast.map6
-        (\name commentsAfterName parameters commentsAfterEqual headVariant tailVariantsReverse ->
+    ParserFast.map7
+        (\name commentsAfterName parameters commentsAfterEqual commentsBeforeHeadVariant headVariant tailVariantsReverse ->
             { comments =
                 commentsAfterName
                     |> Rope.prependTo parameters.comments
                     |> Rope.prependTo commentsAfterEqual
+                    |> Rope.prependTo commentsBeforeHeadVariant
                     |> Rope.prependTo headVariant.comments
                     |> Rope.prependTo tailVariantsReverse.comments
             , syntax =
@@ -1366,7 +1372,11 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
         whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         whitespaceAndCommentsEndsPositivelyIndented
-        valueConstructorOptimisticLayout
+        (ParserFast.orSucceed
+            (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
+            Rope.empty
+        )
+        variantDeclarationFollowedByOptimisticLayout
         (manyWithoutReverseWithComments
             (ParserFast.symbolFollowedBy "|"
                 (positivelyIndentedPlusFollowedBy 1
@@ -1379,15 +1389,15 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
                             }
                         )
                         whitespaceAndCommentsEndsPositivelyIndented
-                        valueConstructorOptimisticLayout
+                        variantDeclarationFollowedByOptimisticLayout
                     )
                 )
             )
         )
 
 
-valueConstructorOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Type.ValueConstructor))
-valueConstructorOptimisticLayout =
+variantDeclarationFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Type.ValueConstructor))
+variantDeclarationFollowedByOptimisticLayout =
     ParserFast.map3
         (\nameNode commentsAfterName argumentsReverse ->
             let

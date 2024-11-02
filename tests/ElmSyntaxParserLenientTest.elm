@@ -2137,6 +2137,36 @@ type alias Foo = {color: String }"""
                                 )
                             )
                 )
+            , Test.test "type with leading | before first variant"
+                (\() ->
+                    "type Color=| Blue String | Red | Green"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 39 } }
+                                (Elm.Syntax.Declaration.CustomTypeDeclaration
+                                    { documentation = Nothing
+                                    , name = Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 11 } } "Color"
+                                    , generics = []
+                                    , constructors =
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 25 } }
+                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 18 } } "Blue"
+                                            , arguments =
+                                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 25 } }
+                                                    (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 25 } } ( [], "String" )) [])
+                                                ]
+                                            }
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 28 }, end = { row = 1, column = 31 } }
+                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 28 }, end = { row = 1, column = 31 } } "Red"
+                                            , arguments = []
+                                            }
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 34 }, end = { row = 1, column = 39 } }
+                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 34 }, end = { row = 1, column = 39 } } "Green"
+                                            , arguments = []
+                                            }
+                                        ]
+                                    }
+                                )
+                            )
+                )
             , Test.test "type with documentation"
                 (\() ->
                     """{-| Classic RGB -}
