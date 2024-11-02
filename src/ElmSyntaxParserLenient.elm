@@ -21,11 +21,13 @@ This means [`ElmSyntaxPrint`](ElmSyntaxPrint)
 can pick this up and format it in a way compatible
 with the compiler or [`Elm.Syntax.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser).
 
-Some additional lenient parsing (TODO):
+Some additional lenient parsing:
 
-  - merge consecutive commas
+  - TODO merge consecutive commas
 
-  -     function parameters : Type = result
+  - TODO
+
+        function parameters : Type = result
 
     →
 
@@ -33,7 +35,9 @@ Some additional lenient parsing (TODO):
         function parameters =
             result
 
-  -     { field0 value, field1 value }
+  - TODO
+
+        { field0 value, field1 value }
 
     →
 
@@ -43,7 +47,9 @@ Some additional lenient parsing (TODO):
 
         { field0 = value, field1 = value }
 
-  -     { field0, field1 }
+  - TODO
+
+        { field0, field1 }
 
     →
 
@@ -55,7 +61,9 @@ Some additional lenient parsing (TODO):
 
         f |> g |> h
 
-  -     3 |> String.toInt
+  - TODO
+
+        3 |> String.toInt
         of case
             Nothing ->
                 0
@@ -72,7 +80,9 @@ Some additional lenient parsing (TODO):
             Just n ->
                 n
 
-  -     type A =
+  - TODO
+
+        type A =
             | A
             | B
 
@@ -3107,6 +3117,9 @@ infixOperatorAndThen extensionRightConstraints =
         (\operator ->
             case operator of
                 "|>" ->
+                    apRResult
+
+                "|" ->
                     apRResult
 
                 "++" ->
