@@ -2726,6 +2726,90 @@ a = 1
                                 )
                             )
                 )
+            , Test.describe "lambda"
+                [ Test.test "unit lambda"
+                    (\() ->
+                        "\\() -> foo"
+                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
+                                    (Elm.Syntax.Expression.LambdaExpression
+                                        { args = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } Elm.Syntax.Pattern.UnitPattern ]
+                                        , expression = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
+                                        }
+                                    )
+                                )
+                    )
+                , Test.test "record lambda"
+                    (\() ->
+                        "\\{foo} -> foo"
+                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
+                                    (Elm.Syntax.Expression.LambdaExpression
+                                        { args = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } (Elm.Syntax.Pattern.RecordPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 6 } } "foo" ]) ]
+                                        , expression = Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 14 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
+                                        }
+                                    )
+                                )
+                    )
+                , Test.test "empty record lambda"
+                    (\() ->
+                        "\\{} -> foo"
+                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
+                                    (Elm.Syntax.Expression.LambdaExpression
+                                        { args = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.RecordPattern []) ]
+                                        , expression = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
+                                        }
+                                    )
+                                )
+                    )
+                , Test.test "args lambda"
+                    (\() ->
+                        "\\a b -> a + b"
+                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
+                                    (Elm.Syntax.Expression.LambdaExpression
+                                        { args =
+                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.VarPattern "a")
+                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 5 } } (Elm.Syntax.Pattern.VarPattern "b")
+                                            ]
+                                        , expression =
+                                            Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 14 } }
+                                                (Elm.Syntax.Expression.OperatorApplication "+"
+                                                    Elm.Syntax.Infix.Left
+                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [] "a"))
+                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 14 } } (Elm.Syntax.Expression.FunctionOrValue [] "b"))
+                                                )
+                                        }
+                                    )
+                                )
+                    )
+                , Test.test "tuple lambda"
+                    (\() ->
+                        "\\(a,b) -> a + b"
+                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
+                                    (Elm.Syntax.Expression.LambdaExpression
+                                        { args =
+                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } }
+                                                (Elm.Syntax.Pattern.TuplePattern
+                                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.VarPattern "a")
+                                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } } (Elm.Syntax.Pattern.VarPattern "b")
+                                                    ]
+                                                )
+                                            ]
+                                        , expression =
+                                            Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 16 } }
+                                                (Elm.Syntax.Expression.OperatorApplication "+"
+                                                    Elm.Syntax.Infix.Left
+                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [] "a"))
+                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 16 } } (Elm.Syntax.Expression.FunctionOrValue [] "b"))
+                                                )
+                                        }
+                                    )
+                                )
+                    )
+                ]
             , Test.describe "case-of"
                 [ Test.test "should fail to parse when the matched expression has the wrong indentation"
                     (\() ->
