@@ -3,7 +3,7 @@ module ElmSyntaxParserLenient exposing
     , moduleName, nameLowercase, nameUppercase, expose, exposing_
     , moduleHeader, import_, declarations, declaration
     , type_, pattern, expression
-    , multilineComment, singleLineComment, whitespaceAndComments
+    , multiLineComment, singleLineComment, whitespaceAndComments
     )
 
 {-| Like [`Elm.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser)
@@ -107,7 +107,7 @@ or reparse only the touched declarations on save.
 
 ### whitespace
 
-@docs multilineComment, singleLineComment, whitespaceAndComments
+@docs multiLineComment, singleLineComment, whitespaceAndComments
 
 -}
 
@@ -4328,8 +4328,8 @@ singleLineComment =
 {-| [`Parser`](#Parser) for a `{-...-}` comment,
 also verifying that it itself isn't a [`documentationComment`](#documentationComment)
 -}
-multilineComment : Parser (Elm.Syntax.Node.Node String)
-multilineComment =
+multiLineComment : Parser (Elm.Syntax.Node.Node String)
+multiLineComment =
     ParserFast.offsetSourceAndThen
         (\offset source ->
             case String.slice (offset + 2) (offset + 3) source of
@@ -4348,6 +4348,10 @@ multiLineCommentNoCheck =
         ( '-', "}" )
 
 
+{-| [`Parser`](#Parser) for the space between syntax tokens
+which can contain spaces, linebreaks, [`multiLineComment`](#multiLineComment)s
+and [`singleLineComment`](#singleLineComment)s
+-}
 whitespaceAndComments : Parser Comments
 whitespaceAndComments =
     ParserFast.skipWhileWhitespaceBacktrackableFollowedBy
@@ -4378,7 +4382,7 @@ fromMultilineCommentNodeOrEmptyOnProblem =
         (\comment commentsAfter ->
             Rope.one comment |> Rope.filledPrependTo commentsAfter
         )
-        (multilineComment
+        (multiLineComment
             |> ParserFast.followedBySkipWhileWhitespace
         )
         whitespaceAndCommentsOrEmptyLoop
@@ -4402,7 +4406,7 @@ whitespaceAndCommentsOrEmptyLoop =
     ParserFast.loopWhileSucceeds
         (ParserFast.oneOf2
             singleLineComment
-            multilineComment
+            multiLineComment
             |> ParserFast.followedBySkipWhileWhitespace
         )
         Rope.empty

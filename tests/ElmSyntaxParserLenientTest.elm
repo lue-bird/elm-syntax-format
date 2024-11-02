@@ -140,36 +140,36 @@ all =
                     )
                 , Test.test "multilineComment parse result"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multilineComment "{-foo\nbar-}"
+                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{-foo\nbar-}"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-foo\nbar-}"))
                     )
                 , Test.test "multilineComment range"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multilineComment "{-foo\nbar-}"
+                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{-foo\nbar-}"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-foo\nbar-}"))
                     )
                 , Test.test "multilineComment including 2-part utf-16 char range"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multilineComment "{-foo\nbar🔧-}"
+                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{-foo\nbar🔧-}"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 7 } } "{-foo\nbar🔧-}"))
                     )
                 , Test.test "nested multilineComment only open"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multilineComment "{- {- -}"
+                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{- {- -}"
                             |> Expect.equal Nothing
                     )
                 , Test.test "nested multilineComment open and close"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multilineComment "{- {- -} -}"
+                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{- {- -} -}"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } "{- {- -} -}"))
                     )
                 , Test.test "multilineComment on module documentation"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multilineComment "{-|foo\nbar-}"
+                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{-|foo\nbar-}"
                             |> Expect.equal Nothing
                     )
                 ]
