@@ -15,8 +15,7 @@ import Elm.Syntax.TypeAnnotation
 import ElmSyntaxParserLenient
 import Expect
 import ParserFast
-import ParserWithComments
-import Rope
+import Rope exposing (Rope)
 import Test
 
 
@@ -4119,7 +4118,7 @@ True -> 1"""
         ]
 
 
-exposeDefinition : ParserFast.Parser (ParserWithComments.WithComments Elm.Syntax.Exposing.Exposing)
+exposeDefinition : ParserFast.Parser { comments : Rope (Elm.Syntax.Node.Node String), syntax : Elm.Syntax.Exposing.Exposing }
 exposeDefinition =
     ParserFast.map2
         (\commentsAfterExposing exposingListInnerResult ->

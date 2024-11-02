@@ -3,11 +3,18 @@ module Elm.Parser.ParserWithCommentsTestUtil exposing (expectAst, expectAstWithC
 import Elm.Syntax.Node
 import Expect
 import ParserFast
-import ParserWithComments
-import Rope
+import Rope exposing (Rope)
 
 
-parseWithState : String -> ParserFast.Parser (ParserWithComments.WithComments a) -> Maybe { comments : List (Elm.Syntax.Node.Node String), syntax : a }
+type alias WithComments res =
+    { comments : Comments, syntax : res }
+
+
+type alias Comments =
+    Rope (Elm.Syntax.Node.Node String)
+
+
+parseWithState : String -> ParserFast.Parser (WithComments a) -> Maybe { comments : List (Elm.Syntax.Node.Node String), syntax : a }
 parseWithState s p =
     case ParserFast.run p s of
         Nothing ->
@@ -20,23 +27,18 @@ parseWithState s p =
                 |> Just
 
 
-parse : String -> ParserFast.Parser (ParserWithComments.WithComments a) -> Maybe a
+parse : String -> ParserFast.Parser (WithComments a) -> Maybe a
 parse s p =
     parseWithState s p
         |> Maybe.map .syntax
 
 
-parseWithFailure : String -> ParserFast.Parser (ParserWithComments.WithComments a) -> Maybe a
+parseWithFailure : String -> ParserFast.Parser (WithComments a) -> Maybe a
 parseWithFailure s p =
-    case ParserFast.run p s of
-        Nothing ->
-            Nothing
-
-        Just commentsAndSyntax ->
-            Just commentsAndSyntax.syntax
+    ParserFast.run p s |> Maybe.map .syntax
 
 
-expectAstWithIndent1 : ParserFast.Parser (ParserWithComments.WithComments a) -> a -> String -> Expect.Expectation
+expectAstWithIndent1 : ParserFast.Parser (WithComments a) -> a -> String -> Expect.Expectation
 expectAstWithIndent1 parser =
     \expected source ->
         case ParserFast.run parser source of
@@ -55,7 +57,7 @@ expectAstWithIndent1 parser =
                     ()
 
 
-expectAst : ParserFast.Parser (ParserWithComments.WithComments a) -> a -> String -> Expect.Expectation
+expectAst : ParserFast.Parser (WithComments a) -> a -> String -> Expect.Expectation
 expectAst parser =
     \expected source ->
         case ParserFast.run parser source of
@@ -74,7 +76,7 @@ expectAst parser =
                     ()
 
 
-expectAstWithComments : ParserFast.Parser (ParserWithComments.WithComments a) -> { ast : a, comments : List (Elm.Syntax.Node.Node String) } -> String -> Expect.Expectation
+expectAstWithComments : ParserFast.Parser (WithComments a) -> { ast : a, comments : List (Elm.Syntax.Node.Node String) } -> String -> Expect.Expectation
 expectAstWithComments parser =
     \expected source ->
         case ParserFast.run parser source of
@@ -89,7 +91,7 @@ expectAstWithComments parser =
                     ()
 
 
-expectInvalid : ParserFast.Parser (ParserWithComments.WithComments a_) -> String -> Expect.Expectation
+expectInvalid : ParserFast.Parser (WithComments a_) -> String -> Expect.Expectation
 expectInvalid parser =
     \source ->
         case parseWithFailure source parser of
