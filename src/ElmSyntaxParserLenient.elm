@@ -117,7 +117,6 @@ import Elm.Syntax.Range
 import Elm.Syntax.Signature
 import Elm.Syntax.Type
 import Elm.Syntax.TypeAnnotation
-import List.Extra
 import ParserFast
 import ParserWithComments
 import Rope
@@ -360,7 +359,7 @@ whereBlock =
                 , syntax =
                     { command =
                         pairs
-                            |> List.Extra.find
+                            |> listFirstWhere
                                 (\( fnName, _ ) ->
                                     case fnName of
                                         "command" ->
@@ -372,7 +371,7 @@ whereBlock =
                             |> Maybe.map Tuple.second
                     , subscription =
                         pairs
-                            |> List.Extra.find
+                            |> listFirstWhere
                                 (\( fnName, _ ) ->
                                     case fnName of
                                         "subscription" ->
@@ -393,6 +392,20 @@ whereBlock =
             )
         )
         |> ParserFast.followedBySymbol "}"
+
+
+listFirstWhere : (a -> Bool) -> List a -> Maybe a
+listFirstWhere predicate list =
+    case list of
+        [] ->
+            Nothing
+
+        x :: xs ->
+            if predicate x then
+                Just x
+
+            else
+                listFirstWhere predicate xs
 
 
 effectWhereClauses : Parser (ParserWithComments.WithComments { command : Maybe (Elm.Syntax.Node.Node String), subscription : Maybe (Elm.Syntax.Node.Node String) })
