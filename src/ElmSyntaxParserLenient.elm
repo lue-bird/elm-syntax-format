@@ -1,12 +1,12 @@
 module ElmSyntaxParserLenient exposing
     ( Parser, run, module_
     , moduleName, nameLowercase, nameUppercase, expose, exposing_
-    , moduleHeader, documentationComment, import_, declarations, declaration
+    , moduleHeader, import_, declarations, declaration
     , type_, pattern, expression
     , multilineComment, singleLineComment, whitespaceAndComments
     )
 
-{-| Like [`Elm.Syntax.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser)
+{-| Like [`Elm.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser)
 but able to parse badly indented code (TODO) and similar somewhat incorrect syntax,
 similar to elm-format.
 
@@ -19,7 +19,7 @@ Ranges will still be correct when viewed relative to each other
 and tell you how many lines they span.
 This means [`ElmSyntaxPrint`](ElmSyntaxPrint)
 can pick this up and format it in a way compatible
-with the compiler or [`Elm.Syntax.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser).
+with the compiler or [`Elm.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser).
 
 Some additional lenient parsing:
 
@@ -101,7 +101,7 @@ to, say, display only an expression in an article
 or reparse only the touched declarations on save.
 
 @docs moduleName, nameLowercase, nameUppercase, expose, exposing_
-@docs moduleHeader, documentationComment, import_, declarations, declaration
+@docs moduleHeader, import_, declarations, declaration
 @docs type_, pattern, expression
 
 
@@ -4299,6 +4299,8 @@ isOperatorSymbolCharAsString c =
             False
 
 
+{-| [`Parser`](#Parser) for a `--...` comment
+-}
 singleLineComment : Parser (Elm.Syntax.Node.Node String)
 singleLineComment =
     ParserFast.symbolFollowedBy "--"
@@ -4317,6 +4319,9 @@ singleLineComment =
         )
 
 
+{-| [`Parser`](#Parser) for a `{-...-}` comment,
+also verifying that it itself isn't a [`documentationComment`](#documentationComment)
+-}
 multilineComment : Parser (Elm.Syntax.Node.Node String)
 multilineComment =
     ParserFast.offsetSourceAndThen

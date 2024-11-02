@@ -1046,20 +1046,6 @@ f =
                             ]
                         )
             )
-        , Test.test "documentation comment"
-            (\() ->
-                "{-|foo\nbar-}"
-                    |> ParserFast.run ElmSyntaxParserLenient.documentationComment
-                    |> Expect.equal
-                        (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-|foo\nbar-}"))
-            )
-        , Test.test "documentation comment can handle nested comments"
-            (\() ->
-                "{-| {- hello -} -}"
-                    |> ParserFast.run ElmSyntaxParserLenient.documentationComment
-                    |> Expect.equal
-                        (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 19 } } "{-| {- hello -} -}"))
-            )
         , Test.test "declarations with comments"
             (\() ->
                 """module Foo exposing (b, fn)
@@ -5997,7 +5983,7 @@ exposeDefinition =
             , syntax = exposingListInnerResult.syntax
             }
         )
-        (ParserFast.symbolFollowedBy "exposing" ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.symbolFollowedBy "exposing" ElmSyntaxParserLenient.whitespaceAndComments)
         ElmSyntaxParserLenient.exposing_
 
 
