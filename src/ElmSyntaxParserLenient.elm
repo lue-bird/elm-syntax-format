@@ -151,6 +151,8 @@ run syntaxParser source =
     ParserFast.run syntaxParser source
 
 
+{-| [`Parser`](#Parser) for an [`Elm.Syntax.File.File`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-File#File)
+-}
 module_ : Parser Elm.Syntax.File.File
 module_ =
     ParserFast.map4
@@ -183,6 +185,8 @@ module_ =
         declarations
 
 
+{-| [`Parser`](#Parser) for an [`Elm.Syntax.ModuleName.ModuleName`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-ModuleName#ModuleName)
+-}
 moduleName : Parser (Elm.Syntax.Node.Node Elm.Syntax.ModuleName.ModuleName)
 moduleName =
     ParserFast.map2WithRange
@@ -212,6 +216,9 @@ exposeDefinition =
         exposing_
 
 
+{-| [`Parser`](#Parser) for an [`Elm.Syntax.Exposing.Exposing`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Exposing#Exposing)
+(the stuff after `exposing` in an import or module)
+-}
 exposing_ : Parser (WithComments Elm.Syntax.Exposing.Exposing)
 exposing_ =
     ParserFast.symbolFollowedBy "("
@@ -257,6 +264,8 @@ exposing_ =
         |> ParserFast.followedBySymbol ")"
 
 
+{-| [`Parser`](#Parser) for a single [`Elm.Syntax.Exposing.TopLevelExpose`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Exposing#TopLevelExpose)
+-}
 expose : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose))
 expose =
     ParserFast.oneOf3
@@ -328,6 +337,9 @@ functionExpose =
         )
 
 
+{-| [`Parser`](#Parser) for an [`Elm.Syntax.Module.Module`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Module#Module)
+(confusingly, that's their name for only the `module X exposing (Y)` lines)
+-}
 moduleHeader : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Module.Module))
 moduleHeader =
     ParserFast.oneOf3
@@ -504,6 +516,8 @@ portModuleDefinition =
         exposeDefinition
 
 
+{-| [`Parser`](#Parser) for a single [`Elm.Syntax.Import.Import`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Import#Import)
+-}
 import_ : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Import.Import))
 import_ =
     ParserFast.map5WithStartLocation
@@ -612,6 +626,9 @@ import_ =
         )
 
 
+{-| [`Parser`](#Parser) for a list of [`Elm.Syntax.Declaration.Declaration`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Declaration#Declaration)s
+and comments in between
+-}
 declarations : Parser (WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration)))
 declarations =
     manyWithComments
@@ -628,6 +645,8 @@ declarations =
         )
 
 
+{-| [`Parser`](#Parser) for an [`Elm.Syntax.Declaration.Declaration`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Declaration#Declaration)
+-}
 declaration : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration))
 declaration =
     ParserFast.oneOf5
@@ -1419,6 +1438,8 @@ typeGenericListEquals =
         )
 
 
+{-| [`Parser`](#Parser) for an [`Elm.Syntax.TypeAnnotation.TypeAnnotation`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-TypeAnnotation#TypeAnnotation)
+-}
 type_ : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
 type_ =
     ParserFast.loopWhileSucceedsOntoResultFromParserRightToLeftStackUnsafe
@@ -2030,6 +2051,8 @@ precedence9ComposeL =
     infixLeft 9 "<<"
 
 
+{-| [`Parser`](#Parser) for an [`Elm.Syntax.Expression.Expression`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Expression#Expression)
+-}
 expression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 expression =
     expressionFollowedByOptimisticLayout
@@ -3472,6 +3495,8 @@ type ExtensionRight
         }
 
 
+{-| [`Parser`](#Parser) for an [`Elm.Syntax.Pattern.Pattern`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Pattern#Pattern)
+-}
 pattern : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
 pattern =
     ParserFast.map2
