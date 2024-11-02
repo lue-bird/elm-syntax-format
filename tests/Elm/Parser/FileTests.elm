@@ -1,7 +1,6 @@
 module Elm.Parser.FileTests exposing (all)
 
 import Elm.Parser
-import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Parser.Samples
 import Elm.Parser.TestUtil
 import Elm.Syntax.Declaration
@@ -15,6 +14,7 @@ import Elm.Syntax.TypeAnnotation
 import ElmSyntaxParserLenient
 import Expect
 import ParserFast
+import ParserWithCommentsExpect
 import Rope exposing (Rope)
 import Test
 
@@ -334,7 +334,8 @@ all =
                 )
             , Test.test "unformatted wrong"
                 (\() ->
-                    Elm.Parser.ParserWithCommentsTestUtil.parse "module \nFoo \n exposing  (..)" ElmSyntaxParserLenient.moduleHeader
+                    "module \nFoo \n exposing  (..)"
+                        |> ParserFast.run ElmSyntaxParserLenient.moduleHeader
                         |> Expect.equal Nothing
                 )
             , Test.test "exposing all"
@@ -479,15 +480,15 @@ all =
                 [ Test.test "Exposing all"
                     (\() ->
                         "exposing (..)"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst exposeDefinition (Elm.Syntax.Exposing.All { start = { row = 1, column = 11 }, end = { row = 1, column = 13 } })
+                            |> ParserWithCommentsExpect.syntaxWithoutComments exposeDefinition (Elm.Syntax.Exposing.All { start = { row = 1, column = 11 }, end = { row = 1, column = 13 } })
                     )
                 , Test.test "Exposing all with spacing and comment"
                     (\() ->
                         """exposing (
   .. -- foo
   )"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments exposeDefinition
-                                { ast = Elm.Syntax.Exposing.All { start = { row = 2, column = 3 }, end = { row = 3, column = 3 } }
+                            |> ParserWithCommentsExpect.syntaxWithComments exposeDefinition
+                                { syntax = Elm.Syntax.Exposing.All { start = { row = 2, column = 3 }, end = { row = 3, column = 3 } }
                                 , comments = [ Elm.Syntax.Node.Node { start = { row = 2, column = 6 }, end = { row = 2, column = 12 } } "-- foo" ]
                                 }
                     )
@@ -496,32 +497,32 @@ all =
                         """exposing (
   ..
 )"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid exposeDefinition
+                            |> ParserWithCommentsExpect.failsToParse exposeDefinition
                     )
                 , Test.test "should fail to parse empty with just 1 `.`"
                     (\() ->
                         "exposing ( . )"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid exposeDefinition
+                            |> ParserWithCommentsExpect.failsToParse exposeDefinition
                     )
                 , Test.test "should fail to parse empty with just 3 `...`"
                     (\() ->
                         "exposing ( ... )"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid exposeDefinition
+                            |> ParserWithCommentsExpect.failsToParse exposeDefinition
                     )
                 , Test.test "should fail to parse empty with 2 spaced `.`"
                     (\() ->
                         "exposing (. .)"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid exposeDefinition
+                            |> ParserWithCommentsExpect.failsToParse exposeDefinition
                     )
                 , Test.test "should fail to parse empty exposing list"
                     (\() ->
                         "exposing ()"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid exposeDefinition
+                            |> ParserWithCommentsExpect.failsToParse exposeDefinition
                     )
                 , Test.test "Explicit exposing list"
                     (\() ->
                         "exposing (Model,Msg(..),Info(..),init,(::))"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst exposeDefinition
+                            |> ParserWithCommentsExpect.syntaxWithoutComments exposeDefinition
                                 (Elm.Syntax.Exposing.Explicit
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 16 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Model")
                                     , Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 24 } }
@@ -544,7 +545,7 @@ all =
                 , Test.test "exposingList with spacing on one line"
                     (\() ->
                         "exposing (Model, Msg, Info   (..)   ,init,(::) )"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst exposeDefinition
+                            |> ParserWithCommentsExpect.syntaxWithoutComments exposeDefinition
                                 (Elm.Syntax.Exposing.Explicit
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 16 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Model")
                                     , Elm.Syntax.Node.Node { start = { row = 1, column = 18 }, end = { row = 1, column = 21 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Msg")
@@ -568,7 +569,7 @@ all =
          , init    ,
  (::)
     )"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst exposeDefinition
+                            |> ParserWithCommentsExpect.syntaxWithoutComments exposeDefinition
                                 (Elm.Syntax.Exposing.Explicit
                                     [ Elm.Syntax.Node.Node { start = { row = 2, column = 7 }, end = { row = 2, column = 8 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "A")
                                     , Elm.Syntax.Node.Node { start = { row = 3, column = 7 }, end = { row = 3, column = 12 } }
@@ -591,8 +592,8 @@ all =
                 , Test.test "Comments inside the exposing clause"
                     (\() ->
                         "exposing (foo\n --bar\n )"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments exposeDefinition
-                                { ast =
+                            |> ParserWithCommentsExpect.syntaxWithComments exposeDefinition
+                                { syntax =
                                     Elm.Syntax.Exposing.Explicit
                                         [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 14 } }
                                             (Elm.Syntax.Exposing.FunctionExpose "foo")
@@ -998,7 +999,7 @@ fun2 n =
             [ Test.test "import with explicits"
                 (\() ->
                     "import Foo exposing (Model, Msg(..))"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.import_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.import_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 37 } }
                                 { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
                                 , moduleAlias = Nothing
@@ -1015,7 +1016,7 @@ fun2 n =
             , Test.test "import with explicits 2"
                 (\() ->
                     "import Html exposing (text)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.import_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.import_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
                                 { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 12 } } [ "Html" ]
                                 , moduleAlias = Nothing
@@ -1032,7 +1033,7 @@ fun2 n =
             , Test.test "import minimal"
                 (\() ->
                     "import Foo"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.import_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.import_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
                                 { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
                                 , moduleAlias = Nothing
@@ -1043,7 +1044,7 @@ fun2 n =
             , Test.test "import with alias"
                 (\() ->
                     "import Foo as Bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.import_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.import_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 18 } }
                                 { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
                                 , moduleAlias = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 18 } } [ "Bar" ])
@@ -1054,7 +1055,7 @@ fun2 n =
             , Test.test "import with alias and exposing all"
                 (\() ->
                     "import Foo as Bar exposing (..)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.import_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.import_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
                                 { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
                                 , moduleAlias = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 18 } } [ "Bar" ])
@@ -1069,7 +1070,7 @@ fun2 n =
             , Test.test "import with invalid alias containing ."
                 (\() ->
                     "import Foo as Bar.Buzz"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.import_
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.import_
                 )
             ]
         , Test.test "Comments ordering"
@@ -1115,17 +1116,17 @@ f =
             )
         , Test.test "documentation comment"
             (\() ->
-                Elm.Parser.ParserWithCommentsTestUtil.parseWithState "{-|foo\nbar-}" (ElmSyntaxParserLenient.documentationComment |> ParserFast.map (\c -> { comments = Just (Rope.one c), syntax = () }))
-                    |> Maybe.map .comments
+                "{-|foo\nbar-}"
+                    |> ParserFast.run ElmSyntaxParserLenient.documentationComment
                     |> Expect.equal
-                        (Just [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-|foo\nbar-}" ])
+                        (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-|foo\nbar-}"))
             )
         , Test.test "documentation comment can handle nested comments"
             (\() ->
-                Elm.Parser.ParserWithCommentsTestUtil.parseWithState "{-| {- hello -} -}" (ElmSyntaxParserLenient.documentationComment |> ParserFast.map (\c -> { comments = Just (Rope.one c), syntax = () }))
-                    |> Maybe.map .comments
+                "{-| {- hello -} -}"
+                    |> ParserFast.run ElmSyntaxParserLenient.documentationComment
                     |> Expect.equal
-                        (Just [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 19 } } "{-| {- hello -} -}" ])
+                        (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 19 } } "{-| {- hello -} -}"))
             )
         , Test.test "declarations with comments"
             (\() ->
@@ -1507,18 +1508,18 @@ a = 1
             [ Test.test "unitTypeReference"
                 (\() ->
                     "()"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } Elm.Syntax.TypeAnnotation.Unit)
                 )
             , Test.test "unitTypeReference with spaces"
                 (\() ->
                     "( )"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.type_
                 )
             , Test.test "tupledTypeReference"
                 (\() ->
                     "( (), ())"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
                                 (Elm.Syntax.TypeAnnotation.Tupled
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 5 } } Elm.Syntax.TypeAnnotation.Unit
@@ -1530,18 +1531,18 @@ a = 1
             , Test.test "4-tuple type annotation is invalid"
                 (\() ->
                     "(Int,String,(),a)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.type_
                 )
             , Test.test "tupledTypeReference 2"
                 (\() ->
                     "( () )"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } } Elm.Syntax.TypeAnnotation.Unit)
                 )
             , Test.test "tupledTypeReference 3"
                 (\() ->
                     "( () , Maybe m )"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 17 } }
                                 (Elm.Syntax.TypeAnnotation.Tupled
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 5 } } Elm.Syntax.TypeAnnotation.Unit
@@ -1557,7 +1558,7 @@ a = 1
             , Test.test "qualified type reference"
                 (\() ->
                     "Foo.Bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                                 (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } ( [ "Foo" ], "Bar" )) [])
                             )
@@ -1565,7 +1566,7 @@ a = 1
             , Test.test "typeAnnotationNoFn"
                 (\() ->
                     "Bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
                                 (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } ( [], "Bar" )) [])
                             )
@@ -1573,7 +1574,7 @@ a = 1
             , Test.test "typedTypeReference 1"
                 (\() ->
                     "Foo () a Bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
                                 (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } ( [], "Foo" ))
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 7 } } Elm.Syntax.TypeAnnotation.Unit
@@ -1587,7 +1588,7 @@ a = 1
             , Test.test "typedTypeReference 2"
                 (\() ->
                     "Foo () a Bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
                                 (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } ( [], "Foo" ))
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 7 } } Elm.Syntax.TypeAnnotation.Unit
@@ -1601,13 +1602,13 @@ a = 1
             , Test.test "recordTypeReference empty"
                 (\() ->
                     "{}"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } (Elm.Syntax.TypeAnnotation.Record []))
                 )
             , Test.test "recordTypeReference one field"
                 (\() ->
                     "{color: String }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 17 } }
                                 (Elm.Syntax.TypeAnnotation.Record
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 15 } }
@@ -1622,7 +1623,7 @@ a = 1
             , Test.test "record with generic"
                 (\() ->
                     "{ attr | position : Vec2, texture : Vec2 }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 43 } }
                                 (Elm.Syntax.TypeAnnotation.GenericRecord (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 7 } } "attr")
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 42 } }
@@ -1644,12 +1645,12 @@ a = 1
             , Test.test "generic record with no fields"
                 (\() ->
                     "{ attr |}"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.type_
                 )
             , Test.test "recordTypeReference nested record"
                 (\() ->
                     "{color: {r : Int, g :Int, b: Int } }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 37 } }
                                 (Elm.Syntax.TypeAnnotation.Record
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 35 } }
@@ -1681,7 +1682,7 @@ a = 1
             , Test.test "record field ranges"
                 (\() ->
                     "{ foo : Int, bar : Int, baz : Int }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 36 } }
                                 (Elm.Syntax.TypeAnnotation.Record
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
@@ -1703,7 +1704,7 @@ a = 1
             , Test.test "recordTypeReference with generic"
                 (\() ->
                     "{color: s }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.TypeAnnotation.Record
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 10 } }
@@ -1717,7 +1718,7 @@ a = 1
             , Test.test "function type reference"
                 (\() ->
                     "Foo -> Bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
                                 (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
@@ -1732,7 +1733,7 @@ a = 1
             , Test.test "function type reference multiple"
                 (\() ->
                     "Foo -> Bar -> baz"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 18 } }
                                 (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
@@ -1752,7 +1753,7 @@ a = 1
             , Test.test "function type reference generics"
                 (\() ->
                     "cMsg -> cModel -> a"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 20 } }
                                 (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.TypeAnnotation.GenericType "cMsg"))
@@ -1768,7 +1769,7 @@ a = 1
             , Test.test "annotation with parens"
                 (\() ->
                     "Msg -> Model -> (Model, Cmd Msg)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 33 } }
                                 (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
@@ -1800,7 +1801,7 @@ a = 1
             , Test.test "function as argument"
                 (\() ->
                     "( cMsg -> cModel -> a ) -> b"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 29 } }
                                 (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
@@ -1820,7 +1821,7 @@ a = 1
             , Test.test "type with params"
                 (\() ->
                     "(Foo -> Bar)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
                                 (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } }
@@ -1841,7 +1842,7 @@ a = 1
             , Test.test "function type reference multiple and parens"
                 (\() ->
                     "(Foo -> Bar) -> baz"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 20 } }
                                 (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
@@ -1867,12 +1868,12 @@ a = 1
             , Test.test "parseTypeWith wrong indent"
                 (\() ->
                     "Maybe\na"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.type_
                 )
             , Test.test "parseTypeWith good indent"
                 (\() ->
                     "Maybe\n a"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 3 } }
                                 (Elm.Syntax.TypeAnnotation.Typed
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } ( [], "Maybe" ))
@@ -1883,7 +1884,7 @@ a = 1
             , Test.test "issue #5 - no spaces between type and generic with parens"
                 (\() ->
                     "List(String)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
                                 (Elm.Syntax.TypeAnnotation.Typed
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } ( [], "List" ))
@@ -1899,7 +1900,7 @@ a = 1
             , Test.test "parse type with multiple params"
                 (\() ->
                     "Dict String Int"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.type_
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
                                 (Elm.Syntax.TypeAnnotation.Typed
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } ( [], "Dict" ))
@@ -1934,22 +1935,22 @@ a = 1
             , Test.test "empty"
                 (\() ->
                     "a = "
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "Integer literal"
                 (\() ->
                     "101"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 101))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 101))
                 )
             , Test.test "Hex integer literal"
                 (\() ->
                     "0x56"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.Hex 86))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.Hex 86))
                 )
             , Test.test "String literal"
                 (\() ->
                     "\"Bar\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.Literal "Bar"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Expression.Literal "Bar"))
                 )
             , Test.test "multiline string"
                 (\() ->
@@ -2018,12 +2019,12 @@ a = 1
             , Test.test "character literal"
                 (\() ->
                     "'c'"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.CharLiteral 'c'))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.CharLiteral 'c'))
                 )
             , Test.test "tuple expression"
                 (\() ->
                     "(1,2)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
                                 (Elm.Syntax.Expression.TupledExpression
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.Integer 1)
@@ -2035,7 +2036,7 @@ a = 1
             , Test.test "triple expression"
                 (\() ->
                     "(1,2,3)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                                 (Elm.Syntax.Expression.TupledExpression
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.Integer 1)
@@ -2048,7 +2049,7 @@ a = 1
             , Test.test "tuple expression with spaces"
                 (\() ->
                     "( 1  ,  2 )"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.Expression.TupledExpression
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 1)
@@ -2060,47 +2061,47 @@ a = 1
             , Test.test "4-tuple expression is invalid"
                 (\() ->
                     "a = (1,2,3,4)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "String literal multiline"
                 (\() ->
                     "\"\"\"Bar foo \n a\"\"\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } (Elm.Syntax.Expression.Literal "Bar foo \n a"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } (Elm.Syntax.Expression.Literal "Bar foo \n a"))
                 )
             , Test.test "Regression test for multiline strings with backslashes"
                 (\() ->
                     "a = \"\"\"\\{\\}\"\"\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "Regression test 2 for multiline strings with backslashes"
                 (\() ->
                     "\"\"\"\\\\{\\\\}\"\"\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Elm.Syntax.Expression.Literal "\\{\\}"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Elm.Syntax.Expression.Literal "\\{\\}"))
                 )
             , Test.test "Regression test 3 for multiline strings with backslashes"
                 (\() ->
                     "\"\"\"\\\\a-blablabla-\\\\b\"\"\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } } (Elm.Syntax.Expression.Literal "\\a-blablabla-\\b"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } } (Elm.Syntax.Expression.Literal "\\a-blablabla-\\b"))
                 )
             , Test.test "Type expression for upper case"
                 (\() ->
                     "Bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "Bar"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "Bar"))
                 )
             , Test.test "Type expression for lower case"
                 (\() ->
                     "bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
                 )
             , Test.test "Type expression for lower case but qualified"
                 (\() ->
                     "Bar.foo"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [ "Bar" ] "foo"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [ "Bar" ] "foo"))
                 )
             , Test.test "parenthesizedExpression"
                 (\() ->
                     "(bar)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
                                 (Elm.Syntax.Expression.ParenthesizedExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
@@ -2110,7 +2111,7 @@ a = 1
             , Test.test "parenthesized expression starting with a negation"
                 (\() ->
                     "(-1 * sign)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.Expression.ParenthesizedExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 11 } }
@@ -2128,7 +2129,7 @@ a = 1
             , Test.test "application expression"
                 (\() ->
                     "List.concat []"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [ "List" ] "concat")
@@ -2140,7 +2141,7 @@ a = 1
             , Test.test "Binary operation"
                 (\() ->
                     "model + 1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
                                 (Elm.Syntax.Expression.OperatorApplication "+"
                                     Elm.Syntax.Infix.Left
@@ -2152,7 +2153,7 @@ a = 1
             , Test.test "Nested binary operations (+ and ==)"
                 (\() ->
                     "count + 1 == 1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                 (Elm.Syntax.Expression.OperatorApplication "=="
                                     Elm.Syntax.Infix.Non
@@ -2170,7 +2171,7 @@ a = 1
             , Test.test "Nested binary operations (+ and /=)"
                 (\() ->
                     "count + 1 /= 1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                 (Elm.Syntax.Expression.OperatorApplication "/="
                                     Elm.Syntax.Infix.Non
@@ -2188,7 +2189,7 @@ a = 1
             , Test.test "Nested binary operations (+ and //)"
                 (\() ->
                     "count + 1 // 2"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                 (Elm.Syntax.Expression.OperatorApplication "+"
                                     Elm.Syntax.Infix.Left
@@ -2206,7 +2207,7 @@ a = 1
             , Test.test "Nested binary operations (&& and <|)"
                 (\() ->
                     "condition && condition <| f"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
                                 (Elm.Syntax.Expression.OperatorApplication "<|"
                                     Elm.Syntax.Infix.Right
@@ -2224,7 +2225,7 @@ a = 1
             , Test.test "application expression 2"
                 (\() ->
                     "(\"\", always (List.concat [ [ fileName ], [] ]))"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 48 } }
                                 (Elm.Syntax.Expression.TupledExpression
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Literal "")
@@ -2259,12 +2260,12 @@ a = 1
             , Test.test "expressionNotApplication simple"
                 (\() ->
                     "foo"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
                 )
             , Test.test "unit application"
                 (\() ->
                     "Task.succeed ()"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } } (Elm.Syntax.Expression.FunctionOrValue [ "Task" ] "succeed")
@@ -2276,7 +2277,7 @@ a = 1
             , Test.test "Function call"
                 (\() ->
                     "foo bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
@@ -2288,12 +2289,12 @@ a = 1
             , Test.test "Function call with argument badly indented"
                 (\() ->
                     "a = foo\nbar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "ifBlockExpression"
                 (\() ->
                     "if True then foo else bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 26 } }
                                 (Elm.Syntax.Expression.IfBlock
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "True"))
@@ -2305,7 +2306,7 @@ a = 1
             , Test.test "nestedIfExpression"
                 (\() ->
                     "if True then if False then foo else baz else bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 49 } }
                                 (Elm.Syntax.Expression.IfBlock
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "True"))
@@ -2323,7 +2324,7 @@ a = 1
             , Test.test "recordExpression"
                 (\() ->
                     "{ model = 0, view = view, update = update }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 44 } }
                                 (Elm.Syntax.Expression.RecordExpr
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
@@ -2345,8 +2346,8 @@ a = 1
             , Test.test "recordExpression with comment"
                 (\() ->
                     "{ foo = 1 -- bar\n , baz = 2 }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.expression
-                            { ast =
+                        |> ParserWithCommentsExpect.syntaxWithComments ElmSyntaxParserLenient.expression
+                            { syntax =
                                 Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 13 } }
                                     (Elm.Syntax.Expression.RecordExpr
                                         [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 10 } }
@@ -2365,7 +2366,7 @@ a = 1
             , Test.test "listExpression"
                 (\() ->
                     "[ class \"a\", text \"Foo\"]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
                                 (Elm.Syntax.Expression.ListExpr
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
@@ -2387,8 +2388,8 @@ a = 1
             , Test.test "listExpression singleton with comment"
                 (\() ->
                     "[ 1 {- Foo-} ]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.expression
-                            { ast =
+                        |> ParserWithCommentsExpect.syntaxWithComments ElmSyntaxParserLenient.expression
+                            { syntax =
                                 Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                                     (Elm.Syntax.Expression.ListExpr
                                         [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 1)
@@ -2400,20 +2401,20 @@ a = 1
             , Test.test "listExpression empty with comment"
                 (\() ->
                     "[{- Foo -}]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.expression
-                            { ast = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.ListExpr [])
+                        |> ParserWithCommentsExpect.syntaxWithComments ElmSyntaxParserLenient.expression
+                            { syntax = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.ListExpr [])
                             , comments = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 11 } } "{- Foo -}" ]
                             }
                 )
             , Test.test "qualified expression"
                 (\() ->
                     "Html.text"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [ "Html" ] "text"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [ "Html" ] "text"))
                 )
             , Test.test "record access"
                 (\() ->
                     "foo.bar"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                                 (Elm.Syntax.Expression.RecordAccess
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
@@ -2424,7 +2425,7 @@ a = 1
             , Test.test "multiple record access operations"
                 (\() ->
                     "foo.bar.baz"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.Expression.RecordAccess
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
@@ -2440,7 +2441,7 @@ a = 1
             , Test.test "multiple record access operations with module name"
                 (\() ->
                     "A.B.foo.bar.baz"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
                                 (Elm.Syntax.Expression.RecordAccess
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
@@ -2456,7 +2457,7 @@ a = 1
             , Test.test "record update"
                 (\() ->
                     "{ model | count = 1, loading = True }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
                                 (Elm.Syntax.Expression.RecordUpdateExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } "model")
@@ -2475,7 +2476,7 @@ a = 1
             , Test.test "record update no spacing"
                 (\() ->
                     "{model| count = 1, loading = True }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 36 } }
                                 (Elm.Syntax.Expression.RecordUpdateExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } "model")
@@ -2494,7 +2495,7 @@ a = 1
             , Test.test "record access as function"
                 (\() ->
                     "List.map .name people"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 22 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [ "List" ] "map")
@@ -2507,7 +2508,7 @@ a = 1
             , Test.test "record access direct"
                 (\() ->
                     "(.spaceEvenly Internal.Style.classes)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
                                 (Elm.Syntax.Expression.ParenthesizedExpression
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 37 } }
@@ -2523,47 +2524,47 @@ a = 1
             , Test.test "positive integer should be invalid"
                 (\() ->
                     "a = +1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "expression ending with an operator should not be valid"
                 (\() ->
                     "a = 1++"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "multiple < in a row should not be valid"
                 (\() ->
                     "z = a < b < c"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "multiple > in a row should not be valid"
                 (\() ->
                     "z = a > b > c"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "multiple == in a row should not be valid"
                 (\() ->
                     "z = a == b == c"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "multiple /= in a row should not be valid"
                 (\() ->
                     "z = a /= b /= c"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "multiple >= in a row should not be valid"
                 (\() ->
                     "z = a >= b >= c"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "multiple <= in a row should not be valid"
                 (\() ->
                     "z = a <= b <= c"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "mixing comparison operators without parenthesis should not be valid"
                 (\() ->
                     "z = a < b == c"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
 
             -- TODO introduce validation step for
@@ -2586,7 +2587,7 @@ a = 1
             , Test.test "prefix notation"
                 (\() ->
                     "(::) x"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.PrefixOperator "::")
@@ -2598,7 +2599,7 @@ a = 1
             , Test.test "subtraction without spaces"
                 (\() ->
                     "2-1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
                                 (Elm.Syntax.Expression.OperatorApplication "-"
                                     Elm.Syntax.Infix.Left
@@ -2610,7 +2611,7 @@ a = 1
             , Test.test "negated expression for value"
                 (\() ->
                     "-x"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } }
                                 (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.FunctionOrValue [] "x")))
                             )
@@ -2618,7 +2619,7 @@ a = 1
             , Test.test "negated expression in application"
                 (\() ->
                     "toFloat -5"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "toFloat")
@@ -2631,7 +2632,7 @@ a = 1
             , Test.test "negated expression for parenthesized"
                 (\() ->
                     "-(x - y)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } }
                                 (Elm.Syntax.Expression.Negation
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 9 } }
@@ -2651,7 +2652,7 @@ a = 1
             , Test.test "negated expression with other operations"
                 (\() ->
                     "-1 + -10 * -100^2 == -100001"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 29 } }
                                 (Elm.Syntax.Expression.OperatorApplication "=="
                                     Elm.Syntax.Infix.Non
@@ -2691,7 +2692,7 @@ a = 1
             , Test.test "plus and minus in the same expression"
                 (\() ->
                     "1 + 2 - 3"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node
                                 { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
                                 (Elm.Syntax.Expression.OperatorApplication "-"
@@ -2710,7 +2711,7 @@ a = 1
             , Test.test "pipe operation"
                 (\() ->
                     "a |> b"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
                                 (Elm.Syntax.Expression.OperatorApplication "|>"
                                     Elm.Syntax.Infix.Left
@@ -2722,7 +2723,7 @@ a = 1
             , Test.test "function with higher order"
                 (\() ->
                     "chompWhile (\\c -> c == ' ' || c == '\\n' || c == '\\r')"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 54 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } } (Elm.Syntax.Expression.FunctionOrValue [] "chompWhile")
@@ -2777,7 +2778,7 @@ a = 1
             , Test.test "application should be lower-priority than field access"
                 (\() ->
                     "foo { d | b = f x y }.b"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
@@ -2807,7 +2808,7 @@ a = 1
             , Test.test "should not consider a negative number parameter as the start of a new application"
                 (\() ->
                     "Random.list -1 generator"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
                                 (Elm.Syntax.Expression.Application
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.FunctionOrValue [ "Random" ] "list")
@@ -2825,7 +2826,7 @@ a = 1
             , Test.test "negation can be applied on record access"
                 (\() ->
                     "1 + -{x = 10}.x"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
                                 (Elm.Syntax.Expression.OperatorApplication "+"
                                     Elm.Syntax.Infix.Left
@@ -2855,7 +2856,7 @@ a = 1
                 [ Test.test "unit lambda"
                     (\() ->
                         "\\() -> foo"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
                                     (Elm.Syntax.Expression.LambdaExpression
                                         { args = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } Elm.Syntax.Pattern.UnitPattern ]
@@ -2867,7 +2868,7 @@ a = 1
                 , Test.test "record lambda"
                     (\() ->
                         "\\{foo} -> foo"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
                                     (Elm.Syntax.Expression.LambdaExpression
                                         { args = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } (Elm.Syntax.Pattern.RecordPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 6 } } "foo" ]) ]
@@ -2879,7 +2880,7 @@ a = 1
                 , Test.test "empty record lambda"
                     (\() ->
                         "\\{} -> foo"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
                                     (Elm.Syntax.Expression.LambdaExpression
                                         { args = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.RecordPattern []) ]
@@ -2891,7 +2892,7 @@ a = 1
                 , Test.test "args lambda"
                     (\() ->
                         "\\a b -> a + b"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
                                     (Elm.Syntax.Expression.LambdaExpression
                                         { args =
@@ -2912,7 +2913,7 @@ a = 1
                 , Test.test "tuple lambda"
                     (\() ->
                         "\\(a,b) -> a + b"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
                                     (Elm.Syntax.Expression.LambdaExpression
                                         { args =
@@ -2942,7 +2943,7 @@ a = 1
   foo = bar
 
   john n = n in 1"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 4, column = 18 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -2982,7 +2983,7 @@ a = 1
   bar = 1
             in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 4, column = 6 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3010,7 +3011,7 @@ a = 1
   bar = 1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should fail to parse if declarations are not indented the same way"
                     (\() ->
@@ -3019,7 +3020,7 @@ a = 1
       foo = 2
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "let with deindented expression in in"
                     (\() ->
@@ -3027,7 +3028,7 @@ a = 1
   bar = 1
  in
    bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 4, column = 7 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3056,7 +3057,7 @@ a = 1
     bar = 1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 5, column = 6 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3095,7 +3096,7 @@ a = 1
     bar = 1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 7, column = 6 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3130,7 +3131,7 @@ a = 1
       bar = 1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should fail to parse when type annotation and declaration are not aligned (annotation later)"
                     (\() ->
@@ -3139,7 +3140,7 @@ a = 1
     bar = 1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should fail to parse `as` pattern not surrounded by parentheses"
                     (\() ->
@@ -3147,7 +3148,7 @@ a = 1
           bar n as m = 1
         in
         bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "correctly parse variant + args pattern not surrounded by parentheses"
                     (\() ->
@@ -3155,7 +3156,7 @@ a = 1
           bar Bar m = 1
         in
         bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 4, column = 12 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3187,7 +3188,7 @@ a = 1
     (bar) = 1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should not parse let destructuring with `as` not surrounded by parentheses"
                     (\() ->
@@ -3195,7 +3196,7 @@ a = 1
     foo as bar = 1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should not parse let destructuring with variant + arguments not surrounded by parentheses"
                     (\() ->
@@ -3203,7 +3204,7 @@ a = 1
     Foo bar = 1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should not parse let destructuring with non-positive layout before ="
                     (\() ->
@@ -3212,7 +3213,7 @@ a = 1
     =     1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should not parse let destructuring with non-positive layout before expression"
                     (\() ->
@@ -3221,7 +3222,7 @@ a = 1
     1
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should not parse let type annotation without a declaration"
                     (\() ->
@@ -3229,7 +3230,7 @@ a = 1
     bar : Int
   in
   bar"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "Using destructuring"
                     (\() ->
@@ -3240,7 +3241,7 @@ a = 1
     (Node _ f) = g
  in
     1"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 7, column = 6 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3282,7 +3283,7 @@ a = 1
                 , Test.test "On one line"
                     (\() ->
                         "let indent = String.length s in indent"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 39 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3315,7 +3316,7 @@ a = 1
                         """let
         a = 1
     in[]"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 9 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3342,7 +3343,7 @@ a = 1
                         """let
         a = 1
     in{}"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 9 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3369,7 +3370,7 @@ a = 1
                         """let
         a = 1
     in\\_ -> 1"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 14 } }
                                     (Elm.Syntax.Expression.LetExpression
                                         { declarations =
@@ -3396,7 +3397,7 @@ a = 1
                 , Test.test "let is not confused by a variable name starting with let"
                     (\() ->
                         "letterbox"
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [] "letterbox"))
                     )
                 ]
@@ -3407,34 +3408,34 @@ a = 1
 True
   of
     A -> 1"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should fail to parse when the `of` keyword has the wrong indentation"
                     (\() ->
                         """case True
 of
                A -> 1"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should fail to parse a branch at the start of a line"
                     (\() ->
                         """case True of
 True -> 1"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should fail to parse when branch body starts at the start of a line"
                     (\() ->
                         """case f of
   True ->
 1"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "case expression"
                     (\() ->
                         """case f of
   True -> 1
   False -> 2"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 13 } }
                                     (Elm.Syntax.Expression.CaseExpression
                                         { expression =
@@ -3455,7 +3456,7 @@ True -> 1"""
                     (\() ->
                         """case f of
   Foo.Bar -> 1"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 15 } }
                                     (Elm.Syntax.Expression.CaseExpression
                                         { expression =
@@ -3473,7 +3474,7 @@ True -> 1"""
                     (\() ->
                         """case f of
   x->1"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 7 } }
                                     (Elm.Syntax.Expression.CaseExpression
                                         { expression =
@@ -3491,7 +3492,7 @@ True -> 1"""
                     (\() ->
                         """case x of True -> 1
           False -> 2"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 21 } }
                                     (Elm.Syntax.Expression.CaseExpression
                                         { expression = Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "x")
@@ -3516,7 +3517,7 @@ True -> 1"""
             triple quote\"\"\" ->
             2
         _ -> 3"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 7, column = 15 } }
                                     (Elm.Syntax.Expression.CaseExpression
                                         { expression =
@@ -3542,7 +3543,7 @@ True -> 1"""
                     )
                 , Test.test "should fail to parse case expression with second branch indented differently than the first line (before)"
                     (\() ->
-                        Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression """case f of
+                        ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression """case f of
   True -> 1
  False -> 2"""
                     )
@@ -3552,7 +3553,7 @@ True -> 1"""
   True -> 1
    False -> 2
 """
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.expression
                     )
                 , Test.test "should parse case expression when "
                     (\() ->
@@ -3562,7 +3563,7 @@ True -> 1"""
 
   Decrement ->
     2"""
-                            |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                                 (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 6, column = 6 } }
                                     (Elm.Syntax.Expression.CaseExpression
                                         { expression = Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [] "msg")
@@ -3588,7 +3589,7 @@ True -> 1"""
         f y then  1 else 0
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if `then` not positively indented"
                 (\() ->
@@ -3599,7 +3600,7 @@ True -> 1"""
        then  1 else 0
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if if-true-branch not positively indented"
                 (\() ->
@@ -3610,7 +3611,7 @@ True -> 1"""
         1   else 0
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if `else` not positively indented"
                 (\() ->
@@ -3621,7 +3622,7 @@ True -> 1"""
        else 0
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if if-false-branch not positively indented"
                 (\() ->
@@ -3632,7 +3633,7 @@ True -> 1"""
         0
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if record closing curly not positively indented"
                 (\() ->
@@ -3643,7 +3644,7 @@ True -> 1"""
         }
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if record field value not positively indented"
                 (\() ->
@@ -3654,7 +3655,7 @@ True -> 1"""
         1 }
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if record field name not positively indented"
                 (\() ->
@@ -3665,7 +3666,7 @@ True -> 1"""
         b       = 1 }
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if record field `=` not positively indented"
                 (\() ->
@@ -3676,7 +3677,7 @@ True -> 1"""
         =         1 }
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if tuple closing parens not positively indented"
                 (\() ->
@@ -3687,7 +3688,7 @@ True -> 1"""
         )
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if first tuple part not positively indented"
                 (\() ->
@@ -3699,7 +3700,7 @@ True -> 1"""
             )
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if second tuple part not positively indented"
                 (\() ->
@@ -3710,7 +3711,7 @@ True -> 1"""
         1   )
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if operator not positively indented"
                 (\() ->
@@ -3721,7 +3722,7 @@ True -> 1"""
         + 1
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if function call argument not positively indented"
                 (\() ->
@@ -3732,7 +3733,7 @@ True -> 1"""
         1
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if lambda result not positively indented"
                 (\() ->
@@ -3743,7 +3744,7 @@ True -> 1"""
         y
     in
     x"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "fail if case branch result call argument not positively indented"
                 (\() ->
@@ -3751,12 +3752,12 @@ True -> 1"""
     case Nothing of
         Nothing -> a
   b"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "glsl block"
                 (\() ->
                     "[glsl| precision mediump float; |]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.expression
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 37 } }
                                 (Elm.Syntax.Expression.GLSLExpression " precision mediump float; ")
                             )
@@ -3766,7 +3767,7 @@ True -> 1"""
             [ Test.test "Unit"
                 (\() ->
                     "()"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } Elm.Syntax.Pattern.UnitPattern)
                 )
             , Test.test "Unit with inner layout"
@@ -3774,30 +3775,30 @@ True -> 1"""
                     """(
    -- comment
    )"""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.pattern
-                            { ast = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 5 } } Elm.Syntax.Pattern.UnitPattern
+                        |> ParserWithCommentsExpect.syntaxWithComments ElmSyntaxParserLenient.pattern
+                            { syntax = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 5 } } Elm.Syntax.Pattern.UnitPattern
                             , comments = [ Elm.Syntax.Node.Node { start = { row = 2, column = 4 }, end = { row = 2, column = 14 } } "-- comment" ]
                             }
                 )
             , Test.test "String"
                 (\() ->
                     "\"Foo\""
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Pattern.StringPattern "Foo"))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } (Elm.Syntax.Pattern.StringPattern "Foo"))
                 )
             , Test.test "Char"
                 (\() ->
                     "'f'"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.CharPattern 'f'))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.CharPattern 'f'))
                 )
             , Test.test "Wildcard"
                 (\() ->
                     "_"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } Elm.Syntax.Pattern.AllPattern)
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } Elm.Syntax.Pattern.AllPattern)
                 )
             , Test.test "Parenthesized"
                 (\() ->
                     "(x)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
                                 (Elm.Syntax.Pattern.ParenthesizedPattern
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.VarPattern "x"))
@@ -3807,18 +3808,18 @@ True -> 1"""
             , Test.test "Int"
                 (\() ->
                     "1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Pattern.IntPattern 1))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Pattern.IntPattern 1))
                 )
             , Test.test "Hex int"
                 (\() ->
                     "0x1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.HexPattern 1))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.HexPattern 1))
                 )
-            , Test.test "Float should not be valid" (\() -> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern "1.0")
+            , Test.test "Float should not be valid" (\() -> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.pattern "1.0")
             , Test.test "Uncons"
                 (\() ->
                     "n :: tail"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
                                 (Elm.Syntax.Pattern.UnConsPattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Pattern.VarPattern "n"))
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 10 } } (Elm.Syntax.Pattern.VarPattern "tail"))
@@ -3828,7 +3829,7 @@ True -> 1"""
             , Test.test "Uncons multiple"
                 (\() ->
                     "a :: b :: cUp"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
                                 (Elm.Syntax.Pattern.UnConsPattern
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Pattern.VarPattern "a"))
@@ -3843,7 +3844,7 @@ True -> 1"""
             , Test.test "Uncons with parens"
                 (\() ->
                     "(X x) :: xs"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.Pattern.UnConsPattern
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
@@ -3862,46 +3863,46 @@ True -> 1"""
             , Test.test "Empty list"
                 (\() ->
                     "[]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.ListPattern []))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.ListPattern []))
                 )
             , Test.test "Empty list pattern with whitespace"
                 (\() ->
                     "[ ]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.ListPattern []))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.ListPattern []))
                 )
             , Test.test "Single element list"
                 (\() ->
                     "[1]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.ListPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.IntPattern 1) ]))
                 )
             , Test.test "Single element list with trailing whitespace"
                 (\() ->
                     "[1 ]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Pattern.ListPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.IntPattern 1) ]))
                 )
             , Test.test "Single element list with leading whitespace"
                 (\() ->
                     "[ 1]"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Pattern.ListPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.IntPattern 1) ]))
                 )
             , Test.test "Empty record"
                 (\() ->
                     "{}"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.RecordPattern []))
                 )
             , Test.test "Empty record with whitespace"
                 (\() ->
                     "{ }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.RecordPattern []))
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.RecordPattern []))
                 )
             , Test.test "Record"
                 (\() ->
                     "{a,b}"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
                                 (Elm.Syntax.Pattern.RecordPattern
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } "a"
@@ -3913,7 +3914,7 @@ True -> 1"""
             , Test.test "Record pattern with whitespace"
                 (\() ->
                     "{a , b}"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                                 (Elm.Syntax.Pattern.RecordPattern
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } "a"
@@ -3925,7 +3926,7 @@ True -> 1"""
             , Test.test "Record pattern with trailing whitespace"
                 (\() ->
                     "{a }"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } }
                                 (Elm.Syntax.Pattern.RecordPattern
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } "a" ]
@@ -3935,7 +3936,7 @@ True -> 1"""
             , Test.test "Record pattern with leading whitespace"
                 (\() ->
                     "{ a}"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } }
                                 (Elm.Syntax.Pattern.RecordPattern
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } "a" ]
@@ -3945,20 +3946,24 @@ True -> 1"""
             , Test.test "Named"
                 (\() ->
                     "True"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } }
                                 (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "True" } [])
                             )
                 )
             , Test.test "Named pattern without and with spacing should parse to the same"
                 (\() ->
-                    Elm.Parser.ParserWithCommentsTestUtil.parse "Bar " ElmSyntaxParserLenient.pattern
-                        |> Expect.equal (Elm.Parser.ParserWithCommentsTestUtil.parse "Bar" ElmSyntaxParserLenient.pattern)
+                    "Bar "
+                        |> ParserFast.run ElmSyntaxParserLenient.pattern
+                        |> Expect.equal
+                            ("Bar"
+                                |> ParserFast.run ElmSyntaxParserLenient.pattern
+                            )
                 )
             , Test.test "Qualified named"
                 (\() ->
                     "Basics.True"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.Pattern.NamedPattern { moduleName = [ "Basics" ], name = "True" } [])
                             )
@@ -3966,7 +3971,7 @@ True -> 1"""
             , Test.test "Named pattern with data"
                 (\() ->
                     "Set x"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } }
                                 (Elm.Syntax.Pattern.NamedPattern
                                     { moduleName = [], name = "Set" }
@@ -3977,7 +3982,7 @@ True -> 1"""
             , Test.test "Qualified named pattern with data"
                 (\() ->
                     "Set.Set x"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
                                 (Elm.Syntax.Pattern.NamedPattern
                                     { moduleName = [ "Set" ], name = "Set" }
@@ -3988,7 +3993,7 @@ True -> 1"""
             , Test.test "Tuple"
                 (\() ->
                     "(model, cmd)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
                                 (Elm.Syntax.Pattern.TuplePattern
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } (Elm.Syntax.Pattern.VarPattern "model")
@@ -4000,12 +4005,12 @@ True -> 1"""
             , Test.test "4-tuple pattern is invalid"
                 (\() ->
                     "(1,2,3,4)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.pattern
                 )
             , Test.test "Nested tuple"
                 (\() ->
                     "(a,{b,c},())"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
                                 (Elm.Syntax.Pattern.TuplePattern
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Pattern.VarPattern "a")
@@ -4018,7 +4023,7 @@ True -> 1"""
             , Test.test "As pattern"
                 (\() ->
                     "x as y"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
                                 (Elm.Syntax.Pattern.AsPattern
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } (Elm.Syntax.Pattern.VarPattern "x"))
@@ -4029,37 +4034,37 @@ True -> 1"""
             , Test.test "should fail to parse when right side is not a direct variable name"
                 (\() ->
                     "x as (y)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.pattern
                 )
             , Test.test "should fail to parse consecutive as"
                 (\() ->
                     "x as y as z"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.pattern
                 )
             , Test.test "should fail to parse :: after as"
                 (\() ->
                     "x as y :: z"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.pattern
                 )
             , Test.test "should fail to parse :: after as even when :: was already used before"
                 (\() ->
                     "w :: x as y :: z"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.pattern
                 )
             , Test.test "should fail to parse when right side is an invalid variable name"
                 (\() ->
                     "x as _y"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.pattern
                 )
             , Test.test "should fail to parse when right side is not a variable name"
                 (\() ->
                     "x as 1"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.pattern
                 )
             , Test.test "Record as"
                 (\() ->
                     "{model,context} as appState"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
                                 (Elm.Syntax.Pattern.AsPattern
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 16 } }
@@ -4076,7 +4081,7 @@ True -> 1"""
             , Test.test "Complex"
                 (\() ->
                     "(Index irec as index, docVector)"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 33 } }
                                 (Elm.Syntax.Pattern.TuplePattern
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 21 } }
@@ -4096,7 +4101,7 @@ True -> 1"""
             , Test.test "Complex pattern 2"
                 (\() ->
                     "RBNode_elm_builtin col (RBNode_elm_builtin Red  (RBNode_elm_builtin Red xv))"
-                        |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.pattern
+                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 77 } }
                                 (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "RBNode_elm_builtin" }
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 20 }, end = { row = 1, column = 23 } } (Elm.Syntax.Pattern.VarPattern "col")
@@ -4134,7 +4139,7 @@ exposeDefinition =
 
 moduleHeaderExpectAst : Elm.Syntax.Module.Module -> String -> Expect.Expectation
 moduleHeaderExpectAst =
-    Elm.Parser.ParserWithCommentsTestUtil.expectAst (ParserFast.map (\mod -> { comments = mod.comments, syntax = Elm.Syntax.Node.value mod.syntax }) ElmSyntaxParserLenient.moduleHeader)
+    ParserWithCommentsExpect.syntaxWithoutComments (ParserFast.map (\mod -> { comments = mod.comments, syntax = Elm.Syntax.Node.value mod.syntax }) ElmSyntaxParserLenient.moduleHeader)
 
 
 parseSource : String -> ParserFast.Parser a -> Maybe a

@@ -1,6 +1,5 @@
 module Elm.Parser.DeclarationsTests exposing (all)
 
-import Elm.Parser.ParserWithCommentsTestUtil
 import Elm.Syntax.Declaration
 import Elm.Syntax.Expression
 import Elm.Syntax.Infix
@@ -9,6 +8,8 @@ import Elm.Syntax.Pattern
 import Elm.Syntax.TypeAnnotation
 import ElmSyntaxParserLenient
 import Expect
+import ParserFast
+import ParserWithCommentsExpect
 import Test
 
 
@@ -18,7 +19,7 @@ all =
         [ Test.test "function declaration"
             (\() ->
                 "foo = bar"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -37,7 +38,7 @@ all =
             (\() ->
                 """{-| Foo does bar -}
 foo = bar"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 10 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 20 } } "{-| Foo does bar -}")
@@ -55,7 +56,7 @@ foo = bar"""
         , Test.test "function declaration with empty record"
             (\() ->
                 "foo = {}"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -79,7 +80,7 @@ foo = bar"""
         True -> z
     a = b
   in a"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 7, column = 7 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -138,7 +139,7 @@ foo = bar"""
         , Test.test "function declaration with args"
             (\() ->
                 "inc x = x + 1"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -166,7 +167,7 @@ foo = bar"""
   b = 1
  in
   b"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 5, column = 4 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -202,7 +203,7 @@ foo = bar"""
             )
         , Test.test "documentation comment inside a let is invalid"
             (\() ->
-                expectInvalid """foo =
+                ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration """foo =
  let
   {-| b is one -}
   b = 1
@@ -216,7 +217,7 @@ foo = bar"""
   (b, c)=(1, 2)
  in
   b"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 5, column = 4 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -259,7 +260,7 @@ foo = bar"""
             (\() ->
                 """main =
   beginnerProgram { model = 0, view = view, update = update }"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 62 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -304,7 +305,7 @@ foo = bar"""
 
     Decrement ->
       model - 1"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 7, column = 16 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -348,7 +349,7 @@ foo = bar"""
         , Test.test "port declaration for command"
             (\() ->
                 "port parseResponse : ( String, String ) -> Cmd msg"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 51 } }
                             (Elm.Syntax.Declaration.PortDeclaration
                                 { name = Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 19 } } "parseResponse"
@@ -380,7 +381,7 @@ foo = bar"""
         , Test.test "port declaration for subscription"
             (\() ->
                 "port scroll : (Move -> msg) -> Sub msg"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 39 } }
                             (Elm.Syntax.Declaration.PortDeclaration
                                 { name = Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 12 } } "scroll"
@@ -409,13 +410,13 @@ foo = bar"""
         , Test.test "should fail to parse destructuring declaration at the top-level"
             (\() ->
                 "_ = b"
-                    |> expectInvalid
+                    |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
             )
         , Test.test "declaration"
             (\() ->
                 """main =
   text "Hello, World!\""""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 23 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -440,7 +441,7 @@ foo = bar"""
             (\() ->
                 """main =
   text "Hello, World!\""""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 23 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -465,8 +466,8 @@ foo = bar"""
             (\() ->
                 """main =
   {- y -} x"""
-                    |> expectAstWithComments
-                        { ast =
+                    |> ParserWithCommentsExpect.syntaxWithComments ElmSyntaxParserLenient.declaration
+                        { syntax =
                             Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 12 } }
                                 (Elm.Syntax.Declaration.FunctionDeclaration
                                     { documentation = Nothing
@@ -485,7 +486,7 @@ foo = bar"""
         , Test.test "function with a lot of symbols"
             (\() ->
                 "updateState update sendPort = curry <| (uncurry update) >> batchStateCmds sendPort"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 83 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -537,7 +538,7 @@ foo = bar"""
 
     Decrement ->
       model - 1"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 7, column = 16 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -583,7 +584,7 @@ foo = bar"""
                 """update : Model
 update msg model =
     msg"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 8 } }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
@@ -610,7 +611,7 @@ update msg model =
         , Test.test "type alias"
             (\() ->
                 "type alias Foo = {color: String }"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 34 } }
                             (Elm.Syntax.Declaration.AliasDeclaration
                                 { documentation = Nothing
@@ -634,7 +635,7 @@ update msg model =
             (\() ->
                 """{-| Foo is colorful -}
 type alias Foo = {color: String }"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 34 } }
                             (Elm.Syntax.Declaration.AliasDeclaration
                                 { documentation = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 23 } } "{-| Foo is colorful -}")
@@ -657,7 +658,7 @@ type alias Foo = {color: String }"""
         , Test.test "type alias without spacings around '='"
             (\() ->
                 "type alias Foo={color: String }"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
                             (Elm.Syntax.Declaration.AliasDeclaration
                                 { documentation = Nothing
@@ -680,7 +681,7 @@ type alias Foo = {color: String }"""
         , Test.test "type alias with GenericType "
             (\() ->
                 "type alias Foo a = {some : a }"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 31 } }
                             (Elm.Syntax.Declaration.AliasDeclaration
                                 { documentation = Nothing
@@ -702,7 +703,7 @@ type alias Foo = {color: String }"""
         , Test.test "type"
             (\() ->
                 "type Color = Blue String | Red | Green"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 39 } }
                             (Elm.Syntax.Declaration.CustomTypeDeclaration
                                 { documentation = Nothing
@@ -733,7 +734,7 @@ type alias Foo = {color: String }"""
             (\() ->
                 """{-| Classic RGB -}
 type Color = Blue String | Red | Green"""
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 39 } }
                             (Elm.Syntax.Declaration.CustomTypeDeclaration
                                 { documentation = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 19 } } "{-| Classic RGB -}")
@@ -766,7 +767,7 @@ type Color = Blue String | Red | Green"""
         , Test.test "type with multiple args"
             (\() ->
                 "type D = C a B"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                             (Elm.Syntax.Declaration.CustomTypeDeclaration
                                 { documentation = Nothing
@@ -789,7 +790,7 @@ type Color = Blue String | Red | Green"""
         , Test.test "type with multiple args and correct distribution of args"
             (\() ->
                 "type D = C B a"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
                             (Elm.Syntax.Declaration.CustomTypeDeclaration
                                 { documentation = Nothing
@@ -812,12 +813,12 @@ type Color = Blue String | Red | Green"""
         , Test.test "type args should not continue on next line"
             (\() ->
                 "type D = C B\na"
-                    |> expectInvalid
+                    |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
             )
         , Test.test "type with GenericType"
             (\() ->
                 "type Maybe a = Just a | Nothing"
-                    |> expectAst
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 32 } }
                             (Elm.Syntax.Declaration.CustomTypeDeclaration
                                 { documentation = Nothing
@@ -839,7 +840,8 @@ type Color = Blue String | Red | Green"""
             )
         , Test.test "type with value on next line "
             (\() ->
-                Elm.Parser.ParserWithCommentsTestUtil.parse "type Maybe a = Just a |\nNothing" ElmSyntaxParserLenient.declaration
+                "type Maybe a = Just a |\nNothing"
+                    |> ParserFast.run ElmSyntaxParserLenient.declaration
                     |> Expect.equal Nothing
             )
         , Test.test "fail if declarations not on module-level"
@@ -847,27 +849,27 @@ type Color = Blue String | Red | Green"""
                 """a = f
     3
     b = 4"""
-                    |> expectInvalid
+                    |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
             )
         , Test.test "fail if function declaration argument is `as` without parenthesis"
             (\() ->
                 """a foo as bar = f3"""
-                    |> expectInvalid
+                    |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
             )
         , Test.test "regression test for disallowing ( +)"
             (\() ->
                 "a = ( +)"
-                    |> expectInvalid
+                    |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
             )
         , Test.test "regression test for disallowing (+ )"
             (\() ->
                 "a = (+ )"
-                    |> expectInvalid
+                    |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
             )
         , Test.test "right infix"
             (\() ->
                 "infix right 7 (</>) = slash"
-                    |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.declaration
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 28 } }
                             (Elm.Syntax.Declaration.InfixDeclaration
                                 { direction = Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 12 } } Elm.Syntax.Infix.Right
@@ -881,7 +883,7 @@ type Color = Blue String | Red | Green"""
         , Test.test "left infix"
             (\() ->
                 "infix left  8 (<?>) = questionMark"
-                    |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.declaration
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 35 } }
                             (Elm.Syntax.Declaration.InfixDeclaration
                                 { direction = Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 11 } } Elm.Syntax.Infix.Left
@@ -895,7 +897,7 @@ type Color = Blue String | Red | Green"""
         , Test.test "non infix"
             (\() ->
                 "infix non   4 (==) = eq"
-                    |> Elm.Parser.ParserWithCommentsTestUtil.expectAst ElmSyntaxParserLenient.declaration
+                    |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.declaration
                         (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 24 } }
                             (Elm.Syntax.Declaration.InfixDeclaration
                                 { direction = Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 10 } } Elm.Syntax.Infix.Non
@@ -907,18 +909,3 @@ type Color = Blue String | Red | Green"""
                         )
             )
         ]
-
-
-expectAst : Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration -> String -> Expect.Expectation
-expectAst =
-    Elm.Parser.ParserWithCommentsTestUtil.expectAstWithIndent1 ElmSyntaxParserLenient.declaration
-
-
-expectAstWithComments : { ast : Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration, comments : List (Elm.Syntax.Node.Node String) } -> String -> Expect.Expectation
-expectAstWithComments =
-    Elm.Parser.ParserWithCommentsTestUtil.expectAstWithComments ElmSyntaxParserLenient.declaration
-
-
-expectInvalid : String -> Expect.Expectation
-expectInvalid =
-    Elm.Parser.ParserWithCommentsTestUtil.expectInvalid ElmSyntaxParserLenient.declaration
