@@ -4249,7 +4249,7 @@ isOperatorSymbolCharAsString c =
             False
 
 
-singleLineComment : ParserFast.Parser (Elm.Syntax.Node.Node String)
+singleLineComment : Parser (Elm.Syntax.Node.Node String)
 singleLineComment =
     ParserFast.symbolFollowedBy "--"
         (ParserFast.whileMapWithRange
@@ -4267,7 +4267,7 @@ singleLineComment =
         )
 
 
-multilineComment : ParserFast.Parser (Elm.Syntax.Node.Node String)
+multilineComment : Parser (Elm.Syntax.Node.Node String)
 multilineComment =
     ParserFast.offsetSourceAndThen
         (\offset source ->
@@ -4280,14 +4280,14 @@ multilineComment =
         )
 
 
-multiLineCommentNoCheck : ParserFast.Parser (Elm.Syntax.Node.Node String)
+multiLineCommentNoCheck : Parser (Elm.Syntax.Node.Node String)
 multiLineCommentNoCheck =
     ParserFast.nestableMultiCommentMapWithRange Elm.Syntax.Node.Node
         ( '{', "-" )
         ( '-', "}" )
 
 
-whitespaceAndComments : ParserFast.Parser ParserWithComments.Comments
+whitespaceAndComments : Parser ParserWithComments.Comments
 whitespaceAndComments =
     ParserFast.skipWhileWhitespaceBacktrackableFollowedBy
         -- whitespace can't be followed by more whitespace
@@ -4311,7 +4311,7 @@ whitespaceAndComments =
         )
 
 
-fromMultilineCommentNodeOrEmptyOnProblem : ParserFast.Parser ParserWithComments.Comments
+fromMultilineCommentNodeOrEmptyOnProblem : Parser ParserWithComments.Comments
 fromMultilineCommentNodeOrEmptyOnProblem =
     ParserFast.map2OrSucceed
         (\comment commentsAfter ->
@@ -4324,7 +4324,7 @@ fromMultilineCommentNodeOrEmptyOnProblem =
         Rope.empty
 
 
-fromSingleLineCommentNode : ParserFast.Parser ParserWithComments.Comments
+fromSingleLineCommentNode : Parser ParserWithComments.Comments
 fromSingleLineCommentNode =
     ParserFast.map2
         (\content commentsAfter ->
@@ -4336,7 +4336,7 @@ fromSingleLineCommentNode =
         whitespaceAndCommentsOrEmptyLoop
 
 
-whitespaceAndCommentsOrEmptyLoop : ParserFast.Parser ParserWithComments.Comments
+whitespaceAndCommentsOrEmptyLoop : Parser ParserWithComments.Comments
 whitespaceAndCommentsOrEmptyLoop =
     ParserFast.loopWhileSucceeds
         (ParserFast.oneOf2
@@ -4349,12 +4349,12 @@ whitespaceAndCommentsOrEmptyLoop =
         identity
 
 
-whitespaceAndCommentsEndsPositivelyIndented : ParserFast.Parser ParserWithComments.Comments
+whitespaceAndCommentsEndsPositivelyIndented : Parser ParserWithComments.Comments
 whitespaceAndCommentsEndsPositivelyIndented =
     whitespaceAndComments |> endsPositivelyIndented
 
 
-endsPositivelyIndented : ParserFast.Parser a -> ParserFast.Parser a
+endsPositivelyIndented : Parser a -> Parser a
 endsPositivelyIndented parser =
     ParserFast.validateEndColumnIndentation
         (\column indent -> column > indent)
@@ -4364,7 +4364,7 @@ endsPositivelyIndented parser =
 {-| Check that the indentation of an already parsed token
 would be valid after [`maybeLayout`](#maybeLayout)
 -}
-positivelyIndentedPlusFollowedBy : Int -> ParserFast.Parser a -> ParserFast.Parser a
+positivelyIndentedPlusFollowedBy : Int -> Parser a -> Parser a
 positivelyIndentedPlusFollowedBy extraIndent nextParser =
     ParserFast.columnIndentAndThen
         (\column indent ->
@@ -4376,7 +4376,7 @@ positivelyIndentedPlusFollowedBy extraIndent nextParser =
         )
 
 
-positivelyIndentedFollowedBy : ParserFast.Parser a -> ParserFast.Parser a
+positivelyIndentedFollowedBy : Parser a -> Parser a
 positivelyIndentedFollowedBy nextParser =
     ParserFast.columnIndentAndThen
         (\column indent ->
@@ -4388,7 +4388,7 @@ positivelyIndentedFollowedBy nextParser =
         )
 
 
-whitespaceAndCommentsEndsTopIndentedFollowedByComments : ParserFast.Parser ParserWithComments.Comments -> ParserFast.Parser ParserWithComments.Comments
+whitespaceAndCommentsEndsTopIndentedFollowedByComments : Parser ParserWithComments.Comments -> Parser ParserWithComments.Comments
 whitespaceAndCommentsEndsTopIndentedFollowedByComments nextParser =
     ParserFast.map2
         (\commentsBefore afterComments ->
@@ -4398,7 +4398,7 @@ whitespaceAndCommentsEndsTopIndentedFollowedByComments nextParser =
         (topIndentedFollowedBy nextParser)
 
 
-whitespaceAndCommentsEndsTopIndentedFollowedByWithComments : ParserFast.Parser (ParserWithComments.WithComments syntax) -> ParserFast.Parser (ParserWithComments.WithComments syntax)
+whitespaceAndCommentsEndsTopIndentedFollowedByWithComments : Parser (ParserWithComments.WithComments syntax) -> Parser (ParserWithComments.WithComments syntax)
 whitespaceAndCommentsEndsTopIndentedFollowedByWithComments nextParser =
     ParserFast.map2
         (\commentsBefore after ->
@@ -4410,7 +4410,7 @@ whitespaceAndCommentsEndsTopIndentedFollowedByWithComments nextParser =
         (topIndentedFollowedBy nextParser)
 
 
-whitespaceAndCommentsEndsTopIndentedFollowedBy : ParserFast.Parser syntax -> ParserFast.Parser (ParserWithComments.WithComments syntax)
+whitespaceAndCommentsEndsTopIndentedFollowedBy : Parser syntax -> Parser (ParserWithComments.WithComments syntax)
 whitespaceAndCommentsEndsTopIndentedFollowedBy nextParser =
     ParserFast.map2
         (\commentsBefore after ->
@@ -4420,12 +4420,12 @@ whitespaceAndCommentsEndsTopIndentedFollowedBy nextParser =
         (topIndentedFollowedBy nextParser)
 
 
-whitespaceAndCommentsEndsTopIndented : ParserFast.Parser ParserWithComments.Comments
+whitespaceAndCommentsEndsTopIndented : Parser ParserWithComments.Comments
 whitespaceAndCommentsEndsTopIndented =
     whitespaceAndComments |> endsTopIndented
 
 
-moduleLevelIndentedFollowedBy : ParserFast.Parser a -> ParserFast.Parser a
+moduleLevelIndentedFollowedBy : Parser a -> Parser a
 moduleLevelIndentedFollowedBy nextParser =
     ParserFast.columnAndThen
         (\column ->
@@ -4437,14 +4437,14 @@ moduleLevelIndentedFollowedBy nextParser =
         )
 
 
-endsTopIndented : ParserFast.Parser a -> ParserFast.Parser a
+endsTopIndented : Parser a -> Parser a
 endsTopIndented parser =
     ParserFast.validateEndColumnIndentation
         (\column indent -> column - indent == 0)
         parser
 
 
-topIndentedFollowedBy : ParserFast.Parser a -> ParserFast.Parser a
+topIndentedFollowedBy : Parser a -> Parser a
 topIndentedFollowedBy nextParser =
     ParserFast.columnIndentAndThen
         (\column indent ->
@@ -4456,7 +4456,7 @@ topIndentedFollowedBy nextParser =
         )
 
 
-surroundedByWhitespaceAndCommentsEndsPositivelyIndented : ParserFast.Parser (ParserWithComments.WithComments b) -> ParserFast.Parser (ParserWithComments.WithComments b)
+surroundedByWhitespaceAndCommentsEndsPositivelyIndented : Parser (ParserWithComments.WithComments b) -> Parser (ParserWithComments.WithComments b)
 surroundedByWhitespaceAndCommentsEndsPositivelyIndented x =
     ParserFast.map3
         (\before v after ->
