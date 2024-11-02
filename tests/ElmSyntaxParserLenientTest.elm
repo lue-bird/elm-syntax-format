@@ -5969,6 +5969,79 @@ pipeline1 = 1 |> 2 |> 3
                                 }
                             )
                 )
+            , Test.test "!= is equivalent to /="
+                (\() ->
+                    """
+module A exposing (..)
+
+pipeline0 = 1 != 2
+
+pipeline1 = 1 /= 2
+"""
+                        |> String.trim
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                        |> Expect.equal
+                            (Just
+                                { comments = []
+                                , declarations =
+                                    [ Elm.Syntax.Node.Node { end = { column = 19, row = 3 }, start = { column = 1, row = 3 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { declaration =
+                                                Elm.Syntax.Node.Node { end = { column = 19, row = 3 }, start = { column = 1, row = 3 } }
+                                                    { arguments = []
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { end = { column = 19, row = 3 }, start = { column = 13, row = 3 } }
+                                                            (Elm.Syntax.Expression.OperatorApplication "/="
+                                                                Elm.Syntax.Infix.Non
+                                                                (Elm.Syntax.Node.Node { end = { column = 14, row = 3 }, start = { column = 13, row = 3 } }
+                                                                    (Elm.Syntax.Expression.Integer 1)
+                                                                )
+                                                                (Elm.Syntax.Node.Node { end = { column = 19, row = 3 }, start = { column = 18, row = 3 } }
+                                                                    (Elm.Syntax.Expression.Integer 2)
+                                                                )
+                                                            )
+                                                    , name = Elm.Syntax.Node.Node { end = { column = 10, row = 3 }, start = { column = 1, row = 3 } } "pipeline0"
+                                                    }
+                                            , documentation = Nothing
+                                            , signature = Nothing
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 1, row = 5 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { declaration =
+                                                Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 1, row = 5 } }
+                                                    { arguments = []
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 13, row = 5 } }
+                                                            (Elm.Syntax.Expression.OperatorApplication "/="
+                                                                Elm.Syntax.Infix.Non
+                                                                (Elm.Syntax.Node.Node { end = { column = 14, row = 5 }, start = { column = 13, row = 5 } }
+                                                                    (Elm.Syntax.Expression.Integer 1)
+                                                                )
+                                                                (Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 18, row = 5 } }
+                                                                    (Elm.Syntax.Expression.Integer 2)
+                                                                )
+                                                            )
+                                                    , name = Elm.Syntax.Node.Node { end = { column = 10, row = 5 }, start = { column = 1, row = 5 } } "pipeline1"
+                                                    }
+                                            , documentation = Nothing
+                                            , signature = Nothing
+                                            }
+                                        )
+                                    ]
+                                , imports = []
+                                , moduleDefinition =
+                                    Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 1, row = 1 } }
+                                        (Elm.Syntax.Module.NormalModule
+                                            { exposingList =
+                                                Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 10, row = 1 } }
+                                                    (Elm.Syntax.Exposing.All { end = { column = 22, row = 1 }, start = { column = 20, row = 1 } })
+                                            , moduleName = Elm.Syntax.Node.Node { end = { column = 9, row = 1 }, start = { column = 8, row = 1 } } [ "A" ]
+                                            }
+                                        )
+                                }
+                            )
+                )
             ]
         ]
 

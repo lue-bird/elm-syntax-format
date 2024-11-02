@@ -61,6 +61,12 @@ Some additional lenient parsing:
 
         f |> g |> h
 
+  -     a != b
+
+    →
+
+        a /= b
+
   - TODO
 
         3 |> String.toInt
@@ -3184,6 +3190,9 @@ infixOperatorAndThen extensionRightConstraints =
                 "/=" ->
                     neqResult
 
+                "!=" ->
+                    neqResult
+
                 "//" ->
                     idivResult
 
@@ -4299,6 +4308,10 @@ isOperatorSymbolCharAsString c =
             True
 
         "^" ->
+            True
+
+        -- only for != to /= conversion
+        "!" ->
             True
 
         _ ->
