@@ -2462,9 +2462,46 @@ type Color = Blue String | Red | Green"""
                                 )
                             )
                 )
+            , Test.test "recordTypeReference one field with name-value separator ="
+                (\() ->
+                    "{color= String }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.type_
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 17 } }
+                                (Elm.Syntax.TypeAnnotation.Record
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 15 } }
+                                        ( Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } "color"
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 15 } }
+                                            (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 15 } } ( [], "String" )) [])
+                                        )
+                                    ]
+                                )
+                            )
+                )
             , Test.test "record with generic"
                 (\() ->
                     "{ attr | position : Vec2, texture : Vec2 }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.type_
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 43 } }
+                                (Elm.Syntax.TypeAnnotation.GenericRecord (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 7 } } "attr")
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 42 } }
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 25 } }
+                                            ( Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 18 } } "position"
+                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 21 }, end = { row = 1, column = 25 } }
+                                                (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 21 }, end = { row = 1, column = 25 } } ( [], "Vec2" )) [])
+                                            )
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 42 } }
+                                            ( Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 34 } } "texture"
+                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 37 }, end = { row = 1, column = 41 } }
+                                                (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 37 }, end = { row = 1, column = 41 } } ( [], "Vec2" )) [])
+                                            )
+                                        ]
+                                    )
+                                )
+                            )
+                )
+            , Test.test "record with generic, with name-value separator = and name-value separator empty"
+                (\() ->
+                    "{ attr | position   Vec2, texture = Vec2 }"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 43 } }
                                 (Elm.Syntax.TypeAnnotation.GenericRecord (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 7 } } "attr")
@@ -3395,6 +3432,25 @@ type Color = Blue String | Red | Green"""
             , Test.test "record update"
                 (\() ->
                     "{ model | count = 1, loading = True }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
+                                (Elm.Syntax.Expression.RecordUpdateExpression
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } "model")
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 20 } }
+                                        ( Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 16 } } "count"
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 20 } } (Elm.Syntax.Expression.Integer 1)
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 37 } }
+                                        ( Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 29 } } "loading"
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 32 }, end = { row = 1, column = 36 } } (Elm.Syntax.Expression.FunctionOrValue [] "True")
+                                        )
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "record update with name-value separator : and name-value separator empty"
+                (\() ->
+                    "{ model | count : 1, loading   True }"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
                                 (Elm.Syntax.Expression.RecordUpdateExpression

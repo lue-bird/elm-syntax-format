@@ -23,9 +23,27 @@ with the compiler or [`Elm.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-
 
 Some additional lenient parsing:
 
+  - `f | g | h` → `f |> g |> h`
+
+  - `a != b` → `a /= b`
+
   - TODO merge consecutive commas
 
-  - TODO
+  - TODO remove extra prefix , before first record field or list element or tuple part or triple part
+
+  - remove extra prefix | before first variant declaration
+
+        type A =
+            | A
+            | B
+
+    →
+
+        type A
+            = A
+            | B
+
+  - TODO in an expression declaration, allow putting the type before the =
 
         function parameters : Type = result
 
@@ -35,42 +53,32 @@ Some additional lenient parsing:
         function parameters =
             result
 
-  - TODO
+  - TODO correct expression record field name-value separators
 
-        { field0 value, field1 value }
-
-    →
-
-        { field0 = value, field1 = value }
-
-    or
-
-        { field0 = value, field1 = value }
-
-  - TODO
-
-        { field0, field1 }
+    `{ field0 : value, field1 : value }` or
+    `{ field0 value, field1 value }`
 
     →
+    `{ field0 = value, field1 = value }`
 
-        { field0 = field0, field1 = field1 }
+  - TODO correct type record field name-value separators
 
-  -     f | g | h
-
-    →
-
-        f |> g |> h
-
-  -     a != b
+    `{ field0 = value, field1 = value }` or
+    `{ field0 value, field1 value }`
 
     →
+    `{ field0 : value, field1 : value }`
 
-        a /= b
+  - TODO expand expression record field punning
 
-  - TODO
+    `{ field0, field1 }`
 
-        3 |> String.toInt
-        of case
+    →
+    `{ field0 = field0, field1 = field1 }`
+
+  - TODO allow matching everything before
+
+        3 |> String.toInt case
             Nothing ->
                 0
 
@@ -85,16 +93,6 @@ Some additional lenient parsing:
 
             Just n ->
                 n
-
-  -     type A =
-            | A
-            | B
-
-    →
-
-        type A
-            = A
-            | B
 
 @docs Parser, run, module_
 
@@ -1137,9 +1135,12 @@ portDeclarationAfterDocumentation =
 portDeclarationWithoutDocumentation : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration))
 portDeclarationWithoutDocumentation =
     ParserFast.map5
-        (\commentsAfterPort ((Elm.Syntax.Node.Node nameRange _) as name) commentsAfterName commentsAfterColon typeAnnotationResult ->
+        (\commentsAfterPort nameNode commentsAfterName commentsAfterColon typeAnnotationResult ->
             let
-                (Elm.Syntax.Node.Node { end } _) =
+                (Elm.Syntax.Node.Node nameRange _) =
+                    nameNode
+
+                (Elm.Syntax.Node.Node typeRange _) =
                     typeAnnotationResult.syntax
             in
             { comments =
@@ -1150,10 +1151,10 @@ portDeclarationWithoutDocumentation =
             , syntax =
                 Elm.Syntax.Node.Node
                     { start = { row = nameRange.start.row, column = 1 }
-                    , end = end
+                    , end = typeRange.end
                     }
                     (Elm.Syntax.Declaration.PortDeclaration
-                        { name = name
+                        { name = nameNode
                         , typeAnnotation = typeAnnotationResult.syntax
                         }
                     )
@@ -1690,28 +1691,30 @@ recordTypeAnnotation =
                             )
                         )
                     )
-                    (ParserFast.symbolFollowedBy ":"
-                        (ParserFast.map4
-                            (\commentsBeforeFirstFieldValue firstFieldValue commentsAfterFirstFieldValue tailFields ->
-                                { comments =
-                                    commentsBeforeFirstFieldValue
-                                        |> Rope.prependTo firstFieldValue.comments
-                                        |> Rope.prependTo commentsAfterFirstFieldValue
-                                        |> Rope.prependTo tailFields.comments
-                                , syntax =
-                                    FieldsAfterName
-                                        { firstFieldValue = firstFieldValue.syntax
-                                        , tailFields = tailFields.syntax
-                                        }
-                                }
-                            )
-                            whitespaceAndCommentsEndsPositivelyIndented
-                            type_
-                            whitespaceAndCommentsEndsPositivelyIndented
-                            (ParserFast.orSucceed
-                                (ParserFast.symbolFollowedBy "," recordFieldsTypeAnnotation)
-                                { comments = Rope.empty, syntax = [] }
-                            )
+                    (ParserFast.map4
+                        (\commentsBeforeFirstFieldValue firstFieldValue commentsAfterFirstFieldValue tailFields ->
+                            { comments =
+                                commentsBeforeFirstFieldValue
+                                    |> Rope.prependTo firstFieldValue.comments
+                                    |> Rope.prependTo commentsAfterFirstFieldValue
+                                    |> Rope.prependTo tailFields.comments
+                            , syntax =
+                                FieldsAfterName
+                                    { firstFieldValue = firstFieldValue.syntax
+                                    , tailFields = tailFields.syntax
+                                    }
+                            }
+                        )
+                        (ParserFast.oneOf2OrSucceed
+                            (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+                            (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+                            Rope.empty
+                        )
+                        type_
+                        whitespaceAndCommentsEndsPositivelyIndented
+                        (ParserFast.orSucceed
+                            (ParserFast.symbolFollowedBy "," recordFieldsTypeAnnotation)
+                            { comments = Rope.empty, syntax = [] }
                         )
                     )
                 )
@@ -1775,7 +1778,11 @@ recordFieldDefinition =
         whitespaceAndCommentsEndsPositivelyIndented
         nameLowercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
-        (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.oneOf2OrSucceed
+            (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+            Rope.empty
+        )
         type_
         -- This extra whitespace is just included for compatibility with earlier version
         -- TODO for v8: move to recordFieldsTypeAnnotation
@@ -2227,19 +2234,21 @@ recordContentsCurlyEnd =
                         recordSetterNodeWithLayout
                     )
                 )
-                (ParserFast.symbolFollowedBy "="
-                    (ParserFast.map2
-                        (\commentsBefore expressionResult ->
-                            { comments =
-                                commentsBefore
-                                    |> Rope.prependTo expressionResult.comments
-                            , syntax = FieldsFirstValue expressionResult.syntax
-                            }
-                        )
-                        whitespaceAndCommentsEndsPositivelyIndented
-                        expressionFollowedByOptimisticLayout
-                        |> endsPositivelyIndented
+                (ParserFast.map2
+                    (\commentsBefore expressionResult ->
+                        { comments =
+                            commentsBefore
+                                |> Rope.prependTo expressionResult.comments
+                        , syntax = FieldsFirstValue expressionResult.syntax
+                        }
                     )
+                    (ParserFast.oneOf2OrSucceed
+                        (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+                        (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+                        Rope.empty
+                    )
+                    expressionFollowedByOptimisticLayout
+                    |> endsPositivelyIndented
                 )
             )
             recordFields
@@ -2282,7 +2291,11 @@ recordSetterNodeWithLayout =
         )
         nameLowercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
-        (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.oneOf2OrSucceed
+            (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+            Rope.empty
+        )
         expressionFollowedByOptimisticLayout
         -- This extra whitespace is just included for compatibility with earlier version
         -- TODO for v8: remove
