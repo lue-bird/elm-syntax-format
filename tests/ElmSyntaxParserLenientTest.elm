@@ -66,69 +66,24 @@ all =
                     |> Expect.equal (Just [ "Foo", "Bar" ])
             )
         , Test.describe "layout"
-            [ Test.test "empty"
+            [ Test.test "positively indented across multiple linebreaks and comments"
                 (\() ->
-                    "."
-                        |> ElmSyntaxParserLenient.run
-                            (ParserFast.symbolFollowedBy "."
-                                ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented
-                            )
+                    """a =
+        --x
+        {- foo 
+-}
+
+    0"""
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Maybe.map (\_ -> ())
                         |> Expect.equal (Just ())
                 )
-            , Test.test "just whitespace"
+            , Test.test "positively indented, too few spaces"
                 (\() ->
-                    " "
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "spaces followed by new line"
-                (\() ->
-                    " \n"
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented
+                    """a =
+0"""
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
-                )
-            , Test.test "with newline and higher indent 2"
-                (\() ->
-                    "\n  "
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "with newline and higher indent 3"
-                (\() ->
-                    " \n "
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "maybeLayout with multiline comment"
-                (\() ->
-                    "\n--x\n{- foo \n-}\n "
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "maybeLayout with documentation comment fails"
-                (\() ->
-                    "\n--x\n{-| foo \n-}\n "
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented
-                        |> Expect.equal Nothing
-                )
-            , Test.test "with newline and higher indent 4"
-                (\() ->
-                    " \n  "
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "newlines spaces and single line comments"
-                (\() ->
-                    "\n\n      --time\n  "
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsPositivelyIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
                 )
             , Test.test "top indented across multiple linebreaks and comments"
                 (\() ->
