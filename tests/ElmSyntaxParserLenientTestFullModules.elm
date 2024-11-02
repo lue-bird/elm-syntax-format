@@ -1,4 +1,4 @@
-module Elm.Parser.Samples exposing (allSamples)
+module ElmSyntaxParserLenientTestFullModules exposing (allSamples)
 
 
 allSamples : List ( Int, String )

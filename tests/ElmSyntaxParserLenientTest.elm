@@ -1,7 +1,6 @@
-module Elm.Parser.FileTests exposing (all)
+module ElmSyntaxParserLenientTest exposing (all)
 
 import Elm.Parser
-import Elm.Parser.Samples
 import Elm.Syntax.Declaration
 import Elm.Syntax.Exposing
 import Elm.Syntax.Expression
@@ -11,6 +10,7 @@ import Elm.Syntax.Node
 import Elm.Syntax.Pattern
 import Elm.Syntax.TypeAnnotation
 import ElmSyntaxParserLenient
+import ElmSyntaxParserLenientTestFullModules
 import Expect
 import ParserFast
 import ParserWithCommentsExpect
@@ -34,7 +34,7 @@ all =
                                     Expect.pass
                         )
                 )
-                Elm.Parser.Samples.allSamples
+                ElmSyntaxParserLenientTestFullModules.allSamples
             )
 
         -- , describe "Error messages" <|
