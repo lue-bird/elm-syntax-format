@@ -2,7 +2,6 @@ module Elm.Parser.FileTests exposing (all)
 
 import Elm.Parser
 import Elm.Parser.Samples
-import Elm.Parser.TestUtil
 import Elm.Syntax.Declaration
 import Elm.Syntax.Exposing
 import Elm.Syntax.Expression
@@ -55,13 +54,15 @@ all =
         --     ]
         , Test.test "moduleName"
             (\() ->
-                Elm.Parser.TestUtil.parse "Foo" ElmSyntaxParserLenient.moduleName
+                "Foo"
+                    |> ParserFast.run ElmSyntaxParserLenient.moduleName
                     |> Maybe.map Elm.Syntax.Node.value
                     |> Expect.equal (Just [ "Foo" ])
             )
         , Test.test "moduleNameDir"
             (\() ->
-                Elm.Parser.TestUtil.parse "Foo.Bar" ElmSyntaxParserLenient.moduleName
+                "Foo.Bar"
+                    |> ParserFast.run ElmSyntaxParserLenient.moduleName
                     |> Maybe.map Elm.Syntax.Node.value
                     |> Expect.equal (Just [ "Foo", "Bar" ])
             )
@@ -365,114 +366,136 @@ all =
             , Test.describe "uppercase name"
                 [ Test.test "lower and upper simple latin"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "MyCmd" ElmSyntaxParserLenient.typeName
+                        "MyCmd"
+                            |> ParserFast.run ElmSyntaxParserLenient.typeName
                             |> Expect.equal (Just "MyCmd")
                     )
                 , Test.test "typeName not empty"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "" ElmSyntaxParserLenient.typeName
+                        ""
+                            |> ParserFast.run ElmSyntaxParserLenient.typeName
                             |> Expect.equal Nothing
                     )
                 , Test.test "typeName with number"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "T1" ElmSyntaxParserLenient.typeName
+                        "T1"
+                            |> ParserFast.run ElmSyntaxParserLenient.typeName
                             |> Expect.equal (Just "T1")
                     )
                 , Test.test "ρ function"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "ρ" ElmSyntaxParserLenient.functionName
+                        "ρ"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "ε2 function"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "ε2" ElmSyntaxParserLenient.functionName
+                        "ε2"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "εε function"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "εε" ElmSyntaxParserLenient.functionName
+                        "εε"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "ρ uppercase function"
                     (\() ->
-                        Elm.Parser.TestUtil.parse (String.toUpper "ρ") ElmSyntaxParserLenient.functionName
+                        String.toUpper "ρ"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal Nothing
                     )
                 , Test.test "ε uppercase function"
                     (\() ->
-                        Elm.Parser.TestUtil.parse (String.toUpper "ε") ElmSyntaxParserLenient.functionName
+                        String.toUpper "ε"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal Nothing
                     )
                 , Test.test "ρ type name"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "ρ" ElmSyntaxParserLenient.typeName
+                        "ρ"
+                            |> ParserFast.run ElmSyntaxParserLenient.typeName
                             |> Expect.equal Nothing
                     )
                 , Test.test "ε2 type name"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "ε2" ElmSyntaxParserLenient.typeName
+                        "ε2"
+                            |> ParserFast.run ElmSyntaxParserLenient.typeName
                             |> Expect.equal Nothing
                     )
                 , Test.test "εε type name"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "εε" ElmSyntaxParserLenient.typeName
+                        "εε"
+                            |> ParserFast.run ElmSyntaxParserLenient.typeName
                             |> Expect.equal Nothing
                     )
                 , Test.test "ρ uppercase type name"
                     (\() ->
-                        Elm.Parser.TestUtil.parse (String.toUpper "ρ") ElmSyntaxParserLenient.typeName
+                        String.toUpper "ρ"
+                            |> ParserFast.run ElmSyntaxParserLenient.typeName
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "ε uppercase type name"
                     (\() ->
-                        Elm.Parser.TestUtil.parse (String.toUpper "ε") ElmSyntaxParserLenient.typeName
+                        String.toUpper "ε"
+                            |> ParserFast.run ElmSyntaxParserLenient.typeName
                             |> Expect.notEqual Nothing
                     )
                 ]
             , Test.describe "lowercase name"
                 [ Test.test "simple latin"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "foo" ElmSyntaxParserLenient.functionName
+                        "foo"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal (Just "foo")
                     )
                 , Test.test "functionName may not be a keyword"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "type" ElmSyntaxParserLenient.functionName
+                        "type"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal Nothing
                     )
                 , Test.test "functionName may be a keyword suffixed with an underscore"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "type_" ElmSyntaxParserLenient.functionName
+                        "type_"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal (Just "type_")
                     )
                 , Test.test "functionName not empty"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "" ElmSyntaxParserLenient.functionName
+                        ""
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal Nothing
                     )
                 , Test.test "functionName with number"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "n1" ElmSyntaxParserLenient.functionName
+                        "n1"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal (Just "n1")
                     )
                 , Test.test "alias can be a functionName (it is not reserved)"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "alias" ElmSyntaxParserLenient.functionName
+                        "alias"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal (Just "alias")
                     )
                 , Test.test "infix can be a functionName (it is not reserved)"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "infix" ElmSyntaxParserLenient.functionName
+                        "infix"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal (Just "infix")
                     )
                 , Test.test "functionName is not matched with 'if'"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "if" ElmSyntaxParserLenient.functionName
+                        "if"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal Nothing
                     )
                 , Test.test "functionName with _"
                     (\() ->
-                        Elm.Parser.TestUtil.parse "foo_" ElmSyntaxParserLenient.functionName
+                        "foo_"
+                            |> ParserFast.run ElmSyntaxParserLenient.functionName
                             |> Expect.equal (Just "foo_")
                     )
                 ]
@@ -1919,17 +1942,20 @@ a = 1
         , Test.describe "expression"
             [ Test.test "operatorToken 11 -- is not an operator"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "a = (--)" ElmSyntaxParserLenient.declaration
+                    "a = (--)"
+                        |> ParserFast.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
                 )
             , Test.test "operatorToken 14"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "a = (=)" ElmSyntaxParserLenient.declaration
+                    "a = (=)"
+                        |> ParserFast.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
                 )
             , Test.test "operatorToken 15"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "a = (?)" ElmSyntaxParserLenient.declaration
+                    "a = (?)"
+                        |> ParserFast.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
                 )
             , Test.test "empty"
@@ -2036,66 +2062,77 @@ a = 1
                 )
             , Test.test "multiline string"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "\"\"\"Bar foo \n a\"\"\"" ElmSyntaxParserLenient.expression
+                    "\"\"\"Bar foo \n a\"\"\""
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal "Bar foo \n a"))
                 )
             , Test.test "multiline string escape"
                 (\() ->
-                    Elm.Parser.TestUtil.parse """\"\"\" \\\"\"\" \"\"\"""" ElmSyntaxParserLenient.expression
+                    """\"\"\" \\\"\"\" \"\"\""""
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal """ \"\"\" """))
                 )
             , Test.test "character escaped"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\''" ElmSyntaxParserLenient.expression
+                    "'\\''"
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\''))
                 )
             , Test.test "character escaped - 2"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\r'" ElmSyntaxParserLenient.expression
+                    "'\\r'"
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\u{000D}'))
                 )
             , Test.test "unicode char"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\u{000D}'" ElmSyntaxParserLenient.expression
+                    "'\\u{000D}'"
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\u{000D}'))
                 )
             , Test.test "unicode char with lowercase hex"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\u{000d}'" ElmSyntaxParserLenient.expression
+                    "'\\u{000d}'"
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\u{000D}'))
                 )
             , Test.test "string escaped 3"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "\"\\\"\"" ElmSyntaxParserLenient.expression
+                    "\"\\\"\""
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal "\""))
                 )
             , Test.test "string escaped"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "\"foo\\\\\"" ElmSyntaxParserLenient.expression
+                    "\"foo\\\\\""
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal "foo\\"))
                 )
             , Test.test "character escaped 3"
                 (\() ->
-                    Elm.Parser.TestUtil.parse "'\\n'" ElmSyntaxParserLenient.expression
+                    "'\\n'"
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\n'))
                 )
             , Test.test "long string"
                 (\() ->
-                    Elm.Parser.TestUtil.parse longString ElmSyntaxParserLenient.expression
+                    longString
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Expect.notEqual Nothing
                 )
             , Test.test "long multi line string"
                 (\() ->
-                    Elm.Parser.TestUtil.parse longMultiLineString ElmSyntaxParserLenient.expression
+                    longMultiLineString
+                        |> ParserFast.run ElmSyntaxParserLenient.expression
                         |> Expect.notEqual Nothing
                 )
             , Test.test "character literal"
