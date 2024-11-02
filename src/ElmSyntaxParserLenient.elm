@@ -2744,7 +2744,10 @@ ifBlockExpressionFollowedByOptimisticLayout =
         (ParserFast.keywordFollowedBy "if" whitespaceAndCommentsEndsPositivelyIndented)
         expressionFollowedByOptimisticLayout
         (positivelyIndentedFollowedBy
-            (ParserFast.keywordFollowedBy "then" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.oneOf2
+                (ParserFast.keywordFollowedBy "then" whitespaceAndCommentsEndsPositivelyIndented)
+                (ParserFast.keywordFollowedBy "->" whitespaceAndCommentsEndsPositivelyIndented)
+            )
         )
         expressionFollowedByOptimisticLayout
         (positivelyIndentedFollowedBy
