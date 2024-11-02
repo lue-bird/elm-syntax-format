@@ -27,21 +27,13 @@ Some additional lenient parsing:
 
   - `a != b` → `a /= b`
 
-  - TODO merge consecutive commas
+  - TODO merge consecutive `,`
 
-  - TODO remove extra prefix , before first record field or list element or tuple part or triple part
+  - TODO remove extra `,` before first record field or list element or tuple part or triple part
 
-  - remove extra prefix | before first variant declaration
+  - remove remove extra `|` before first variant declaration
 
-        type A =
-            | A
-            | B
-
-    →
-
-        type A
-            = A
-            | B
+    `type A = | A | B` → `type A = A | B`
 
   - TODO in an expression declaration, allow putting the type before the =
 
@@ -53,7 +45,7 @@ Some additional lenient parsing:
         function parameters =
             result
 
-  - TODO correct expression record field name-value separators
+  - correct expression record field name-value separators
 
     `{ field0 : value, field1 : value }` or
     `{ field0 value, field1 value }`
@@ -61,7 +53,7 @@ Some additional lenient parsing:
     →
     `{ field0 = value, field1 = value }`
 
-  - TODO correct type record field name-value separators
+  - correct type record field name-value separators
 
     `{ field0 = value, field1 = value }` or
     `{ field0 value, field1 value }`
@@ -93,6 +85,12 @@ Some additional lenient parsing:
 
             Just n ->
                 n
+
+  - in an expression declaration and let expression declaration, correct `->` to `=`
+
+    `function parameters -> result`
+
+    → `function parameters = result`
 
 @docs Parser, run, module_
 
@@ -1047,7 +1045,11 @@ functionDeclarationWithoutDocumentation =
 
 parameterPatternsEqual : Parser (WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern)))
 parameterPatternsEqual =
-    untilWithComments (ParserFast.symbol "=" ())
+    untilWithComments
+        (ParserFast.oneOf2
+            (ParserFast.symbol "=" ())
+            (ParserFast.symbol "->" ())
+        )
         (ParserFast.map2
             (\patternResult commentsAfterPattern ->
                 { comments = patternResult.comments |> Rope.prependTo commentsAfterPattern

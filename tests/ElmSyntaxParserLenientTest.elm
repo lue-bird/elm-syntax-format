@@ -1869,6 +1869,31 @@ foo = bar"""
                                 )
                             )
                 )
+            , Test.test "function with -> instead of ="
+                (\() ->
+                    """main ->
+  text "Hello, World!\""""
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 23 } }
+                                (Elm.Syntax.Declaration.FunctionDeclaration
+                                    { documentation = Nothing
+                                    , signature = Nothing
+                                    , declaration =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 23 } }
+                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } "main"
+                                            , arguments = []
+                                            , expression =
+                                                Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 23 } }
+                                                    (Elm.Syntax.Expression.Application
+                                                        [ Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "text")
+                                                        , Elm.Syntax.Node.Node { start = { row = 2, column = 8 }, end = { row = 2, column = 23 } } (Elm.Syntax.Expression.Literal "Hello, World!")
+                                                        ]
+                                                    )
+                                            }
+                                    }
+                                )
+                            )
+                )
             , Test.test "function starting with multi line comment"
                 (\() ->
                     """main =
