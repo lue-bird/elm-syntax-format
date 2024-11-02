@@ -55,13 +55,13 @@ all =
         --     ]
         , Test.test "moduleName"
             (\() ->
-                Elm.Parser.TestUtil.parseToResult "Foo" ElmSyntaxParserLenient.moduleName
+                Elm.Parser.TestUtil.parse "Foo" ElmSyntaxParserLenient.moduleName
                     |> Maybe.map Elm.Syntax.Node.value
                     |> Expect.equal (Just [ "Foo" ])
             )
         , Test.test "moduleNameDir"
             (\() ->
-                Elm.Parser.TestUtil.parseToResult "Foo.Bar" ElmSyntaxParserLenient.moduleName
+                Elm.Parser.TestUtil.parse "Foo.Bar" ElmSyntaxParserLenient.moduleName
                     |> Maybe.map Elm.Syntax.Node.value
                     |> Expect.equal (Just [ "Foo", "Bar" ])
             )
