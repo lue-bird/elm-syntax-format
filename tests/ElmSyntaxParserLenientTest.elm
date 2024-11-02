@@ -130,79 +130,34 @@ all =
                         |> Maybe.map (\_ -> ())
                         |> Expect.equal (Just ())
                 )
-            , Test.test "whitespaceAndCommentsEndsTopIndented"
+            , Test.test "top indented across multiple linebreaks and comments"
                 (\() ->
-                    " \n"
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented
+                    """a =
+    let
+        b = 0
+
+        --x
+        {- foo 
+-}
+
+
+        c = 0
+    in
+    b"""
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Maybe.map (\_ -> ())
                         |> Expect.equal (Just ())
                 )
-            , Test.test "whitespaceAndCommentsEndsTopIndented multi line"
+            , Test.test "top indented, too many spaces"
                 (\() ->
-                    " \n      \n"
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "whitespaceAndCommentsEndsTopIndented too much"
-                (\() ->
-                    " \n "
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented
+                    """a =
+    let
+        b = 0
+         c = 0
+    in
+    b"""
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
-                )
-            , Test.test "whitespaceAndCommentsEndsTopIndented with comments"
-                (\() ->
-                    "-- foo\n  --bar\n"
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "whitespaceAndCommentsEndsTopIndented with comments 2"
-                (\() ->
-                    "\n--x\n{- foo \n-}\n"
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "whitespaceAndCommentsEndsTopIndented with documentation comment fails"
-                (\() ->
-                    "\n--x\n{-| foo \n-}\n"
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented
-                        |> Expect.equal Nothing
-                )
-            , Test.test "whitespaceAndCommentsEndsTopIndented some"
-                (\() ->
-                    "..\n  \n  "
-                        |> ElmSyntaxParserLenient.run
-                            (ParserFast.symbolFollowedBy ".."
-                                (ParserFast.withIndentSetToColumn ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented)
-                            )
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "whitespaceAndCommentsEndsTopIndented with comments multi empty line preceding"
-                (\() ->
-                    "\n\n --bar\n"
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "whitespaceAndCommentsEndsTopIndented with multiple new lines"
-                (\() ->
-                    "..\n  \n    \n\n  "
-                        |> ElmSyntaxParserLenient.run
-                            (ParserFast.symbolFollowedBy ".."
-                                (ParserFast.withIndentSetToColumn ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented)
-                            )
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
-                )
-            , Test.test "whitespaceAndCommentsEndsTopIndented with multiline comment plus trailing whitespace"
-                (\() ->
-                    "\n{- some note -}    \n"
-                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.whitespaceAndCommentsEndsTopIndented
-                        |> Maybe.map (\_ -> ())
-                        |> Expect.equal (Just ())
                 )
             , Test.describe "comment"
                 [ Test.test "singleLineComment"

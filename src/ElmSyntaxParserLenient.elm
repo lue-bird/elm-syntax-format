@@ -3,7 +3,8 @@ module ElmSyntaxParserLenient exposing
     , moduleName, nameLowercase, nameUppercase, expose, exposing_
     , moduleHeader, documentationComment, import_, declarations, declaration
     , type_, pattern, expression
-    , multilineComment, singleLineComment, whitespaceAndComments, whitespaceAndCommentsEndsPositivelyIndented, whitespaceAndCommentsEndsTopIndented
+    , multilineComment, singleLineComment, whitespaceAndComments
+    , whitespaceAndCommentsEndsPositivelyIndented
     )
 
 {-| Like [`Elm.Syntax.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser)
@@ -107,7 +108,7 @@ or reparse only the touched declarations on save.
 
 ### whitespace
 
-@docs multilineComment, singleLineComment, whitespaceAndComments, whitespaceAndCommentsEndsPositivelyIndented, whitespaceAndCommentsEndsTopIndented
+@docs multilineComment, singleLineComment, whitespaceAndComments
 
 -}
 
@@ -4399,6 +4400,8 @@ whitespaceAndCommentsOrEmptyLoop =
         identity
 
 
+{-| TODO unexpose
+-}
 whitespaceAndCommentsEndsPositivelyIndented : Parser Comments
 whitespaceAndCommentsEndsPositivelyIndented =
     whitespaceAndComments |> endsPositivelyIndented
