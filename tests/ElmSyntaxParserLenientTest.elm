@@ -3466,6 +3466,46 @@ type Color = Blue String | Red | Green"""
                                 )
                             )
                 )
+            , Test.test "record with name-value separator : and name-value separator = and name-value separator empty and punned fields with each of those"
+                (\() ->
+                    "{ a 1, b = 2, c : 3, aPunned, bPunned =, cPunned : }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { end = { column = 53, row = 1 }, start = { column = 1, row = 1 } }
+                                (Elm.Syntax.Expression.RecordExpr
+                                    [ Elm.Syntax.Node.Node { end = { column = 6, row = 1 }, start = { column = 3, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 4, row = 1 }, start = { column = 3, row = 1 } } "a"
+                                        , Elm.Syntax.Node.Node { end = { column = 6, row = 1 }, start = { column = 5, row = 1 } }
+                                            (Elm.Syntax.Expression.Integer 1)
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 13, row = 1 }, start = { column = 8, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 9, row = 1 }, start = { column = 8, row = 1 } } "b"
+                                        , Elm.Syntax.Node.Node { end = { column = 13, row = 1 }, start = { column = 12, row = 1 } }
+                                            (Elm.Syntax.Expression.Integer 2)
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 20, row = 1 }, start = { column = 15, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 16, row = 1 }, start = { column = 15, row = 1 } } "c"
+                                        , Elm.Syntax.Node.Node { end = { column = 20, row = 1 }, start = { column = 19, row = 1 } }
+                                            (Elm.Syntax.Expression.Integer 3)
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 29, row = 1 }, start = { column = 22, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 29, row = 1 }, start = { column = 22, row = 1 } } "aPunned"
+                                        , Elm.Syntax.Node.Node { end = { column = 29, row = 1 }, start = { column = 29, row = 1 } }
+                                            (Elm.Syntax.Expression.FunctionOrValue [] "aPunned")
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 40, row = 1 }, start = { column = 31, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 38, row = 1 }, start = { column = 31, row = 1 } } "bPunned"
+                                        , Elm.Syntax.Node.Node { end = { column = 38, row = 1 }, start = { column = 38, row = 1 } }
+                                            (Elm.Syntax.Expression.FunctionOrValue [] "bPunned")
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 52, row = 1 }, start = { column = 42, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 49, row = 1 }, start = { column = 42, row = 1 } } "cPunned"
+                                        , Elm.Syntax.Node.Node { end = { column = 49, row = 1 }, start = { column = 49, row = 1 } }
+                                            (Elm.Syntax.Expression.FunctionOrValue [] "cPunned")
+                                        )
+                                    ]
+                                )
+                            )
+                )
             , Test.test "record update"
                 (\() ->
                     "{ model | count = 1, loading = True }"

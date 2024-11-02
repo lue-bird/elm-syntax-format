@@ -61,7 +61,7 @@ Some additional lenient parsing:
     →
     `{ field0 : value, field1 : value }`
 
-  - TODO expand expression record field punning
+  - expand expression record field punning
 
     `{ field0, field1 }`
 
@@ -1677,7 +1677,7 @@ recordTypeAnnotation =
                                 }
                             )
                             whitespaceAndCommentsEndsPositivelyIndented
-                            recordFieldDefinition
+                            typeRecordFieldDefinition
                             (manyWithComments
                                 (ParserFast.symbolFollowedBy ","
                                     (ParserFast.map2
@@ -1687,7 +1687,7 @@ recordTypeAnnotation =
                                             }
                                         )
                                         whitespaceAndCommentsEndsPositivelyIndented
-                                        recordFieldDefinition
+                                        typeRecordFieldDefinition
                                     )
                                 )
                             )
@@ -1748,7 +1748,7 @@ recordFieldsTypeAnnotation =
             }
         )
         whitespaceAndCommentsEndsPositivelyIndented
-        recordFieldDefinition
+        typeRecordFieldDefinition
         (manyWithComments
             (ParserFast.symbolFollowedBy ","
                 (ParserFast.map2
@@ -1758,14 +1758,14 @@ recordFieldsTypeAnnotation =
                         }
                     )
                     whitespaceAndCommentsEndsPositivelyIndented
-                    recordFieldDefinition
+                    typeRecordFieldDefinition
                 )
             )
         )
 
 
-recordFieldDefinition : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.RecordField))
-recordFieldDefinition =
+typeRecordFieldDefinition : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.RecordField))
+typeRecordFieldDefinition =
     ParserFast.map6WithRange
         (\range commentsBeforeName name commentsAfterName commentsAfterColon value commentsAfterValue ->
             { comments =
@@ -2219,7 +2219,26 @@ recordContentsCurlyEnd =
                             Elm.Syntax.Expression.RecordUpdateExpression nameNode (firstField :: tailFields.syntax)
 
                         FieldsFirstValue firstFieldValue ->
-                            Elm.Syntax.Expression.RecordExpr (Elm.Syntax.Node.combine Tuple.pair nameNode firstFieldValue :: tailFields.syntax)
+                            Elm.Syntax.Expression.RecordExpr
+                                (Elm.Syntax.Node.combine Tuple.pair nameNode firstFieldValue
+                                    :: tailFields.syntax
+                                )
+
+                        FieldsFirstValuePunned () ->
+                            Elm.Syntax.Expression.RecordExpr
+                                (Elm.Syntax.Node.Node (nameNode |> Elm.Syntax.Node.range)
+                                    ( nameNode
+                                    , -- dummy
+                                      Elm.Syntax.Node.Node
+                                        { start = nameNode |> Elm.Syntax.Node.range |> .end
+                                        , end = nameNode |> Elm.Syntax.Node.range |> .end
+                                        }
+                                        (Elm.Syntax.Expression.FunctionOrValue []
+                                            (nameNode |> Elm.Syntax.Node.value)
+                                        )
+                                    )
+                                    :: tailFields.syntax
+                                )
                 }
             )
             nameLowercaseNode
@@ -2237,19 +2256,32 @@ recordContentsCurlyEnd =
                     )
                 )
                 (ParserFast.map2
-                    (\commentsBefore expressionResult ->
-                        { comments =
-                            commentsBefore
-                                |> Rope.prependTo expressionResult.comments
-                        , syntax = FieldsFirstValue expressionResult.syntax
-                        }
+                    (\commentsBefore maybeValueResult ->
+                        case maybeValueResult of
+                            Nothing ->
+                                { comments = commentsBefore
+                                , syntax = FieldsFirstValuePunned ()
+                                }
+
+                            Just expressionResult ->
+                                { comments =
+                                    commentsBefore
+                                        |> Rope.prependTo expressionResult.comments
+                                , syntax = FieldsFirstValue expressionResult.syntax
+                                }
                     )
                     (ParserFast.oneOf2OrSucceed
                         (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
                         (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
                         Rope.empty
                     )
-                    expressionFollowedByOptimisticLayout
+                    (ParserFast.mapOrSucceed
+                        Just
+                        (expressionFollowedByOptimisticLayout
+                            |> endsPositivelyIndented
+                        )
+                        Nothing
+                    )
                     |> endsPositivelyIndented
                 )
             )
@@ -2262,6 +2294,7 @@ recordContentsCurlyEnd =
 type RecordFieldsOrUpdateAfterName
     = RecordUpdateFirstSetter (Elm.Syntax.Node.Node Elm.Syntax.Expression.RecordSetter)
     | FieldsFirstValue (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression)
+    | FieldsFirstValuePunned ()
 
 
 recordFields : Parser (WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Expression.RecordSetter)))
@@ -2283,13 +2316,38 @@ recordFields =
 recordSetterNodeWithLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.RecordSetter))
 recordSetterNodeWithLayout =
     ParserFast.map4WithRange
-        (\range name commentsAfterName commentsAfterEquals expressionResult ->
-            { comments =
-                commentsAfterName
-                    |> Rope.prependTo commentsAfterEquals
-                    |> Rope.prependTo expressionResult.comments
-            , syntax = Elm.Syntax.Node.Node range ( name, expressionResult.syntax )
-            }
+        (\range nameNode commentsAfterName commentsAfterEquals maybeValueResult ->
+            -- This extra whitespace is just included for compatibility with earlier version
+            -- TODO for v8: remove
+            case maybeValueResult of
+                Nothing ->
+                    { comments =
+                        commentsAfterName |> Rope.prependTo commentsAfterEquals
+                    , syntax =
+                        Elm.Syntax.Node.Node range
+                            ( nameNode
+                            , -- dummy
+                              Elm.Syntax.Node.Node
+                                { start = nameNode |> Elm.Syntax.Node.range |> .end
+                                , end = nameNode |> Elm.Syntax.Node.range |> .end
+                                }
+                                (Elm.Syntax.Expression.FunctionOrValue []
+                                    (nameNode |> Elm.Syntax.Node.value)
+                                )
+                            )
+                    }
+
+                Just expressionResult ->
+                    { comments =
+                        commentsAfterName
+                            |> Rope.prependTo commentsAfterEquals
+                            |> Rope.prependTo expressionResult.comments
+                    , syntax =
+                        Elm.Syntax.Node.Node range
+                            ( nameNode
+                            , expressionResult.syntax
+                            )
+                    }
         )
         nameLowercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
@@ -2298,10 +2356,13 @@ recordSetterNodeWithLayout =
             (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
             Rope.empty
         )
-        expressionFollowedByOptimisticLayout
-        -- This extra whitespace is just included for compatibility with earlier version
-        -- TODO for v8: remove
-        |> endsPositivelyIndented
+        (ParserFast.mapOrSucceed
+            Just
+            (expressionFollowedByOptimisticLayout
+                |> endsPositivelyIndented
+            )
+            Nothing
+        )
 
 
 literalExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
