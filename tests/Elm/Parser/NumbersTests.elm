@@ -112,22 +112,5 @@ all =
                         |> Expect.equal
                             (Just 2.0e2)
                 )
-
-            -- TODO handling overflow like elm-format / the elm compiler
-            -- would technically be a breaking change and maybe somewhat difficult to implement
-            -- If there's a decision in issues like
-            --   - https://github.com/stil4m/elm-syntax/issues/108
-            --   - https://github.com/stil4m/elm-syntax/issues/255
-            -- this should be considered.
-            -- , test "overflow int" <|
-            --     \() ->
-            --         parseToResult "100000000000000000000000"
-            --             (ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
-            --                 (\_ _ -> -1)
-            --                 (\_ n -> n)
-            --                 (\_ _ -> -1)
-            --             )
-            --             |> Expect.equal
-            --                 (Ok 200376420520689660)
             ]
         ]
