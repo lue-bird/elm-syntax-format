@@ -366,79 +366,79 @@ all =
                 [ Test.test "lower and upper simple latin"
                     (\() ->
                         "MyCmd"
-                            |> ParserFast.run ElmSyntaxParserLenient.typeName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal (Just "MyCmd")
                     )
                 , Test.test "typeName not empty"
                     (\() ->
                         ""
-                            |> ParserFast.run ElmSyntaxParserLenient.typeName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "typeName with number"
                     (\() ->
                         "T1"
-                            |> ParserFast.run ElmSyntaxParserLenient.typeName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal (Just "T1")
                     )
                 , Test.test "ρ function"
                     (\() ->
                         "ρ"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "ε2 function"
                     (\() ->
                         "ε2"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "εε function"
                     (\() ->
                         "εε"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "ρ uppercase function"
                     (\() ->
                         String.toUpper "ρ"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "ε uppercase function"
                     (\() ->
                         String.toUpper "ε"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "ρ type name"
                     (\() ->
                         "ρ"
-                            |> ParserFast.run ElmSyntaxParserLenient.typeName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "ε2 type name"
                     (\() ->
                         "ε2"
-                            |> ParserFast.run ElmSyntaxParserLenient.typeName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "εε type name"
                     (\() ->
                         "εε"
-                            |> ParserFast.run ElmSyntaxParserLenient.typeName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "ρ uppercase type name"
                     (\() ->
                         String.toUpper "ρ"
-                            |> ParserFast.run ElmSyntaxParserLenient.typeName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "ε uppercase type name"
                     (\() ->
                         String.toUpper "ε"
-                            |> ParserFast.run ElmSyntaxParserLenient.typeName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.notEqual Nothing
                     )
                 ]
@@ -446,55 +446,55 @@ all =
                 [ Test.test "simple latin"
                     (\() ->
                         "foo"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "foo")
                     )
                 , Test.test "functionName may not be a keyword"
                     (\() ->
                         "type"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "functionName may be a keyword suffixed with an underscore"
                     (\() ->
                         "type_"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "type_")
                     )
                 , Test.test "functionName not empty"
                     (\() ->
                         ""
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "functionName with number"
                     (\() ->
                         "n1"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "n1")
                     )
                 , Test.test "alias can be a functionName (it is not reserved)"
                     (\() ->
                         "alias"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "alias")
                     )
                 , Test.test "infix can be a functionName (it is not reserved)"
                     (\() ->
                         "infix"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "infix")
                     )
                 , Test.test "functionName is not matched with 'if'"
                     (\() ->
                         "if"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "functionName with _"
                     (\() ->
                         "foo_"
-                            |> ParserFast.run ElmSyntaxParserLenient.functionName
+                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "foo_")
                     )
                 ]

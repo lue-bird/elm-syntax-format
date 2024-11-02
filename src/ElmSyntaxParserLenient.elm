@@ -1,6 +1,6 @@
 module ElmSyntaxParserLenient exposing
     ( Parser, run, module_
-    , moduleName, functionName, typeName, expose, exposing_
+    , moduleName, nameLowercase, nameUppercase, expose, exposing_
     , moduleHeader, documentationComment, import_, declarations, declaration
     , type_, pattern, expression
     , multilineComment, singleLineComment, whitespaceAndComments, whitespaceAndCommentsEndsPositivelyIndented, whitespaceAndCommentsEndsTopIndented
@@ -100,7 +100,7 @@ Sometimes it's useful to parse only some part of the syntax,
 to, say, display only an expression in an article
 or reparse only the touched declarations on save.
 
-@docs moduleName, functionName, typeName, expose, exposing_
+@docs moduleName, nameLowercase, nameUppercase, expose, exposing_
 @docs moduleHeader, documentationComment, import_, declarations, declaration
 @docs type_, pattern, expression
 
@@ -193,9 +193,9 @@ moduleName =
         (\range head tail ->
             Elm.Syntax.Node.Node range (head :: tail)
         )
-        typeName
+        nameUppercase
         (ParserFast.loopWhileSucceedsRightToLeftStackUnsafe
-            (ParserFast.symbolFollowedBy "." typeName)
+            (ParserFast.symbolFollowedBy "." nameUppercase)
             []
             (::)
         )
@@ -312,7 +312,7 @@ typeExpose =
                             (Elm.Syntax.Exposing.TypeExpose { name = typeExposeName, open = Just open.syntax })
                     }
         )
-        typeNameNode
+        nameUppercaseNode
         whitespaceAndComments
         (ParserFast.map2WithRangeOrSucceed
             (\range left right ->
@@ -328,7 +328,7 @@ typeExpose =
 
 functionExpose : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose))
 functionExpose =
-    functionNameMapWithRange
+    nameLowercaseMapWithRange
         (\range name ->
             { comments = Rope.empty
             , syntax =
@@ -356,10 +356,10 @@ effectWhereClause =
             , syntax = ( fnName, fnTypeName )
             }
         )
-        functionName
+        nameLowercase
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
-        typeNameNode
+        nameUppercaseNode
 
 
 whereBlock : Parser (WithComments { command : Maybe (Elm.Syntax.Node.Node String), subscription : Maybe (Elm.Syntax.Node.Node String) })
@@ -605,7 +605,7 @@ import_ =
                     }
             )
             (ParserFast.keywordFollowedBy "as" whitespaceAndCommentsEndsPositivelyIndented)
-            (typeNameMapWithRange
+            (nameUppercaseMapWithRange
                 (\range moduleAlias ->
                     Elm.Syntax.Node.Node range [ moduleAlias ]
                 )
@@ -904,7 +904,7 @@ functionAfterDocumentation =
             }
         )
         -- infix declarations itself don't have documentation
-        functionNameNode
+        nameLowercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.map4OrSucceed
             (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
@@ -923,7 +923,7 @@ functionAfterDocumentation =
             (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
             type_
             (whitespaceAndCommentsEndsTopIndentedFollowedBy
-                functionNameNode
+                nameLowercaseNode
             )
             whitespaceAndCommentsEndsPositivelyIndented
             Nothing
@@ -1005,7 +1005,7 @@ functionDeclarationWithoutDocumentation =
             (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
             type_
             (whitespaceAndCommentsEndsTopIndentedFollowedBy
-                functionNameNode
+                nameLowercaseNode
             )
             whitespaceAndCommentsEndsPositivelyIndented
             Nothing
@@ -1095,7 +1095,7 @@ infixDeclaration =
         )
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
-        functionNameNode
+        nameLowercaseNode
 
 
 infixDirection : Parser (Elm.Syntax.Node.Node Elm.Syntax.Infix.InfixDirection)
@@ -1124,7 +1124,7 @@ portDeclarationAfterDocumentation =
             }
         )
         (ParserFast.keywordFollowedBy "port" whitespaceAndCommentsEndsPositivelyIndented)
-        functionNameNode
+        nameLowercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
         type_
@@ -1156,7 +1156,7 @@ portDeclarationWithoutDocumentation =
             }
         )
         (ParserFast.keywordFollowedBy "port" whitespaceAndCommentsEndsPositivelyIndented)
-        functionNameNode
+        nameLowercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
         type_
@@ -1196,7 +1196,7 @@ typeAliasDefinitionAfterDocumentationAfterTypePrefix =
             }
         )
         (ParserFast.keywordFollowedBy "alias" whitespaceAndCommentsEndsPositivelyIndented)
-        typeNameNode
+        nameUppercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         whitespaceAndCommentsEndsPositivelyIndented
@@ -1222,7 +1222,7 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
                     }
             }
         )
-        typeNameNode
+        nameUppercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         whitespaceAndCommentsEndsPositivelyIndented
@@ -1330,7 +1330,7 @@ typeAliasDefinitionWithoutDocumentationAfterTypePrefix =
             }
         )
         (ParserFast.keywordFollowedBy "alias" whitespaceAndCommentsEndsPositivelyIndented)
-        typeNameNode
+        nameUppercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         whitespaceAndCommentsEndsPositivelyIndented
@@ -1356,7 +1356,7 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
                     }
             }
         )
-        typeNameNode
+        nameUppercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         typeGenericListEquals
         whitespaceAndCommentsEndsPositivelyIndented
@@ -1407,7 +1407,7 @@ valueConstructorOptimisticLayout =
                     }
             }
         )
-        typeNameNode
+        nameUppercaseNode
         whitespaceAndComments
         (manyWithoutReverseWithComments
             (positivelyIndentedFollowedBy
@@ -1433,7 +1433,7 @@ typeGenericListEquals =
                 , syntax = name
                 }
             )
-            functionNameNode
+            nameLowercaseNode
             whitespaceAndCommentsEndsPositivelyIndented
         )
 
@@ -1599,7 +1599,7 @@ parensTypeAnnotation =
 
 genericTypeAnnotation : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
 genericTypeAnnotation =
-    functionNameMapWithRange
+    nameLowercaseMapWithRange
         (\range var ->
             { comments = Rope.empty
             , syntax =
@@ -1644,7 +1644,7 @@ recordTypeAnnotation =
                                     Elm.Syntax.TypeAnnotation.Record (Elm.Syntax.Node.combine Tuple.pair firstNameNode fieldsAfterName.firstFieldValue :: fieldsAfterName.tailFields)
                         }
                 )
-                functionNameNode
+                nameLowercaseNode
                 whitespaceAndCommentsEndsPositivelyIndented
                 (ParserFast.oneOf2
                     (ParserFast.symbolFollowedBy "|"
@@ -1748,10 +1748,10 @@ recordFieldsTypeAnnotation =
 recordFieldDefinition : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.RecordField))
 recordFieldDefinition =
     ParserFast.map6WithRange
-        (\range commentsBeforeFunctionName name commentsAfterFunctionName commentsAfterColon value commentsAfterValue ->
+        (\range commentsBeforeName name commentsAfterName commentsAfterColon value commentsAfterValue ->
             { comments =
-                commentsBeforeFunctionName
-                    |> Rope.prependTo commentsAfterFunctionName
+                commentsBeforeName
+                    |> Rope.prependTo commentsAfterName
                     |> Rope.prependTo commentsAfterColon
                     |> Rope.prependTo value.comments
                     |> Rope.prependTo commentsAfterValue
@@ -1759,7 +1759,7 @@ recordFieldDefinition =
             }
         )
         whitespaceAndCommentsEndsPositivelyIndented
-        functionNameNode
+        nameLowercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
         type_
@@ -1788,12 +1788,12 @@ typedTypeAnnotationWithoutArguments =
                     (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node range name) [])
             }
         )
-        typeName
-        maybeDotTypeNamesTuple
+        nameUppercase
+        maybeDotNamesUppercaseTuple
 
 
-maybeDotTypeNamesTuple : Parser (Maybe ( List String, String ))
-maybeDotTypeNamesTuple =
+maybeDotNamesUppercaseTuple : Parser (Maybe ( List String, String ))
+maybeDotNamesUppercaseTuple =
     ParserFast.map2OrSucceed
         (\firstName afterFirstName ->
             case afterFirstName of
@@ -1803,8 +1803,8 @@ maybeDotTypeNamesTuple =
                 Just ( qualificationAfter, unqualified ) ->
                     Just ( firstName :: qualificationAfter, unqualified )
         )
-        (ParserFast.symbolFollowedBy "." typeName)
-        (ParserFast.lazy (\() -> maybeDotTypeNamesTuple))
+        (ParserFast.symbolFollowedBy "." nameUppercase)
+        (ParserFast.lazy (\() -> maybeDotNamesUppercaseTuple))
         Nothing
 
 
@@ -1846,8 +1846,8 @@ typedTypeAnnotationWithArgumentsOptimisticLayout =
                 in
                 Elm.Syntax.Node.Node range name
             )
-            typeName
-            maybeDotTypeNamesTuple
+            nameUppercase
+            maybeDotNamesUppercaseTuple
         )
         whitespaceAndComments
         (manyWithoutReverseWithComments
@@ -1912,7 +1912,7 @@ referenceOrNumberExpression =
 followedByMultiRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression)) -> Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 followedByMultiRecordAccess beforeRecordAccesses =
     ParserFast.loopWhileSucceedsOntoResultFromParser
-        (ParserFast.symbolFollowedBy "." functionNameNode)
+        (ParserFast.symbolFollowedBy "." nameLowercaseNode)
         beforeRecordAccesses
         (\fieldNode leftResult ->
             let
@@ -2184,9 +2184,9 @@ recordContentsCurlyEnd : Parser (WithComments Elm.Syntax.Expression.Expression)
 recordContentsCurlyEnd =
     ParserFast.oneOf2
         (ParserFast.map5
-            (\nameNode commentsAfterFunctionName afterNameBeforeFields tailFields commentsBeforeClosingCurly ->
+            (\nameNode commentsAfterName afterNameBeforeFields tailFields commentsBeforeClosingCurly ->
                 { comments =
-                    commentsAfterFunctionName
+                    commentsAfterName
                         |> Rope.prependTo afterNameBeforeFields.comments
                         |> Rope.prependTo tailFields.comments
                         |> Rope.prependTo commentsBeforeClosingCurly
@@ -2199,7 +2199,7 @@ recordContentsCurlyEnd =
                             Elm.Syntax.Expression.RecordExpr (Elm.Syntax.Node.combine Tuple.pair nameNode firstFieldValue :: tailFields.syntax)
                 }
             )
-            functionNameNode
+            nameLowercaseNode
             whitespaceAndCommentsEndsPositivelyIndented
             (ParserFast.oneOf2
                 (ParserFast.symbolFollowedBy "|"
@@ -2258,15 +2258,15 @@ recordFields =
 recordSetterNodeWithLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.RecordSetter))
 recordSetterNodeWithLayout =
     ParserFast.map4WithRange
-        (\range name commentsAfterFunctionName commentsAfterEquals expressionResult ->
+        (\range name commentsAfterName commentsAfterEquals expressionResult ->
             { comments =
-                commentsAfterFunctionName
+                commentsAfterName
                     |> Rope.prependTo commentsAfterEquals
                     |> Rope.prependTo expressionResult.comments
             , syntax = Elm.Syntax.Node.Node range ( name, expressionResult.syntax )
             }
         )
-        functionNameNode
+        nameLowercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
         expressionFollowedByOptimisticLayout
@@ -2610,7 +2610,7 @@ letFunctionFollowedByOptimisticLayout =
                             )
                     }
         )
-        functionNameNode
+        nameLowercaseNode
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.map4OrSucceed
             (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
@@ -2627,7 +2627,7 @@ letFunctionFollowedByOptimisticLayout =
             (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
             type_
             (whitespaceAndCommentsEndsTopIndentedFollowedBy
-                functionNameNode
+                nameLowercaseNode
             )
             whitespaceAndCommentsEndsPositivelyIndented
             Nothing
@@ -2793,7 +2793,7 @@ qualifiedOrVariantOrRecordConstructorReferenceExpressionFollowedByRecordAccess =
                     )
             }
         )
-        typeName
+        nameUppercase
         maybeDotReferenceExpressionTuple
         |> followedByMultiRecordAccess
 
@@ -2813,11 +2813,11 @@ maybeDotReferenceExpressionTuple =
                             Just ( qualificationAfter, unqualified ) ->
                                 ( firstName :: qualificationAfter, unqualified )
                     )
-                    typeName
+                    nameUppercase
                     (ParserFast.lazy (\() -> maybeDotReferenceExpressionTuple))
                 )
                 (\name -> Just ( [], name ))
-                functionName
+                nameLowercase
             )
         )
         Nothing
@@ -2825,7 +2825,7 @@ maybeDotReferenceExpressionTuple =
 
 unqualifiedFunctionReferenceExpressionFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 unqualifiedFunctionReferenceExpressionFollowedByRecordAccess =
-    functionNameMapWithRange
+    nameLowercaseMapWithRange
         (\range unqualified ->
             { comments = Rope.empty
             , syntax =
@@ -2838,7 +2838,7 @@ unqualifiedFunctionReferenceExpressionFollowedByRecordAccess =
 recordAccessFunctionExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 recordAccessFunctionExpression =
     ParserFast.symbolFollowedBy "."
-        (functionNameMapWithRange
+        (nameLowercaseMapWithRange
             (\range field ->
                 { comments = Rope.empty
                 , syntax =
@@ -3555,7 +3555,7 @@ pattern =
                             }
                     )
                     whitespaceAndCommentsEndsPositivelyIndented
-                    functionNameNode
+                    nameLowercaseNode
                 )
             )
             Nothing
@@ -3646,7 +3646,7 @@ parensPattern =
 
 varPattern : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
 varPattern =
-    functionNameMapWithRange
+    nameLowercaseMapWithRange
         (\range var ->
             { comments = Rope.empty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.VarPattern var)
@@ -3815,8 +3815,8 @@ qualifiedNameRefNode =
                         { moduleName = firstName :: qualificationAfter, name = unqualified }
                 )
         )
-        typeName
-        maybeDotTypeNamesTuple
+        nameUppercase
+        maybeDotNamesUppercaseTuple
 
 
 qualifiedPatternWithoutConsumeArgs : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
@@ -3838,8 +3838,8 @@ qualifiedPatternWithoutConsumeArgs =
                     )
             }
         )
-        typeName
-        maybeDotTypeNamesTuple
+        nameUppercase
+        maybeDotNamesUppercaseTuple
 
 
 recordPattern : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
@@ -3861,7 +3861,7 @@ recordPattern =
                     , syntax = head :: tail.syntax
                     }
                 )
-                functionNameNode
+                nameLowercaseNode
                 whitespaceAndCommentsEndsPositivelyIndented
                 (manyWithComments
                     (ParserFast.symbolFollowedBy ","
@@ -3872,7 +3872,7 @@ recordPattern =
                                 }
                             )
                             whitespaceAndCommentsEndsPositivelyIndented
-                            functionNameNode
+                            nameLowercaseNode
                             whitespaceAndCommentsEndsPositivelyIndented
                         )
                     )
@@ -4120,24 +4120,24 @@ tripleQuotedStringLiteralOfterTripleDoubleQuote =
         identity
 
 
-functionName : Parser String
-functionName =
+nameLowercase : Parser String
+nameLowercase =
     ParserFast.ifFollowedByWhileValidateWithoutLinebreak
         Char.Extra.unicodeIsLowerFast
         Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
         isNotReserved
 
 
-functionNameNode : Parser (Elm.Syntax.Node.Node String)
-functionNameNode =
+nameLowercaseNode : Parser (Elm.Syntax.Node.Node String)
+nameLowercaseNode =
     ParserFast.ifFollowedByWhileValidateMapWithRangeWithoutLinebreak Elm.Syntax.Node.Node
         Char.Extra.unicodeIsLowerFast
         Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
         isNotReserved
 
 
-functionNameMapWithRange : (Elm.Syntax.Range.Range -> String -> res) -> Parser res
-functionNameMapWithRange rangeAndNameToResult =
+nameLowercaseMapWithRange : (Elm.Syntax.Range.Range -> String -> res) -> Parser res
+nameLowercaseMapWithRange rangeAndNameToResult =
     ParserFast.ifFollowedByWhileValidateMapWithRangeWithoutLinebreak
         rangeAndNameToResult
         Char.Extra.unicodeIsLowerFast
@@ -4153,22 +4153,22 @@ functionNameNotInfixNode =
         (\name -> name /= "infix" && isNotReserved name)
 
 
-typeName : Parser String
-typeName =
+nameUppercase : Parser String
+nameUppercase =
     ParserFast.ifFollowedByWhileWithoutLinebreak
         Char.Extra.unicodeIsUpperFast
         Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
 
 
-typeNameMapWithRange : (Elm.Syntax.Range.Range -> String -> res) -> Parser res
-typeNameMapWithRange rangeAndNameToRes =
+nameUppercaseMapWithRange : (Elm.Syntax.Range.Range -> String -> res) -> Parser res
+nameUppercaseMapWithRange rangeAndNameToRes =
     ParserFast.ifFollowedByWhileMapWithRangeWithoutLinebreak rangeAndNameToRes
         Char.Extra.unicodeIsUpperFast
         Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
 
 
-typeNameNode : Parser (Elm.Syntax.Node.Node String)
-typeNameNode =
+nameUppercaseNode : Parser (Elm.Syntax.Node.Node String)
+nameUppercaseNode =
     ParserFast.ifFollowedByWhileMapWithRangeWithoutLinebreak Elm.Syntax.Node.Node
         Char.Extra.unicodeIsUpperFast
         Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
