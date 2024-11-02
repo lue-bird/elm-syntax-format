@@ -7,7 +7,19 @@ module ElmSyntaxParserLenient exposing
     )
 
 {-| Like [`Elm.Syntax.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser)
-but able to parse badly indented code (TODO) similar to elm.format.
+but able to parse badly indented code (TODO) and similar somewhat incorrect syntax,
+similar to elm-format.
+
+This is **not** a fault-tolerant parser!
+So if you write something it can't recognize in a file,
+the whole thing will fail.
+
+Also, precise ranges of some parts in in the parsed result are not reliable.
+Ranges will still be correct when viewed relative to each other
+and tell you how many lines they span.
+This means [`ElmSyntaxPrint`](ElmSyntaxPrint)
+can pick this up and format it in a way compatible
+with the compiler or [`Elm.Syntax.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser).
 
 Some additional lenient parsing (TODO):
 
@@ -111,10 +123,21 @@ import ParserWithComments
 import Rope
 
 
+{-| Can turn a String into syntax or Nothing.
+See [`ElmSyntaxParserLenient.run`](#run)
+
+(This is not related to [`elm/parser`].
+[Open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new)
+if you need a way to covert to that)
+
+-}
 type alias Parser a =
     ParserFast.Parser a
 
 
+{-| Turn a given source String into `Just` the parsed syntax
+or `Nothing` if any unrecognizable part is found.
+-}
 run : Parser a -> String -> Maybe a
 run syntaxParser source =
     ParserFast.run syntaxParser source
