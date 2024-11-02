@@ -86,9 +86,7 @@ Some additional lenient parsing:
             Just n ->
                 n
 
-  - TODO
-
-        type A =
+  -     type A =
             | A
             | B
 
