@@ -1937,16 +1937,98 @@ a = 1
                     "a = "
                         |> ParserWithCommentsExpect.failsToParse ElmSyntaxParserLenient.declaration
                 )
-            , Test.test "Integer literal"
-                (\() ->
-                    "101"
-                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 101))
-                )
-            , Test.test "Hex integer literal"
-                (\() ->
-                    "0x56"
-                        |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.Hex 86))
-                )
+            , Test.describe "number"
+                [ Test.test "long hex"
+                    (\() ->
+                        "0x03FFFFFF"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Hex 67108863))
+                    )
+                , Test.test "hex FF"
+                    (\() ->
+                        "0xFF"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Hex 255))
+                    )
+                , Test.test "hex"
+                    (\() ->
+                        "0x2A"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Hex 42))
+                    )
+                , Test.test "Hex integer literal"
+                    (\() ->
+                        "0x56"
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Expression.Hex 86))
+                    )
+                , Test.test "Integer literal"
+                    (\() ->
+                        "101"
+                            |> ParserWithCommentsExpect.syntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 101))
+                    )
+                , Test.test "float"
+                    (\() ->
+                        "2.0"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Floatable 2.0))
+                    )
+                , Test.test "integer with negative exponent"
+                    (\() ->
+                        "2e-2"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
+                    )
+                , Test.test "integer with negative exponent (uppercase E)"
+                    (\() ->
+                        "2E-2"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
+                    )
+                , Test.test "integer with positive exponent"
+                    (\() ->
+                        "2e+2"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Floatable 2.0e2))
+                    )
+                , Test.test "float with negative exponent"
+                    (\() ->
+                        "2.0e-2"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
+                    )
+                , Test.test "float with negative exponent (uppercase E)"
+                    (\() ->
+                        "2.0E-2"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
+                    )
+                , Test.test "float with positive exponent"
+                    (\() ->
+                        "2.0e+2"
+                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.Floatable 2.0e2))
+                    )
+                ]
             , Test.test "String literal"
                 (\() ->
                     "\"Bar\""
