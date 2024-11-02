@@ -4120,6 +4120,9 @@ tripleQuotedStringLiteralOfterTripleDoubleQuote =
         identity
 
 
+{-| [`Parser`](#Parser) for a name used for
+record field names and unqualified function/value references
+-}
 nameLowercase : Parser String
 nameLowercase =
     ParserFast.ifFollowedByWhileValidateWithoutLinebreak
@@ -4153,6 +4156,9 @@ functionNameNotInfixNode =
         (\name -> name /= "infix" && isNotReserved name)
 
 
+{-| [`Parser`](#Parser) for a name used for
+type names, variant names, record type alias constructor function names and module names
+-}
 nameUppercase : Parser String
 nameUppercase =
     ParserFast.ifFollowedByWhileWithoutLinebreak
