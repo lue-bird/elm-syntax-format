@@ -27,9 +27,9 @@ Some additional lenient parsing:
 
   - `a != b` → `a /= b`
 
-  - merge consecutive `,` in record or TODO list
+  - merge consecutive `,` in record or list
 
-  - remove extra `,` before first record field or TODO list element
+  - remove extra `,` before first record field or list element
 
   - remove remove extra `|` before first variant declaration
 
@@ -2175,25 +2175,37 @@ expressionAfterOpeningSquareBracket =
             whitespaceAndCommentsEndsPositivelyIndented
             (ParserFast.oneOf2
                 (ParserFast.symbol "]" { comments = Rope.empty, syntax = Elm.Syntax.Expression.ListExpr [] })
-                (ParserFast.map2
-                    (\head tail ->
+                (ParserFast.map3
+                    (\commentsBeforeHead head tail ->
                         { comments =
-                            head.comments
+                            commentsBeforeHead
+                                |> Rope.prependTo head.comments
                                 |> Rope.prependTo tail.comments
                         , syntax = Elm.Syntax.Expression.ListExpr (head.syntax :: tail.syntax)
                         }
+                    )
+                    (ParserFast.orSucceed
+                        (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                        Rope.empty
                     )
                     expressionFollowedByOptimisticLayout
                     (positivelyIndentedFollowedBy
                         (manyWithComments
                             (ParserFast.symbolFollowedBy ","
-                                (ParserFast.map2
-                                    (\commentsBefore expressionResult ->
-                                        { comments = commentsBefore |> Rope.prependTo expressionResult.comments
+                                (ParserFast.map3
+                                    (\commentsBefore commentsWithExtraComma expressionResult ->
+                                        { comments =
+                                            commentsBefore
+                                                |> Rope.prependTo commentsWithExtraComma
+                                                |> Rope.prependTo expressionResult.comments
                                         , syntax = expressionResult.syntax
                                         }
                                     )
                                     whitespaceAndCommentsEndsPositivelyIndented
+                                    (ParserFast.orSucceed
+                                        (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                                        Rope.empty
+                                    )
                                     expressionFollowedByOptimisticLayout
                                     |> endsPositivelyIndented
                                 )
@@ -3827,21 +3839,43 @@ listPattern =
         (ParserFast.symbolFollowedBy "[" whitespaceAndCommentsEndsPositivelyIndented)
         (ParserFast.oneOf2
             (ParserFast.symbol "]" Nothing)
-            (ParserFast.map3
-                (\head commentsAfterHead tail ->
+            (ParserFast.map4
+                (\commentsBeforeHead head commentsAfterHead tail ->
                     Just
                         { comments =
-                            head.comments
+                            commentsBeforeHead
+                                |> Rope.prependTo head.comments
                                 |> Rope.prependTo tail.comments
                                 |> Rope.prependTo commentsAfterHead
                         , syntax = head.syntax :: tail.syntax
                         }
                 )
+                (ParserFast.orSucceed
+                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                    Rope.empty
+                )
                 pattern
                 whitespaceAndCommentsEndsPositivelyIndented
                 (manyWithComments
                     (ParserFast.symbolFollowedBy ","
-                        (surroundedByWhitespaceAndCommentsEndsPositivelyIndented pattern)
+                        (ParserFast.map4
+                            (\commentsBefore commentsWithExtraComma v commentsAfter ->
+                                { comments =
+                                    commentsBefore
+                                        |> Rope.prependTo commentsWithExtraComma
+                                        |> Rope.prependTo v.comments
+                                        |> Rope.prependTo commentsAfter
+                                , syntax = v.syntax
+                                }
+                            )
+                            whitespaceAndCommentsEndsPositivelyIndented
+                            (ParserFast.orSucceed
+                                (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                                Rope.empty
+                            )
+                            pattern
+                            whitespaceAndCommentsEndsPositivelyIndented
+                        )
                     )
                 )
                 |> ParserFast.followedBySymbol "]"

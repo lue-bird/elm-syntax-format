@@ -3494,9 +3494,44 @@ type Color = Blue String | Red | Green"""
                                 )
                             )
                 )
+            , Test.test "list with extra comma between elements"
+                (\() ->
+                    "[ class \"a\",,text \"Foo\"]"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
+                                (Elm.Syntax.Expression.ListExpr
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 12 } }
+                                        (Elm.Syntax.Expression.Application
+                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "class")
+                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } (Elm.Syntax.Expression.Literal "a")
+                                            ]
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 24 } }
+                                        (Elm.Syntax.Expression.Application
+                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 18 } } (Elm.Syntax.Expression.FunctionOrValue [] "text")
+                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 24 } } (Elm.Syntax.Expression.Literal "Foo")
+                                            ]
+                                        )
+                                    ]
+                                )
+                            )
+                )
             , Test.test "listExpression singleton with comment"
                 (\() ->
                     "[ 1 {- Foo-} ]"
+                        |> expectSyntaxWithComments ElmSyntaxParserLenient.expression
+                            { syntax =
+                                Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
+                                    (Elm.Syntax.Expression.ListExpr
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.Integer 1)
+                                        ]
+                                    )
+                            , comments = [ Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 13 } } "{- Foo-}" ]
+                            }
+                )
+            , Test.test "list with extra prefix comma and comment"
+                (\() ->
+                    "[,1 {- Foo-} ]"
                         |> expectSyntaxWithComments ElmSyntaxParserLenient.expression
                             { syntax =
                                 Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
@@ -5150,6 +5185,26 @@ True -> 1"""
                     "[ 1]"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Pattern.ListPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.IntPattern 1) ]))
+                )
+            , Test.test "list with prefix extra comma"
+                (\() ->
+                    "[,1]"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } (Elm.Syntax.Pattern.ListPattern [ Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Pattern.IntPattern 1) ]))
+                )
+            , Test.test "list with extra comma between elements"
+                (\() ->
+                    "[1,,2]"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
+                                (Elm.Syntax.Pattern.ListPattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } }
+                                        (Elm.Syntax.Pattern.IntPattern 1)
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } }
+                                        (Elm.Syntax.Pattern.IntPattern 2)
+                                    ]
+                                )
+                            )
                 )
             , Test.test "Empty record"
                 (\() ->
