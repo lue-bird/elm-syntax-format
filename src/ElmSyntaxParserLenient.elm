@@ -1,11 +1,12 @@
 module ElmSyntaxParserLenient exposing
     ( Parser, run, module_
-    , moduleName, nameLowercase, nameUppercase
     , Comments, commentsToList
     , expose, exposing_
     , moduleHeader, import_, declarations, declaration
     , type_, pattern, expression
     , multiLineComment, singleLineComment, whitespaceAndComments
+    , moduleName, nameLowercase, nameUppercase
+    , RopeFilled(..)
     )
 
 {-| Like [`Elm.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser)
@@ -95,7 +96,6 @@ Sometimes it's useful to parse only some part of the syntax,
 to, say, display only an expression in an article
 or reparse only the touched declarations on save.
 
-@docs moduleName, nameLowercase, nameUppercase
 @docs Comments, commentsToList
 @docs expose, exposing_
 @docs moduleHeader, import_, declarations, declaration
@@ -105,6 +105,12 @@ or reparse only the touched declarations on save.
 ### whitespace
 
 @docs multiLineComment, singleLineComment, whitespaceAndComments
+
+
+### low-level
+
+@docs moduleName, nameLowercase, nameUppercase
+@docs RopeFilled
 
 -}
 
@@ -124,7 +130,6 @@ import Elm.Syntax.Range
 import Elm.Syntax.Type
 import Elm.Syntax.TypeAnnotation
 import ParserFast
-import Rope exposing (Rope)
 
 
 {-| Can turn a String into syntax or Nothing.
@@ -158,10 +163,10 @@ module_ =
             , declarations = declarationsResult.syntax
             , comments =
                 moduleHeaderResults.comments
-                    |> Rope.prependTo moduleComments
-                    |> Rope.prependTo importsResult.comments
-                    |> Rope.prependTo declarationsResult.comments
-                    |> Rope.toList
+                    |> ropePrependTo moduleComments
+                    |> ropePrependTo importsResult.comments
+                    |> ropePrependTo declarationsResult.comments
+                    |> commentsToList
             }
         )
         (whitespaceAndCommentsEndsTopIndentedFollowedByWithComments
@@ -170,11 +175,11 @@ module_ =
         (whitespaceAndCommentsEndsTopIndentedFollowedByComments
             (ParserFast.map2OrSucceed
                 (\moduleDocumentation commentsAfter ->
-                    Rope.one moduleDocumentation |> Rope.filledPrependTo commentsAfter
+                    ropeOne moduleDocumentation |> ropeFilledPrependTo commentsAfter
                 )
                 documentationComment
                 whitespaceAndCommentsEndsTopIndented
-                Rope.empty
+                ropeEmpty
             )
         )
         (manyWithComments import_)
@@ -204,7 +209,7 @@ exposeDefinition =
         (\range commentsAfterExposing exposingListInnerResult ->
             { comments =
                 commentsAfterExposing
-                    |> Rope.prependTo exposingListInnerResult.comments
+                    |> ropePrependTo exposingListInnerResult.comments
             , syntax = Elm.Syntax.Node.Node range exposingListInnerResult.syntax
             }
         )
@@ -220,7 +225,7 @@ exposing_ =
     ParserFast.symbolFollowedBy "("
         (ParserFast.map2
             (\commentsBefore inner ->
-                { comments = commentsBefore |> Rope.prependTo inner.comments
+                { comments = commentsBefore |> ropePrependTo inner.comments
                 , syntax = inner.syntax
                 }
             )
@@ -230,8 +235,8 @@ exposing_ =
                     (\headElement commentsAfterHeadElement tailElements ->
                         { comments =
                             headElement.comments
-                                |> Rope.prependTo commentsAfterHeadElement
-                                |> Rope.prependTo tailElements.comments
+                                |> ropePrependTo commentsAfterHeadElement
+                                |> ropePrependTo tailElements.comments
                         , syntax =
                             Elm.Syntax.Exposing.Explicit
                                 (headElement.syntax
@@ -274,7 +279,7 @@ infixExpose : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Exposing.Top
 infixExpose =
     ParserFast.map2WithRange
         (\range infixName () ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Exposing.InfixExpose infixName)
             }
         )
@@ -299,7 +304,7 @@ typeExpose =
                     }
 
                 Just open ->
-                    { comments = commentsBeforeMaybeOpen |> Rope.prependTo open.comments
+                    { comments = commentsBeforeMaybeOpen |> ropePrependTo open.comments
                     , syntax =
                         Elm.Syntax.Node.Node
                             { start = typeNameRange.start
@@ -312,7 +317,7 @@ typeExpose =
         whitespaceAndComments
         (ParserFast.map2WithRangeOrSucceed
             (\range left right ->
-                Just { comments = left |> Rope.prependTo right, syntax = range }
+                Just { comments = left |> ropePrependTo right, syntax = range }
             )
             (ParserFast.symbolFollowedBy "(" whitespaceAndCommentsEndsPositivelyIndented)
             (ParserFast.symbolFollowedBy ".." whitespaceAndCommentsEndsPositivelyIndented
@@ -326,7 +331,7 @@ functionExpose : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Exposing.
 functionExpose =
     nameLowercaseMapWithRange
         (\range name ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax =
                 Elm.Syntax.Node.Node range (Elm.Syntax.Exposing.FunctionExpose name)
             }
@@ -348,7 +353,7 @@ effectWhereClause : Parser (WithComments ( String, Elm.Syntax.Node.Node String )
 effectWhereClause =
     ParserFast.map4
         (\fnName commentsAfterFnName commentsAfterEqual fnTypeName ->
-            { comments = commentsAfterFnName |> Rope.prependTo commentsAfterEqual
+            { comments = commentsAfterFnName |> ropePrependTo commentsAfterEqual
             , syntax = ( fnName, fnTypeName )
             }
         )
@@ -370,9 +375,9 @@ whereBlock =
                 in
                 { comments =
                     commentsBeforeHead
-                        |> Rope.prependTo head.comments
-                        |> Rope.prependTo commentsAfterHead
-                        |> Rope.prependTo tail.comments
+                        |> ropePrependTo head.comments
+                        |> ropePrependTo commentsAfterHead
+                        |> ropePrependTo tail.comments
                 , syntax =
                     { command =
                         pairs
@@ -429,7 +434,7 @@ effectWhereClauses : Parser (WithComments { command : Maybe (Elm.Syntax.Node.Nod
 effectWhereClauses =
     ParserFast.map2
         (\commentsBefore whereResult ->
-            { comments = commentsBefore |> Rope.prependTo whereResult.comments
+            { comments = commentsBefore |> ropePrependTo whereResult.comments
             , syntax = whereResult.syntax
             }
         )
@@ -443,11 +448,11 @@ effectModuleDefinition =
         (\range commentsAfterEffect commentsAfterModule name commentsAfterName whereClauses commentsAfterWhereClauses exp ->
             { comments =
                 commentsAfterEffect
-                    |> Rope.prependTo commentsAfterModule
-                    |> Rope.prependTo commentsAfterName
-                    |> Rope.prependTo whereClauses.comments
-                    |> Rope.prependTo commentsAfterWhereClauses
-                    |> Rope.prependTo exp.comments
+                    |> ropePrependTo commentsAfterModule
+                    |> ropePrependTo commentsAfterName
+                    |> ropePrependTo whereClauses.comments
+                    |> ropePrependTo commentsAfterWhereClauses
+                    |> ropePrependTo exp.comments
             , syntax =
                 Elm.Syntax.Node.Node range
                     (Elm.Syntax.Module.EffectModule
@@ -474,8 +479,8 @@ normalModuleDefinition =
         (\range commentsAfterModule moduleNameNode commentsAfterModuleName exposingList ->
             { comments =
                 commentsAfterModule
-                    |> Rope.prependTo commentsAfterModuleName
-                    |> Rope.prependTo exposingList.comments
+                    |> ropePrependTo commentsAfterModuleName
+                    |> ropePrependTo exposingList.comments
             , syntax =
                 Elm.Syntax.Node.Node range
                     (Elm.Syntax.Module.NormalModule
@@ -497,9 +502,9 @@ portModuleDefinition =
         (\range commentsAfterPort commentsAfterModule moduleNameNode commentsAfterModuleName exposingList ->
             { comments =
                 commentsAfterPort
-                    |> Rope.prependTo commentsAfterModule
-                    |> Rope.prependTo commentsAfterModuleName
-                    |> Rope.prependTo exposingList.comments
+                    |> ropePrependTo commentsAfterModule
+                    |> ropePrependTo commentsAfterModuleName
+                    |> ropePrependTo exposingList.comments
             , syntax =
                 Elm.Syntax.Node.Node range
                     (Elm.Syntax.Module.PortModule { moduleName = moduleNameNode, exposingList = exposingList.syntax })
@@ -522,7 +527,7 @@ import_ =
                 commentsBeforeAlias : Comments
                 commentsBeforeAlias =
                     commentsAfterImport
-                        |> Rope.prependTo commentsAfterModuleName
+                        |> ropePrependTo commentsAfterModuleName
             in
             case maybeModuleAlias of
                 Nothing ->
@@ -547,7 +552,7 @@ import_ =
                                     exposingListValue.syntax
                             in
                             { comments =
-                                commentsBeforeAlias |> Rope.prependTo exposingListValue.comments
+                                commentsBeforeAlias |> ropePrependTo exposingListValue.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = exposingRange.end }
                                     { moduleName = mod
@@ -564,7 +569,7 @@ import_ =
                                     moduleAliasResult.syntax
                             in
                             { comments =
-                                commentsBeforeAlias |> Rope.prependTo moduleAliasResult.comments
+                                commentsBeforeAlias |> ropePrependTo moduleAliasResult.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = aliasRange.end }
                                     { moduleName = mod
@@ -580,8 +585,8 @@ import_ =
                             in
                             { comments =
                                 commentsBeforeAlias
-                                    |> Rope.prependTo moduleAliasResult.comments
-                                    |> Rope.prependTo exposingListValue.comments
+                                    |> ropePrependTo moduleAliasResult.comments
+                                    |> ropePrependTo exposingListValue.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = exposingRange.end }
                                     { moduleName = mod
@@ -596,7 +601,7 @@ import_ =
         (ParserFast.map3OrSucceed
             (\commentsBefore moduleAliasNode commentsAfter ->
                 Just
-                    { comments = commentsBefore |> Rope.prependTo commentsAfter
+                    { comments = commentsBefore |> ropePrependTo commentsAfter
                     , syntax = moduleAliasNode
                     }
             )
@@ -612,7 +617,7 @@ import_ =
         (ParserFast.map2OrSucceed
             (\exposingResult commentsAfter ->
                 Just
-                    { comments = exposingResult.comments |> Rope.prependTo commentsAfter
+                    { comments = exposingResult.comments |> ropePrependTo commentsAfter
                     , syntax = exposingResult.syntax
                     }
             )
@@ -631,7 +636,7 @@ declarations =
         (moduleLevelIndentedFollowedBy
             (ParserFast.map2
                 (\declarationParsed commentsAfter ->
-                    { comments = declarationParsed.comments |> Rope.prependTo commentsAfter
+                    { comments = declarationParsed.comments |> ropePrependTo commentsAfter
                     , syntax = declarationParsed.syntax
                     }
                 )
@@ -780,8 +785,8 @@ declarationWithDocumentation =
                             portDeclarationAfterName.typeAnnotation
                     in
                     { comments =
-                        Rope.one documentation
-                            |> Rope.filledPrependTo afterDocumentation.comments
+                        ropeOne documentation
+                            |> ropeFilledPrependTo afterDocumentation.comments
                     , syntax =
                         Elm.Syntax.Node.Node
                             { start = portDeclarationAfterName.startLocation
@@ -881,10 +886,10 @@ functionAfterDocumentation =
         (ParserFast.map6
             (\startName commentsAfterStartName maybeSignature arguments commentsAfterEqual result ->
                 { comments =
-                    (commentsAfterStartName |> Rope.prependTo maybeSignature.comments)
-                        |> Rope.prependTo arguments.comments
-                        |> Rope.prependTo commentsAfterEqual
-                        |> Rope.prependTo result.comments
+                    (commentsAfterStartName |> ropePrependTo maybeSignature.comments)
+                        |> ropePrependTo arguments.comments
+                        |> ropePrependTo commentsAfterEqual
+                        |> ropePrependTo result.comments
                 , syntax =
                     FunctionDeclarationAfterDocumentation
                         { startName = startName
@@ -901,9 +906,9 @@ functionAfterDocumentation =
                 (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
                     { comments =
                         commentsBeforeTypeAnnotation
-                            |> Rope.prependTo typeAnnotationResult.comments
-                            |> Rope.prependTo implementationName.comments
-                            |> Rope.prependTo afterImplementationName
+                            |> ropePrependTo typeAnnotationResult.comments
+                            |> ropePrependTo implementationName.comments
+                            |> ropePrependTo afterImplementationName
                     , syntax =
                         Just
                             { implementationName = implementationName.syntax
@@ -917,7 +922,7 @@ functionAfterDocumentation =
                     nameLowercaseNode
                 )
                 whitespaceAndCommentsEndsPositivelyIndented
-                { comments = Rope.empty, syntax = Nothing }
+                { comments = ropeEmpty, syntax = Nothing }
             )
             parameterPatternsEqual
             whitespaceAndCommentsEndsPositivelyIndented
@@ -927,12 +932,12 @@ functionAfterDocumentation =
             (\start commentsBeforeTypeAnnotation typeAnnotationResult commentsBetweenTypeAndName nameNode afterImplementationName arguments commentsAfterEqual result ->
                 { comments =
                     commentsBeforeTypeAnnotation
-                        |> Rope.prependTo typeAnnotationResult.comments
-                        |> Rope.prependTo commentsBetweenTypeAndName
-                        |> Rope.prependTo afterImplementationName
-                        |> Rope.prependTo arguments.comments
-                        |> Rope.prependTo commentsAfterEqual
-                        |> Rope.prependTo result.comments
+                        |> ropePrependTo typeAnnotationResult.comments
+                        |> ropePrependTo commentsBetweenTypeAndName
+                        |> ropePrependTo afterImplementationName
+                        |> ropePrependTo arguments.comments
+                        |> ropePrependTo commentsAfterEqual
+                        |> ropePrependTo result.comments
                 , syntax =
                     FunctionDeclarationAfterDocumentation
                         { startName =
@@ -974,9 +979,9 @@ functionDeclarationWithoutDocumentation =
                     Nothing ->
                         { comments =
                             commentsAfterStartName
-                                |> Rope.prependTo arguments.comments
-                                |> Rope.prependTo commentsAfterEqual
-                                |> Rope.prependTo result.comments
+                                |> ropePrependTo arguments.comments
+                                |> ropePrependTo commentsAfterEqual
+                                |> ropePrependTo result.comments
                         , syntax =
                             Elm.Syntax.Node.Node { start = startNameStart, end = expressionRange.end }
                                 (Elm.Syntax.Declaration.FunctionDeclaration
@@ -998,10 +1003,10 @@ functionDeclarationWithoutDocumentation =
                                 signature.implementationName
                         in
                         { comments =
-                            (commentsAfterStartName |> Rope.prependTo signature.comments)
-                                |> Rope.prependTo arguments.comments
-                                |> Rope.prependTo commentsAfterEqual
-                                |> Rope.prependTo result.comments
+                            (commentsAfterStartName |> ropePrependTo signature.comments)
+                                |> ropePrependTo arguments.comments
+                                |> ropePrependTo commentsAfterEqual
+                                |> ropePrependTo result.comments
                         , syntax =
                             Elm.Syntax.Node.Node { start = startNameStart, end = expressionRange.end }
                                 (Elm.Syntax.Declaration.FunctionDeclaration
@@ -1029,9 +1034,9 @@ functionDeclarationWithoutDocumentation =
                     Just
                         { comments =
                             commentsBeforeTypeAnnotation
-                                |> Rope.prependTo typeAnnotationResult.comments
-                                |> Rope.prependTo implementationName.comments
-                                |> Rope.prependTo afterImplementationName
+                                |> ropePrependTo typeAnnotationResult.comments
+                                |> ropePrependTo implementationName.comments
+                                |> ropePrependTo afterImplementationName
                         , implementationName = implementationName.syntax
                         , typeAnnotation = typeAnnotationResult.syntax
                         }
@@ -1092,12 +1097,12 @@ functionDeclarationWithoutDocumentation =
             (\start commentsBeforeTypeAnnotation typeAnnotationResult commentsBetweenTypeAndName nameNode afterImplementationName arguments commentsAfterEqual result ->
                 { comments =
                     commentsBeforeTypeAnnotation
-                        |> Rope.prependTo typeAnnotationResult.comments
-                        |> Rope.prependTo commentsBetweenTypeAndName
-                        |> Rope.prependTo afterImplementationName
-                        |> Rope.prependTo arguments.comments
-                        |> Rope.prependTo commentsAfterEqual
-                        |> Rope.prependTo result.comments
+                        |> ropePrependTo typeAnnotationResult.comments
+                        |> ropePrependTo commentsBetweenTypeAndName
+                        |> ropePrependTo afterImplementationName
+                        |> ropePrependTo arguments.comments
+                        |> ropePrependTo commentsAfterEqual
+                        |> ropePrependTo result.comments
                 , syntax =
                     Elm.Syntax.Node.Node
                         { start = start
@@ -1152,7 +1157,7 @@ parameterPatternsEqual =
         )
         (ParserFast.map2
             (\patternResult commentsAfterPattern ->
-                { comments = patternResult.comments |> Rope.prependTo commentsAfterPattern
+                { comments = patternResult.comments |> ropePrependTo commentsAfterPattern
                 , syntax = patternResult.syntax
                 }
             )
@@ -1167,10 +1172,10 @@ infixDeclaration =
         (\range commentsAfterInfix direction commentsAfterDirection precedence commentsAfterPrecedence operator commentsAfterOperator commentsAfterEqual fn ->
             { comments =
                 commentsAfterInfix
-                    |> Rope.prependTo commentsAfterDirection
-                    |> Rope.prependTo commentsAfterPrecedence
-                    |> Rope.prependTo commentsAfterOperator
-                    |> Rope.prependTo commentsAfterEqual
+                    |> ropePrependTo commentsAfterDirection
+                    |> ropePrependTo commentsAfterPrecedence
+                    |> ropePrependTo commentsAfterOperator
+                    |> ropePrependTo commentsAfterEqual
             , syntax =
                 Elm.Syntax.Node.Node range
                     (Elm.Syntax.Declaration.InfixDeclaration
@@ -1220,9 +1225,9 @@ portDeclarationAfterDocumentation =
             in
             { comments =
                 commentsAfterPort
-                    |> Rope.prependTo commentsAfterName
-                    |> Rope.prependTo typeAnnotationResult.comments
-                    |> Rope.prependTo commentsAfterColon
+                    |> ropePrependTo commentsAfterName
+                    |> ropePrependTo typeAnnotationResult.comments
+                    |> ropePrependTo commentsAfterColon
             , syntax =
                 PortDeclarationAfterDocumentation
                     { startLocation = { row = nameRange.start.row, column = 1 }
@@ -1251,9 +1256,9 @@ portDeclarationWithoutDocumentation =
             in
             { comments =
                 commentsAfterPort
-                    |> Rope.prependTo commentsAfterName
-                    |> Rope.prependTo commentsAfterColon
-                    |> Rope.prependTo typeAnnotationResult.comments
+                    |> ropePrependTo commentsAfterName
+                    |> ropePrependTo commentsAfterColon
+                    |> ropePrependTo typeAnnotationResult.comments
             , syntax =
                 Elm.Syntax.Node.Node
                     { start = { row = nameRange.start.row, column = 1 }
@@ -1277,7 +1282,7 @@ typeOrTypeAliasDefinitionAfterDocumentation : Parser (WithComments DeclarationAf
 typeOrTypeAliasDefinitionAfterDocumentation =
     ParserFast.map2
         (\commentsAfterType declarationAfterDocumentation ->
-            { comments = commentsAfterType |> Rope.prependTo declarationAfterDocumentation.comments
+            { comments = commentsAfterType |> ropePrependTo declarationAfterDocumentation.comments
             , syntax = declarationAfterDocumentation.syntax
             }
         )
@@ -1294,10 +1299,10 @@ typeAliasDefinitionAfterDocumentationAfterTypePrefix =
         (\commentsAfterAlias name commentsAfterName parameters commentsAfterEquals typeAnnotationResult ->
             { comments =
                 commentsAfterAlias
-                    |> Rope.prependTo commentsAfterName
-                    |> Rope.prependTo parameters.comments
-                    |> Rope.prependTo commentsAfterEquals
-                    |> Rope.prependTo typeAnnotationResult.comments
+                    |> ropePrependTo commentsAfterName
+                    |> ropePrependTo parameters.comments
+                    |> ropePrependTo commentsAfterEquals
+                    |> ropePrependTo typeAnnotationResult.comments
             , syntax =
                 TypeAliasDeclarationAfterDocumentation
                     { name = name
@@ -1320,11 +1325,11 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
         (\name commentsAfterName parameters commentsAfterEqual commentsBeforeHeadVariant headVariant tailVariantsReverse ->
             { comments =
                 commentsAfterName
-                    |> Rope.prependTo parameters.comments
-                    |> Rope.prependTo commentsAfterEqual
-                    |> Rope.prependTo commentsBeforeHeadVariant
-                    |> Rope.prependTo headVariant.comments
-                    |> Rope.prependTo tailVariantsReverse.comments
+                    |> ropePrependTo parameters.comments
+                    |> ropePrependTo commentsAfterEqual
+                    |> ropePrependTo commentsBeforeHeadVariant
+                    |> ropePrependTo headVariant.comments
+                    |> ropePrependTo tailVariantsReverse.comments
             , syntax =
                 TypeDeclarationAfterDocumentation
                     { name = name
@@ -1340,7 +1345,7 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.orSucceed
             (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
-            Rope.empty
+            ropeEmpty
         )
         variantDeclarationFollowedByOptimisticLayout
         (manyWithCommentsReverse
@@ -1350,7 +1355,7 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
                         (\commentsBeforePipe variantResult ->
                             { comments =
                                 commentsBeforePipe
-                                    |> Rope.prependTo variantResult.comments
+                                    |> ropePrependTo variantResult.comments
                             , syntax = variantResult.syntax
                             }
                         )
@@ -1369,7 +1374,7 @@ typeOrTypeAliasDefinitionWithoutDocumentation =
             let
                 allComments : Comments
                 allComments =
-                    commentsAfterType |> Rope.prependTo afterStart.comments
+                    commentsAfterType |> ropePrependTo afterStart.comments
             in
             case afterStart.syntax of
                 TypeDeclarationWithoutDocumentation typeDeclarationAfterDocumentation ->
@@ -1433,10 +1438,10 @@ typeAliasDefinitionWithoutDocumentationAfterTypePrefix =
         (\commentsAfterAlias name commentsAfterName parameters commentsAfterEqual typeAnnotationResult ->
             { comments =
                 commentsAfterAlias
-                    |> Rope.prependTo commentsAfterName
-                    |> Rope.prependTo parameters.comments
-                    |> Rope.prependTo commentsAfterEqual
-                    |> Rope.prependTo typeAnnotationResult.comments
+                    |> ropePrependTo commentsAfterName
+                    |> ropePrependTo parameters.comments
+                    |> ropePrependTo commentsAfterEqual
+                    |> ropePrependTo typeAnnotationResult.comments
             , syntax =
                 TypeAliasDeclarationWithoutDocumentation
                     { name = name
@@ -1459,11 +1464,11 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
         (\name commentsAfterName parameters commentsAfterEqual commentsBeforeHeadVariant headVariant tailVariantsReverse ->
             { comments =
                 commentsAfterName
-                    |> Rope.prependTo parameters.comments
-                    |> Rope.prependTo commentsAfterEqual
-                    |> Rope.prependTo commentsBeforeHeadVariant
-                    |> Rope.prependTo headVariant.comments
-                    |> Rope.prependTo tailVariantsReverse.comments
+                    |> ropePrependTo parameters.comments
+                    |> ropePrependTo commentsAfterEqual
+                    |> ropePrependTo commentsBeforeHeadVariant
+                    |> ropePrependTo headVariant.comments
+                    |> ropePrependTo tailVariantsReverse.comments
             , syntax =
                 TypeDeclarationWithoutDocumentation
                     { name = name
@@ -1479,7 +1484,7 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.orSucceed
             (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
-            Rope.empty
+            ropeEmpty
         )
         variantDeclarationFollowedByOptimisticLayout
         (manyWithCommentsReverse
@@ -1489,7 +1494,7 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
                         (\commentsBeforePipe variantResult ->
                             { comments =
                                 commentsBeforePipe
-                                    |> Rope.prependTo variantResult.comments
+                                    |> ropePrependTo variantResult.comments
                             , syntax = variantResult.syntax
                             }
                         )
@@ -1520,7 +1525,7 @@ variantDeclarationFollowedByOptimisticLayout =
             in
             { comments =
                 commentsAfterName
-                    |> Rope.prependTo argumentsReverse.comments
+                    |> ropePrependTo argumentsReverse.comments
             , syntax =
                 Elm.Syntax.Node.Node fullRange
                     { name = nameNode
@@ -1534,7 +1539,7 @@ variantDeclarationFollowedByOptimisticLayout =
             (positivelyIndentedFollowedBy
                 (ParserFast.map2
                     (\typeAnnotationResult commentsAfter ->
-                        { comments = typeAnnotationResult.comments |> Rope.prependTo commentsAfter
+                        { comments = typeAnnotationResult.comments |> ropePrependTo commentsAfter
                         , syntax = typeAnnotationResult.syntax
                         }
                     )
@@ -1568,7 +1573,7 @@ type_ =
             (\startType commentsAfter ->
                 { comments =
                     startType.comments
-                        |> Rope.prependTo commentsAfter
+                        |> ropePrependTo commentsAfter
                 , syntax = startType.syntax
                 }
             )
@@ -1581,8 +1586,8 @@ type_ =
                     (\commentsAfterArrow typeAnnotationResult commentsAfterType ->
                         { comments =
                             commentsAfterArrow
-                                |> Rope.prependTo typeAnnotationResult.comments
-                                |> Rope.prependTo commentsAfterType
+                                |> ropePrependTo typeAnnotationResult.comments
+                                |> ropePrependTo commentsAfterType
                         , syntax = typeAnnotationResult.syntax
                         }
                     )
@@ -1595,7 +1600,7 @@ type_ =
         (\inType outType ->
             { comments =
                 inType.comments
-                    |> Rope.prependTo outType.comments
+                    |> ropePrependTo outType.comments
             , syntax =
                 Elm.Syntax.Node.combine Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType.syntax outType.syntax
             }
@@ -1626,7 +1631,7 @@ parensTypeAnnotation =
         (ParserFast.oneOf2
             (ParserFast.symbolWithEndLocation ")"
                 (\end ->
-                    { comments = Rope.empty
+                    { comments = ropeEmpty
                     , syntax =
                         Elm.Syntax.Node.Node
                             { start = { row = end.row, column = end.column - 2 }
@@ -1640,9 +1645,9 @@ parensTypeAnnotation =
                 (\rangeAfterOpeningParens commentsBeforeFirstPart firstPart commentsAfterFirstPart lastToSecondPart ->
                     { comments =
                         commentsBeforeFirstPart
-                            |> Rope.prependTo firstPart.comments
-                            |> Rope.prependTo commentsAfterFirstPart
-                            |> Rope.prependTo lastToSecondPart.comments
+                            |> ropePrependTo firstPart.comments
+                            |> ropePrependTo commentsAfterFirstPart
+                            |> ropePrependTo lastToSecondPart.comments
                     , syntax =
                         Elm.Syntax.Node.Node
                             { start = { row = rangeAfterOpeningParens.start.row, column = rangeAfterOpeningParens.start.column - 1 }
@@ -1675,15 +1680,15 @@ parensTypeAnnotation =
                 whitespaceAndCommentsEndsPositivelyIndented
                 (ParserFast.oneOf2
                     (ParserFast.symbol ")"
-                        { comments = Rope.empty, syntax = Nothing }
+                        { comments = ropeEmpty, syntax = Nothing }
                     )
                     (ParserFast.symbolFollowedBy ","
                         (ParserFast.map4
                             (\commentsBefore secondPartResult commentsAfter maybeThirdPartResult ->
                                 { comments =
                                     commentsBefore
-                                        |> Rope.prependTo secondPartResult.comments
-                                        |> Rope.prependTo commentsAfter
+                                        |> ropePrependTo secondPartResult.comments
+                                        |> ropePrependTo commentsAfter
                                 , syntax = Just { maybeThirdPart = maybeThirdPartResult.syntax, secondPart = secondPartResult.syntax }
                                 }
                             )
@@ -1692,15 +1697,15 @@ parensTypeAnnotation =
                             whitespaceAndCommentsEndsPositivelyIndented
                             (ParserFast.oneOf2
                                 (ParserFast.symbol ")"
-                                    { comments = Rope.empty, syntax = Nothing }
+                                    { comments = ropeEmpty, syntax = Nothing }
                                 )
                                 (ParserFast.symbolFollowedBy ","
                                     (ParserFast.map3
                                         (\commentsBefore thirdPartResult commentsAfter ->
                                             { comments =
                                                 commentsBefore
-                                                    |> Rope.prependTo thirdPartResult.comments
-                                                    |> Rope.prependTo commentsAfter
+                                                    |> ropePrependTo thirdPartResult.comments
+                                                    |> ropePrependTo commentsAfter
                                             , syntax = Just thirdPartResult.syntax
                                             }
                                         )
@@ -1722,7 +1727,7 @@ genericTypeAnnotation : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Ty
 genericTypeAnnotation =
     nameLowercaseMapWithRange
         (\range var ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax =
                 Elm.Syntax.Node.Node range (Elm.Syntax.TypeAnnotation.GenericType var)
             }
@@ -1743,7 +1748,7 @@ recordTypeAnnotation =
                 Just afterCurlyResult ->
                     { comments =
                         commentsBefore
-                            |> Rope.prependTo afterCurlyResult.comments
+                            |> ropePrependTo afterCurlyResult.comments
                     , syntax =
                         Elm.Syntax.Node.Node range afterCurlyResult.syntax
                     }
@@ -1756,8 +1761,8 @@ recordTypeAnnotation =
                     Just
                         { comments =
                             commentsBeforeFirstName
-                                |> Rope.prependTo commentsAfterFirstName
-                                |> Rope.prependTo afterFirstName.comments
+                                |> ropePrependTo commentsAfterFirstName
+                                |> ropePrependTo afterFirstName.comments
                         , syntax =
                             case afterFirstName.syntax of
                                 RecordExtensionExpressionAfterName fields ->
@@ -1769,7 +1774,7 @@ recordTypeAnnotation =
                 )
                 (ParserFast.orSucceed
                     (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                    Rope.empty
+                    ropeEmpty
                 )
                 nameLowercaseNode
                 whitespaceAndCommentsEndsPositivelyIndented
@@ -1779,8 +1784,8 @@ recordTypeAnnotation =
                             (\range commentsBefore head tail ->
                                 { comments =
                                     commentsBefore
-                                        |> Rope.prependTo head.comments
-                                        |> Rope.prependTo tail.comments
+                                        |> ropePrependTo head.comments
+                                        |> ropePrependTo tail.comments
                                 , syntax =
                                     RecordExtensionExpressionAfterName
                                         (Elm.Syntax.Node.Node range (head.syntax :: tail.syntax))
@@ -1794,15 +1799,15 @@ recordTypeAnnotation =
                                         (\commentsBefore commentsWithExtraComma field ->
                                             { comments =
                                                 commentsBefore
-                                                    |> Rope.prependTo commentsWithExtraComma
-                                                    |> Rope.prependTo field.comments
+                                                    |> ropePrependTo commentsWithExtraComma
+                                                    |> ropePrependTo field.comments
                                             , syntax = field.syntax
                                             }
                                         )
                                         whitespaceAndCommentsEndsPositivelyIndented
                                         (ParserFast.orSucceed
                                             (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                                            Rope.empty
+                                            ropeEmpty
                                         )
                                         typeRecordFieldDefinition
                                     )
@@ -1814,9 +1819,9 @@ recordTypeAnnotation =
                         (\commentsBeforeFirstFieldValue firstFieldValue commentsAfterFirstFieldValue tailFields ->
                             { comments =
                                 commentsBeforeFirstFieldValue
-                                    |> Rope.prependTo firstFieldValue.comments
-                                    |> Rope.prependTo commentsAfterFirstFieldValue
-                                    |> Rope.prependTo tailFields.comments
+                                    |> ropePrependTo firstFieldValue.comments
+                                    |> ropePrependTo commentsAfterFirstFieldValue
+                                    |> ropePrependTo tailFields.comments
                             , syntax =
                                 FieldsAfterName
                                     { firstFieldValue = firstFieldValue.syntax
@@ -1827,13 +1832,13 @@ recordTypeAnnotation =
                         (ParserFast.oneOf2OrSucceed
                             (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
                             (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
-                            Rope.empty
+                            ropeEmpty
                         )
                         type_
                         whitespaceAndCommentsEndsPositivelyIndented
                         (ParserFast.orSucceed
                             (ParserFast.symbolFollowedBy "," recordFieldsTypeAnnotation)
-                            { comments = Rope.empty, syntax = [] }
+                            { comments = ropeEmpty, syntax = [] }
                         )
                     )
                 )
@@ -1858,16 +1863,16 @@ recordFieldsTypeAnnotation =
         (\commentsBefore commentsWithExtraComma head tail ->
             { comments =
                 commentsWithExtraComma
-                    |> Rope.prependTo commentsBefore
-                    |> Rope.prependTo head.comments
-                    |> Rope.prependTo tail.comments
+                    |> ropePrependTo commentsBefore
+                    |> ropePrependTo head.comments
+                    |> ropePrependTo tail.comments
             , syntax = head.syntax :: tail.syntax
             }
         )
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.orSucceed
             (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-            Rope.empty
+            ropeEmpty
         )
         typeRecordFieldDefinition
         (manyWithComments
@@ -1876,15 +1881,15 @@ recordFieldsTypeAnnotation =
                     (\commentsBefore commentsWithExtraComma field ->
                         { comments =
                             commentsBefore
-                                |> Rope.prependTo commentsWithExtraComma
-                                |> Rope.prependTo field.comments
+                                |> ropePrependTo commentsWithExtraComma
+                                |> ropePrependTo field.comments
                         , syntax = field.syntax
                         }
                     )
                     whitespaceAndCommentsEndsPositivelyIndented
                     (ParserFast.orSucceed
                         (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                        Rope.empty
+                        ropeEmpty
                     )
                     typeRecordFieldDefinition
                 )
@@ -1898,10 +1903,10 @@ typeRecordFieldDefinition =
         (\range commentsBeforeName name commentsAfterName commentsAfterColon value commentsAfterValue ->
             { comments =
                 commentsBeforeName
-                    |> Rope.prependTo commentsAfterName
-                    |> Rope.prependTo commentsAfterColon
-                    |> Rope.prependTo value.comments
-                    |> Rope.prependTo commentsAfterValue
+                    |> ropePrependTo commentsAfterName
+                    |> ropePrependTo commentsAfterColon
+                    |> ropePrependTo value.comments
+                    |> ropePrependTo commentsAfterValue
             , syntax = Elm.Syntax.Node.Node range ( name, value.syntax )
             }
         )
@@ -1911,7 +1916,7 @@ typeRecordFieldDefinition =
         (ParserFast.oneOf2OrSucceed
             (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
             (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
-            Rope.empty
+            ropeEmpty
         )
         type_
         -- This extra whitespace is just included for compatibility with earlier version
@@ -1933,7 +1938,7 @@ typedTypeAnnotationWithoutArguments =
                         Just ( qualificationAfterStartName, unqualified ) ->
                             ( startName :: qualificationAfterStartName, unqualified )
             in
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax =
                 Elm.Syntax.Node.Node range
                     (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node range name) [])
@@ -1978,7 +1983,7 @@ typedTypeAnnotationWithArgumentsOptimisticLayout =
             in
             { comments =
                 commentsAfterName
-                    |> Rope.prependTo argsReverse.comments
+                    |> ropePrependTo argsReverse.comments
             , syntax =
                 Elm.Syntax.Node.Node range (Elm.Syntax.TypeAnnotation.Typed nameNode (List.reverse argsReverse.syntax))
             }
@@ -2007,7 +2012,7 @@ typedTypeAnnotationWithArgumentsOptimisticLayout =
                     (\typeAnnotationResult commentsAfter ->
                         { comments =
                             typeAnnotationResult.comments
-                                |> Rope.prependTo commentsAfter
+                                |> ropePrependTo commentsAfter
                         , syntax = typeAnnotationResult.syntax
                         }
                     )
@@ -2222,7 +2227,7 @@ glslExpressionAfterOpeningSquareBracket =
     ParserFast.symbolFollowedBy "glsl|"
         (ParserFast.mapWithRange
             (\range s ->
-                { comments = Rope.empty
+                { comments = ropeEmpty
                 , syntax =
                     Elm.Syntax.Node.Node
                         -- TODO for v8: don't include extra end width (from bug in elm/parser) in range
@@ -2267,7 +2272,7 @@ expressionAfterOpeningSquareBracket =
         glslExpressionAfterOpeningSquareBracket
         (ParserFast.map2WithRange
             (\range commentsBefore elements ->
-                { comments = commentsBefore |> Rope.prependTo elements.comments
+                { comments = commentsBefore |> ropePrependTo elements.comments
                 , syntax =
                     Elm.Syntax.Node.Node
                         { start = { row = range.start.row, column = range.start.column - 1 }
@@ -2278,19 +2283,19 @@ expressionAfterOpeningSquareBracket =
             )
             whitespaceAndCommentsEndsPositivelyIndented
             (ParserFast.oneOf2
-                (ParserFast.symbol "]" { comments = Rope.empty, syntax = Elm.Syntax.Expression.ListExpr [] })
+                (ParserFast.symbol "]" { comments = ropeEmpty, syntax = Elm.Syntax.Expression.ListExpr [] })
                 (ParserFast.map3
                     (\commentsBeforeHead head tail ->
                         { comments =
                             commentsBeforeHead
-                                |> Rope.prependTo head.comments
-                                |> Rope.prependTo tail.comments
+                                |> ropePrependTo head.comments
+                                |> ropePrependTo tail.comments
                         , syntax = Elm.Syntax.Expression.ListExpr (head.syntax :: tail.syntax)
                         }
                     )
                     (ParserFast.orSucceed
                         (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                        Rope.empty
+                        ropeEmpty
                     )
                     expressionFollowedByOptimisticLayout
                     (positivelyIndentedFollowedBy
@@ -2300,15 +2305,15 @@ expressionAfterOpeningSquareBracket =
                                     (\commentsBefore commentsWithExtraComma expressionResult ->
                                         { comments =
                                             commentsBefore
-                                                |> Rope.prependTo commentsWithExtraComma
-                                                |> Rope.prependTo expressionResult.comments
+                                                |> ropePrependTo commentsWithExtraComma
+                                                |> ropePrependTo expressionResult.comments
                                         , syntax = expressionResult.syntax
                                         }
                                     )
                                     whitespaceAndCommentsEndsPositivelyIndented
                                     (ParserFast.orSucceed
                                         (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                                        Rope.empty
+                                        ropeEmpty
                                     )
                                     expressionFollowedByOptimisticLayout
                                     |> endsPositivelyIndented
@@ -2329,7 +2334,7 @@ recordExpressionFollowedByRecordAccess =
             (\range commentsBefore afterCurly ->
                 { comments =
                     commentsBefore
-                        |> Rope.prependTo afterCurly.comments
+                        |> ropePrependTo afterCurly.comments
                 , syntax = Elm.Syntax.Node.Node (rangeMoveStartLeftByOneColumn range) afterCurly.syntax
                 }
             )
@@ -2346,9 +2351,9 @@ recordContentsCurlyEnd =
             (\nameNode commentsAfterName afterNameBeforeFields tailFields commentsBeforeClosingCurly ->
                 { comments =
                     commentsAfterName
-                        |> Rope.prependTo afterNameBeforeFields.comments
-                        |> Rope.prependTo tailFields.comments
-                        |> Rope.prependTo commentsBeforeClosingCurly
+                        |> ropePrependTo afterNameBeforeFields.comments
+                        |> ropePrependTo tailFields.comments
+                        |> ropePrependTo commentsBeforeClosingCurly
                 , syntax =
                     case afterNameBeforeFields.syntax of
                         RecordUpdateFirstSetter firstField ->
@@ -2383,7 +2388,7 @@ recordContentsCurlyEnd =
                 (ParserFast.symbolFollowedBy "|"
                     (ParserFast.map2
                         (\commentsBefore setterResult ->
-                            { comments = commentsBefore |> Rope.prependTo setterResult.comments
+                            { comments = commentsBefore |> ropePrependTo setterResult.comments
                             , syntax = RecordUpdateFirstSetter setterResult.syntax
                             }
                         )
@@ -2402,14 +2407,14 @@ recordContentsCurlyEnd =
                             Just expressionResult ->
                                 { comments =
                                     commentsBefore
-                                        |> Rope.prependTo expressionResult.comments
+                                        |> ropePrependTo expressionResult.comments
                                 , syntax = FieldsFirstValue expressionResult.syntax
                                 }
                     )
                     (ParserFast.oneOf2OrSucceed
                         (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
                         (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
-                        Rope.empty
+                        ropeEmpty
                     )
                     (ParserFast.mapOrSucceed
                         Just
@@ -2424,13 +2429,13 @@ recordContentsCurlyEnd =
             recordFields
             (whitespaceAndCommentsEndsPositivelyIndented |> ParserFast.followedBySymbol "}")
         )
-        (ParserFast.symbol "}" { comments = Rope.empty, syntax = Elm.Syntax.Expression.RecordExpr [] })
+        (ParserFast.symbol "}" { comments = ropeEmpty, syntax = Elm.Syntax.Expression.RecordExpr [] })
         -- prefixed comma
         (ParserFast.map2
             (\recordFieldsResult commentsAfterFields ->
                 { comments =
                     recordFieldsResult.comments
-                        |> Rope.prependTo commentsAfterFields
+                        |> ropePrependTo commentsAfterFields
                 , syntax =
                     Elm.Syntax.Expression.RecordExpr recordFieldsResult.syntax
                 }
@@ -2454,15 +2459,15 @@ recordFields =
                 (\commentsBefore commentsWithExtraComma setterResult ->
                     { comments =
                         commentsBefore
-                            |> Rope.prependTo commentsWithExtraComma
-                            |> Rope.prependTo setterResult.comments
+                            |> ropePrependTo commentsWithExtraComma
+                            |> ropePrependTo setterResult.comments
                     , syntax = setterResult.syntax
                     }
                 )
                 whitespaceAndCommentsEndsPositivelyIndented
                 (ParserFast.orSucceed
                     (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                    Rope.empty
+                    ropeEmpty
                 )
                 recordSetterNodeWithLayout
             )
@@ -2478,7 +2483,7 @@ recordSetterNodeWithLayout =
             case maybeValueResult of
                 Nothing ->
                     { comments =
-                        commentsAfterName |> Rope.prependTo commentsAfterEquals
+                        commentsAfterName |> ropePrependTo commentsAfterEquals
                     , syntax =
                         Elm.Syntax.Node.Node range
                             ( nameNode
@@ -2496,8 +2501,8 @@ recordSetterNodeWithLayout =
                 Just expressionResult ->
                     { comments =
                         commentsAfterName
-                            |> Rope.prependTo commentsAfterEquals
-                            |> Rope.prependTo expressionResult.comments
+                            |> ropePrependTo commentsAfterEquals
+                            |> ropePrependTo expressionResult.comments
                     , syntax =
                         Elm.Syntax.Node.Node range
                             ( nameNode
@@ -2510,7 +2515,7 @@ recordSetterNodeWithLayout =
         (ParserFast.oneOf2OrSucceed
             (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
             (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
-            Rope.empty
+            ropeEmpty
         )
         (ParserFast.mapOrSucceed
             Just
@@ -2525,7 +2530,7 @@ literalExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expres
 literalExpression =
     singleOrTripleQuotedStringLiteralMapWithRange
         (\range string ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Expression.Literal string)
             }
         )
@@ -2535,7 +2540,7 @@ charLiteralExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Ex
 charLiteralExpression =
     characterLiteralMapWithRange
         (\range char ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Expression.CharLiteral char)
             }
         )
@@ -2551,11 +2556,11 @@ lambdaExpressionFollowedByOptimisticLayout =
             in
             { comments =
                 commentsAfterBackslash
-                    |> Rope.prependTo firstArg.comments
-                    |> Rope.prependTo commentsAfterFirstArg
-                    |> Rope.prependTo secondUpArgs.comments
-                    |> Rope.prependTo commentsAfterArrow
-                    |> Rope.prependTo expressionResult.comments
+                    |> ropePrependTo firstArg.comments
+                    |> ropePrependTo commentsAfterFirstArg
+                    |> ropePrependTo secondUpArgs.comments
+                    |> ropePrependTo commentsAfterArrow
+                    |> ropePrependTo expressionResult.comments
             , syntax =
                 Elm.Syntax.Node.Node
                     { start = start
@@ -2577,7 +2582,7 @@ lambdaExpressionFollowedByOptimisticLayout =
                 (\patternResult commentsAfter ->
                     { comments =
                         patternResult.comments
-                            |> Rope.prependTo commentsAfter
+                            |> ropePrependTo commentsAfter
                     , syntax = patternResult.syntax
                     }
                 )
@@ -2599,9 +2604,9 @@ caseExpressionFollowedByOptimisticLayout =
             in
             { comments =
                 commentsAfterCase
-                    |> Rope.prependTo casedExpressionResult.comments
-                    |> Rope.prependTo commentsAfterOf
-                    |> Rope.prependTo casesResult.comments
+                    |> ropePrependTo casedExpressionResult.comments
+                    |> ropePrependTo commentsAfterOf
+                    |> ropePrependTo casesResult.comments
             , syntax =
                 Elm.Syntax.Node.Node
                     { start = start
@@ -2638,10 +2643,10 @@ caseStatementsFollowedByOptimisticLayout =
         (\firstCasePatternResult commentsAfterFirstCasePattern commentsAfterFirstCaseArrowRight firstCaseExpressionResult lastToSecondCase ->
             { comments =
                 firstCasePatternResult.comments
-                    |> Rope.prependTo commentsAfterFirstCasePattern
-                    |> Rope.prependTo commentsAfterFirstCaseArrowRight
-                    |> Rope.prependTo firstCaseExpressionResult.comments
-                    |> Rope.prependTo lastToSecondCase.comments
+                    |> ropePrependTo commentsAfterFirstCasePattern
+                    |> ropePrependTo commentsAfterFirstCaseArrowRight
+                    |> ropePrependTo firstCaseExpressionResult.comments
+                    |> ropePrependTo lastToSecondCase.comments
             , syntax =
                 ( ( firstCasePatternResult.syntax, firstCaseExpressionResult.syntax )
                 , lastToSecondCase.syntax
@@ -2662,9 +2667,9 @@ caseStatementFollowedByOptimisticLayout =
             (\patternResult commentsBeforeArrowRight commentsAfterArrowRight expr ->
                 { comments =
                     patternResult.comments
-                        |> Rope.prependTo commentsBeforeArrowRight
-                        |> Rope.prependTo commentsAfterArrowRight
-                        |> Rope.prependTo expr.comments
+                        |> ropePrependTo commentsBeforeArrowRight
+                        |> ropePrependTo commentsAfterArrowRight
+                        |> ropePrependTo expr.comments
                 , syntax = ( patternResult.syntax, expr.syntax )
                 }
             )
@@ -2685,8 +2690,8 @@ letExpressionFollowedByOptimisticLayout =
             in
             { comments =
                 letDeclarationsResult.comments
-                    |> Rope.prependTo commentsAfterIn
-                    |> Rope.prependTo expressionResult.comments
+                    |> ropePrependTo commentsAfterIn
+                    |> ropePrependTo expressionResult.comments
             , syntax =
                 Elm.Syntax.Node.Node
                     { start = start
@@ -2705,7 +2710,7 @@ letExpressionFollowedByOptimisticLayout =
                     (\commentsAfterLet letDeclarationsResult ->
                         { comments =
                             commentsAfterLet
-                                |> Rope.prependTo letDeclarationsResult.comments
+                                |> ropePrependTo letDeclarationsResult.comments
                         , declarations = letDeclarationsResult.syntax
                         }
                     )
@@ -2728,8 +2733,8 @@ letDeclarationsIn =
             (\headLetResult commentsAfter tailLetResult ->
                 { comments =
                     headLetResult.comments
-                        |> Rope.prependTo commentsAfter
-                        |> Rope.prependTo tailLetResult.comments
+                        |> ropePrependTo commentsAfter
+                        |> ropePrependTo tailLetResult.comments
                 , syntax = headLetResult.syntax :: tailLetResult.syntax
                 }
             )
@@ -2767,9 +2772,9 @@ letDestructuringDeclarationFollowedByOptimisticLayout =
             in
             { comments =
                 patternResult.comments
-                    |> Rope.prependTo commentsAfterPattern
-                    |> Rope.prependTo commentsAfterEquals
-                    |> Rope.prependTo expressionResult.comments
+                    |> ropePrependTo commentsAfterPattern
+                    |> ropePrependTo commentsAfterEquals
+                    |> ropePrependTo expressionResult.comments
             , syntax =
                 Elm.Syntax.Node.Node { start = patternRange.start, end = destructuredExpressionRange.end }
                     (Elm.Syntax.Expression.LetDestructuring patternResult.syntax expressionResult.syntax)
@@ -2794,9 +2799,9 @@ letFunctionFollowedByOptimisticLayout =
                         in
                         { comments =
                             commentsAfterStartName
-                                |> Rope.prependTo arguments.comments
-                                |> Rope.prependTo commentsAfterEqual
-                                |> Rope.prependTo expressionResult.comments
+                                |> ropePrependTo arguments.comments
+                                |> ropePrependTo commentsAfterEqual
+                                |> ropePrependTo expressionResult.comments
                         , syntax =
                             Elm.Syntax.Node.Node { start = startNameStart, end = expressionRange.end }
                                 (Elm.Syntax.Expression.LetFunction
@@ -2821,10 +2826,10 @@ letFunctionFollowedByOptimisticLayout =
                                 expressionResult.syntax
                         in
                         { comments =
-                            (commentsAfterStartName |> Rope.prependTo signature.comments)
-                                |> Rope.prependTo arguments.comments
-                                |> Rope.prependTo commentsAfterEqual
-                                |> Rope.prependTo expressionResult.comments
+                            (commentsAfterStartName |> ropePrependTo signature.comments)
+                                |> ropePrependTo arguments.comments
+                                |> ropePrependTo commentsAfterEqual
+                                |> ropePrependTo expressionResult.comments
                         , syntax =
                             Elm.Syntax.Node.Node { start = startNameStart, end = expressionRange.end }
                                 (Elm.Syntax.Expression.LetFunction
@@ -2852,9 +2857,9 @@ letFunctionFollowedByOptimisticLayout =
                     Just
                         { comments =
                             commentsBeforeTypeAnnotation
-                                |> Rope.prependTo typeAnnotationResult.comments
-                                |> Rope.prependTo implementationName.comments
-                                |> Rope.prependTo afterImplementationName
+                                |> ropePrependTo typeAnnotationResult.comments
+                                |> ropePrependTo implementationName.comments
+                                |> ropePrependTo afterImplementationName
                         , implementationName = implementationName.syntax
                         , typeAnnotation = typeAnnotationResult.syntax
                         }
@@ -2903,12 +2908,12 @@ letFunctionFollowedByOptimisticLayout =
             (\start commentsBeforeTypeAnnotation typeAnnotationResult commentsBetweenTypeAndName nameNode afterImplementationName arguments commentsAfterEqual result ->
                 { comments =
                     commentsBeforeTypeAnnotation
-                        |> Rope.prependTo typeAnnotationResult.comments
-                        |> Rope.prependTo commentsBetweenTypeAndName
-                        |> Rope.prependTo afterImplementationName
-                        |> Rope.prependTo arguments.comments
-                        |> Rope.prependTo commentsAfterEqual
-                        |> Rope.prependTo result.comments
+                        |> ropePrependTo typeAnnotationResult.comments
+                        |> ropePrependTo commentsBetweenTypeAndName
+                        |> ropePrependTo afterImplementationName
+                        |> ropePrependTo arguments.comments
+                        |> ropePrependTo commentsAfterEqual
+                        |> ropePrependTo result.comments
                 , syntax =
                     Elm.Syntax.Node.Node
                         { start = start
@@ -2958,17 +2963,17 @@ numberExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Express
 numberExpression =
     ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
         (\range n ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Expression.Floatable n)
             }
         )
         (\range n ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Expression.Integer n)
             }
         )
         (\range n ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Expression.Hex n)
             }
         )
@@ -2984,11 +2989,11 @@ ifBlockExpressionFollowedByOptimisticLayout =
             in
             { comments =
                 commentsAfterIf
-                    |> Rope.prependTo condition.comments
-                    |> Rope.prependTo commentsAfterThen
-                    |> Rope.prependTo ifTrue.comments
-                    |> Rope.prependTo commentsAfterElse
-                    |> Rope.prependTo ifFalse.comments
+                    |> ropePrependTo condition.comments
+                    |> ropePrependTo commentsAfterThen
+                    |> ropePrependTo ifTrue.comments
+                    |> ropePrependTo commentsAfterElse
+                    |> ropePrependTo ifFalse.comments
             , syntax =
                 Elm.Syntax.Node.Node
                     { start = start
@@ -3073,7 +3078,7 @@ qualifiedOrVariantOrRecordConstructorReferenceExpressionFollowedByRecordAccess :
 qualifiedOrVariantOrRecordConstructorReferenceExpressionFollowedByRecordAccess =
     ParserFast.map2WithRange
         (\range firstName after ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax =
                 Elm.Syntax.Node.Node range
                     (case after of
@@ -3119,7 +3124,7 @@ unqualifiedFunctionReferenceExpressionFollowedByRecordAccess : Parser (WithComme
 unqualifiedFunctionReferenceExpressionFollowedByRecordAccess =
     nameLowercaseMapWithRange
         (\range unqualified ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax =
                 Elm.Syntax.Node.Node range (Elm.Syntax.Expression.FunctionOrValue [] unqualified)
             }
@@ -3132,7 +3137,7 @@ recordAccessFunctionExpression =
     ParserFast.symbolFollowedBy "."
         (nameLowercaseMapWithRange
             (\range field ->
-                { comments = Rope.empty
+                { comments = ropeEmpty
                 , syntax =
                     Elm.Syntax.Node.Node (range |> rangeMoveStartLeftByOneColumn)
                         (Elm.Syntax.Expression.RecordAccessFunction ("." ++ field))
@@ -3154,7 +3159,7 @@ tupledExpressionIfNecessaryFollowedByRecordAccess =
         (ParserFast.oneOf3
             (ParserFast.symbolWithEndLocation ")"
                 (\end ->
-                    { comments = Rope.empty
+                    { comments = ropeEmpty
                     , syntax =
                         Elm.Syntax.Node.Node { start = { row = end.row, column = end.column - 2 }, end = end }
                             Elm.Syntax.Expression.UnitExpr
@@ -3170,7 +3175,7 @@ allowedPrefixOperatorFollowedByClosingParensOneOf : Parser (WithComments (Elm.Sy
 allowedPrefixOperatorFollowedByClosingParensOneOf =
     ParserFast.whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollowedBySymbol
         (\operatorRange operator ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax =
                 Elm.Syntax.Node.Node
                     { start = { row = operatorRange.start.row, column = operatorRange.start.column - 1 }
@@ -3190,8 +3195,8 @@ tupledExpressionInnerAfterOpeningParens =
         (\rangeAfterOpeningParens commentsBeforeFirstPart firstPart tailParts ->
             { comments =
                 commentsBeforeFirstPart
-                    |> Rope.prependTo firstPart.comments
-                    |> Rope.prependTo tailParts.comments
+                    |> ropePrependTo firstPart.comments
+                    |> ropePrependTo tailParts.comments
             , syntax =
                 case tailParts.syntax of
                     TupledParenthesized () () ->
@@ -3220,15 +3225,15 @@ tupledExpressionInnerAfterOpeningParens =
         (positivelyIndentedFollowedBy
             (ParserFast.oneOf2
                 (ParserFast.symbol ")"
-                    { comments = Rope.empty, syntax = TupledParenthesized () () }
+                    { comments = ropeEmpty, syntax = TupledParenthesized () () }
                 )
                 (ParserFast.symbolFollowedBy ","
                     (ParserFast.map3
                         (\commentsBefore partResult maybeThirdPart ->
                             { comments =
                                 commentsBefore
-                                    |> Rope.prependTo partResult.comments
-                                    |> Rope.prependTo maybeThirdPart.comments
+                                    |> ropePrependTo partResult.comments
+                                    |> ropePrependTo maybeThirdPart.comments
                             , syntax = TupledTwoOrThree partResult.syntax maybeThirdPart.syntax
                             }
                         )
@@ -3236,13 +3241,13 @@ tupledExpressionInnerAfterOpeningParens =
                         expressionFollowedByOptimisticLayout
                         (positivelyIndentedFollowedBy
                             (ParserFast.oneOf2
-                                (ParserFast.symbol ")" { comments = Rope.empty, syntax = Nothing })
+                                (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
                                 (ParserFast.symbolFollowedBy ","
                                     (ParserFast.map2
                                         (\commentsBefore partResult ->
                                             { comments =
                                                 commentsBefore
-                                                    |> Rope.prependTo partResult.comments
+                                                    |> ropePrependTo partResult.comments
                                             , syntax = Just partResult.syntax
                                             }
                                         )
@@ -3286,7 +3291,7 @@ extendedSubExpressionOptimisticLayout info =
                 Just cases ->
                     { comments =
                         expressionResult.comments
-                            |> Rope.prependTo cases.comments
+                            |> ropePrependTo cases.comments
                     , syntax =
                         Elm.Syntax.Node.Node
                             { start =
@@ -3310,7 +3315,7 @@ extendedSubExpressionOptimisticLayout info =
             (\extensionRightResult leftNodeWithComments ->
                 { comments =
                     leftNodeWithComments.comments
-                        |> Rope.prependTo extensionRightResult.comments
+                        |> ropePrependTo extensionRightResult.comments
                 , syntax =
                     leftNodeWithComments.syntax
                         |> applyExtensionRight extensionRightResult.syntax
@@ -3329,7 +3334,7 @@ extendedSubExpressionOptimisticLayout info =
                         Just
                             { comments =
                                 commentsAfterCase
-                                    |> Rope.prependTo casesResult.comments
+                                    |> ropePrependTo casesResult.comments
                             , end =
                                 case lastToSecondCase of
                                     ( _, Elm.Syntax.Node.Node lastCaseExpressionRange _ ) :: _ ->
@@ -3364,7 +3369,7 @@ extensionRightParser :
 extensionRightParser extensionRightInfo =
     ParserFast.map2
         (\commentsBefore right ->
-            { comments = commentsBefore |> Rope.prependTo right.comments
+            { comments = commentsBefore |> ropePrependTo right.comments
             , syntax =
                 ExtendRightByOperation
                     { symbol = extensionRightInfo.symbol
@@ -3645,7 +3650,7 @@ followedByOptimisticLayout : Parser (WithComments a) -> Parser (WithComments a)
 followedByOptimisticLayout parser =
     ParserFast.map2
         (\result commentsAfter ->
-            { comments = result.comments |> Rope.prependTo commentsAfter
+            { comments = result.comments |> ropePrependTo commentsAfter
             , syntax = result.syntax
             }
         )
@@ -3717,8 +3722,8 @@ followedByMultiArgumentApplication appliedExpressionParser =
         (\leftExpressionResult commentsBeforeExtension maybeArgsReverse ->
             { comments =
                 leftExpressionResult.comments
-                    |> Rope.prependTo commentsBeforeExtension
-                    |> Rope.prependTo maybeArgsReverse.comments
+                    |> ropePrependTo commentsBeforeExtension
+                    |> ropePrependTo maybeArgsReverse.comments
             , syntax =
                 case maybeArgsReverse.syntax of
                     [] ->
@@ -3741,7 +3746,7 @@ followedByMultiArgumentApplication appliedExpressionParser =
             (positivelyIndentedFollowedBy
                 (ParserFast.map2
                     (\arg commentsAfter ->
-                        { comments = arg.comments |> Rope.prependTo commentsAfter
+                        { comments = arg.comments |> ropePrependTo commentsAfter
                         , syntax = arg.syntax
                         }
                     )
@@ -3863,7 +3868,7 @@ pattern =
                 Just asExtension ->
                     { comments =
                         leftMaybeConsed.comments
-                            |> Rope.prependTo asExtension.comments
+                            |> ropePrependTo asExtension.comments
                     , syntax =
                         Elm.Syntax.Node.combine Elm.Syntax.Pattern.AsPattern leftMaybeConsed.syntax asExtension.syntax
                     }
@@ -3871,7 +3876,7 @@ pattern =
         (ParserFast.loopWhileSucceedsOntoResultFromParserRightToLeftStackUnsafe
             (ParserFast.map2
                 (\startPatternResult commentsAfter ->
-                    { comments = startPatternResult.comments |> Rope.prependTo commentsAfter
+                    { comments = startPatternResult.comments |> ropePrependTo commentsAfter
                     , syntax = startPatternResult.syntax
                     }
                 )
@@ -3883,8 +3888,8 @@ pattern =
                     (\commentsAfterCons patternResult commentsAfterTailSubPattern ->
                         { comments =
                             commentsAfterCons
-                                |> Rope.prependTo patternResult.comments
-                                |> Rope.prependTo commentsAfterTailSubPattern
+                                |> ropePrependTo patternResult.comments
+                                |> ropePrependTo commentsAfterTailSubPattern
                         , syntax = patternResult.syntax
                         }
                     )
@@ -3894,7 +3899,7 @@ pattern =
                 )
             )
             (\consed afterCons ->
-                { comments = consed.comments |> Rope.prependTo afterCons.comments
+                { comments = consed.comments |> ropePrependTo afterCons.comments
                 , syntax =
                     Elm.Syntax.Node.combine Elm.Syntax.Pattern.UnConsPattern consed.syntax afterCons.syntax
                 }
@@ -3924,7 +3929,7 @@ parensPattern =
             (\range commentsBeforeHead contentResult ->
                 { comments =
                     commentsBeforeHead
-                        |> Rope.prependTo contentResult.comments
+                        |> ropePrependTo contentResult.comments
                 , syntax =
                     Elm.Syntax.Node.Node { start = { row = range.start.row, column = range.start.column - 1 }, end = range.end }
                         contentResult.syntax
@@ -3933,13 +3938,13 @@ parensPattern =
             whitespaceAndCommentsEndsPositivelyIndented
             -- yes, (  ) is a valid pattern but not a valid type or expression
             (ParserFast.oneOf2
-                (ParserFast.symbol ")" { comments = Rope.empty, syntax = Elm.Syntax.Pattern.UnitPattern })
+                (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Elm.Syntax.Pattern.UnitPattern })
                 (ParserFast.map3
                     (\headResult commentsAfterHead tailResult ->
                         { comments =
                             headResult.comments
-                                |> Rope.prependTo commentsAfterHead
-                                |> Rope.prependTo tailResult.comments
+                                |> ropePrependTo commentsAfterHead
+                                |> ropePrependTo tailResult.comments
                         , syntax =
                             case tailResult.syntax of
                                 Nothing ->
@@ -3957,15 +3962,15 @@ parensPattern =
                     pattern
                     whitespaceAndCommentsEndsPositivelyIndented
                     (ParserFast.oneOf2
-                        (ParserFast.symbol ")" { comments = Rope.empty, syntax = Nothing })
+                        (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
                         (ParserFast.symbolFollowedBy ","
                             (ParserFast.map4
                                 (\commentsBefore secondPart commentsAfter maybeThirdPart ->
                                     { comments =
                                         commentsBefore
-                                            |> Rope.prependTo secondPart.comments
-                                            |> Rope.prependTo commentsAfter
-                                            |> Rope.prependTo maybeThirdPart.comments
+                                            |> ropePrependTo secondPart.comments
+                                            |> ropePrependTo commentsAfter
+                                            |> ropePrependTo maybeThirdPart.comments
                                     , syntax = Just { maybeThirdPart = maybeThirdPart.syntax, secondPart = secondPart.syntax }
                                     }
                                 )
@@ -3973,14 +3978,14 @@ parensPattern =
                                 pattern
                                 whitespaceAndCommentsEndsPositivelyIndented
                                 (ParserFast.oneOf2
-                                    (ParserFast.symbol ")" { comments = Rope.empty, syntax = Nothing })
+                                    (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
                                     (ParserFast.symbolFollowedBy ","
                                         (ParserFast.map3
                                             (\commentsBefore thirdPart commentsAfter ->
                                                 { comments =
                                                     commentsBefore
-                                                        |> Rope.prependTo thirdPart.comments
-                                                        |> Rope.prependTo commentsAfter
+                                                        |> ropePrependTo thirdPart.comments
+                                                        |> ropePrependTo commentsAfter
                                                 , syntax = Just thirdPart.syntax
                                                 }
                                             )
@@ -4003,7 +4008,7 @@ varPattern : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Patte
 varPattern =
     nameLowercaseMapWithRange
         (\range var ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.VarPattern var)
             }
         )
@@ -4012,15 +4017,15 @@ varPattern =
 numberPart : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
 numberPart =
     ParserFast.integerDecimalOrHexadecimalMapWithRange
-        (\range n -> { comments = Rope.empty, syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.IntPattern n) })
-        (\range n -> { comments = Rope.empty, syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.HexPattern n) })
+        (\range n -> { comments = ropeEmpty, syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.IntPattern n) })
+        (\range n -> { comments = ropeEmpty, syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.HexPattern n) })
 
 
 charPattern : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
 charPattern =
     characterLiteralMapWithRange
         (\range char ->
-            { comments = Rope.empty, syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.CharPattern char) }
+            { comments = ropeEmpty, syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.CharPattern char) }
         )
 
 
@@ -4035,7 +4040,7 @@ listPattern =
                     }
 
                 Just elements ->
-                    { comments = commentsBeforeElements |> Rope.prependTo elements.comments
+                    { comments = commentsBeforeElements |> ropePrependTo elements.comments
                     , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.ListPattern elements.syntax)
                     }
         )
@@ -4047,15 +4052,15 @@ listPattern =
                     Just
                         { comments =
                             commentsBeforeHead
-                                |> Rope.prependTo head.comments
-                                |> Rope.prependTo tail.comments
-                                |> Rope.prependTo commentsAfterHead
+                                |> ropePrependTo head.comments
+                                |> ropePrependTo tail.comments
+                                |> ropePrependTo commentsAfterHead
                         , syntax = head.syntax :: tail.syntax
                         }
                 )
                 (ParserFast.orSucceed
                     (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                    Rope.empty
+                    ropeEmpty
                 )
                 pattern
                 whitespaceAndCommentsEndsPositivelyIndented
@@ -4065,16 +4070,16 @@ listPattern =
                             (\commentsBefore commentsWithExtraComma v commentsAfter ->
                                 { comments =
                                     commentsBefore
-                                        |> Rope.prependTo commentsWithExtraComma
-                                        |> Rope.prependTo v.comments
-                                        |> Rope.prependTo commentsAfter
+                                        |> ropePrependTo commentsWithExtraComma
+                                        |> ropePrependTo v.comments
+                                        |> ropePrependTo commentsAfter
                                 , syntax = v.syntax
                                 }
                             )
                             whitespaceAndCommentsEndsPositivelyIndented
                             (ParserFast.orSucceed
                                 (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                                Rope.empty
+                                ropeEmpty
                             )
                             pattern
                             whitespaceAndCommentsEndsPositivelyIndented
@@ -4123,7 +4128,7 @@ allPattern : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Patte
 allPattern =
     ParserFast.symbolWithRange "_"
         (\range ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax = Elm.Syntax.Node.Node range Elm.Syntax.Pattern.AllPattern
             }
         )
@@ -4133,7 +4138,7 @@ stringPattern : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pa
 stringPattern =
     singleOrTripleQuotedStringLiteralMapWithRange
         (\range string ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.StringPattern string)
             }
         )
@@ -4153,7 +4158,7 @@ qualifiedPatternWithConsumeArgs =
                         (Elm.Syntax.Node.Node lastArgRange _) :: _ ->
                             { start = nameRange.start, end = lastArgRange.end }
             in
-            { comments = afterStartName |> Rope.prependTo argsReverse.comments
+            { comments = afterStartName |> ropePrependTo argsReverse.comments
             , syntax =
                 Elm.Syntax.Node.Node range
                     (Elm.Syntax.Pattern.NamedPattern
@@ -4168,7 +4173,7 @@ qualifiedPatternWithConsumeArgs =
             (positivelyIndentedFollowedBy
                 (ParserFast.map2
                     (\arg commentsAfterArg ->
-                        { comments = arg.comments |> Rope.prependTo commentsAfterArg
+                        { comments = arg.comments |> ropePrependTo commentsAfterArg
                         , syntax = arg.syntax
                         }
                     )
@@ -4200,7 +4205,7 @@ qualifiedPatternWithoutConsumeArgs : Parser (WithComments (Elm.Syntax.Node.Node 
 qualifiedPatternWithoutConsumeArgs =
     ParserFast.map2WithRange
         (\range firstName after ->
-            { comments = Rope.empty
+            { comments = ropeEmpty
             , syntax =
                 Elm.Syntax.Node.Node range
                     (Elm.Syntax.Pattern.NamedPattern
@@ -4223,26 +4228,26 @@ recordPattern : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pa
 recordPattern =
     ParserFast.map2WithRange
         (\range commentsBeforeElements elements ->
-            { comments = commentsBeforeElements |> Rope.prependTo elements.comments
+            { comments = commentsBeforeElements |> ropePrependTo elements.comments
             , syntax =
                 Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.RecordPattern elements.syntax)
             }
         )
         (ParserFast.symbolFollowedBy "{" whitespaceAndCommentsEndsPositivelyIndented)
         (ParserFast.oneOf2
-            (ParserFast.symbol "}" { comments = Rope.empty, syntax = [] })
+            (ParserFast.symbol "}" { comments = ropeEmpty, syntax = [] })
             (ParserFast.map4
                 (\commentsBeforeHead head commentsAfterHead tail ->
                     { comments =
                         commentsBeforeHead
-                            |> Rope.prependTo commentsAfterHead
-                            |> Rope.prependTo tail.comments
+                            |> ropePrependTo commentsAfterHead
+                            |> ropePrependTo tail.comments
                     , syntax = head :: tail.syntax
                     }
                 )
                 (ParserFast.orSucceed
                     (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                    Rope.empty
+                    ropeEmpty
                 )
                 nameLowercaseNode
                 whitespaceAndCommentsEndsPositivelyIndented
@@ -4252,15 +4257,15 @@ recordPattern =
                             (\commentsBeforeName commentsWithExtraComma name afterName ->
                                 { comments =
                                     commentsBeforeName
-                                        |> Rope.prependTo commentsWithExtraComma
-                                        |> Rope.prependTo afterName
+                                        |> ropePrependTo commentsWithExtraComma
+                                        |> ropePrependTo afterName
                                 , syntax = name
                                 }
                             )
                             whitespaceAndCommentsEndsPositivelyIndented
                             (ParserFast.orSucceed
                                 (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                                Rope.empty
+                                ropeEmpty
                             )
                             nameLowercaseNode
                             whitespaceAndCommentsEndsPositivelyIndented
@@ -4763,7 +4768,7 @@ whitespaceAndComments =
             (\offset source ->
                 case source |> String.slice offset (offset + 2) of
                     "--" ->
-                        -- this will always succeed from here, so no need to fall back to Rope.empty
+                        -- this will always succeed from here, so no need to fall back to empty
                         Just fromSingleLineCommentNode
 
                     "{-" ->
@@ -4772,7 +4777,7 @@ whitespaceAndComments =
                     _ ->
                         Nothing
             )
-            Rope.empty
+            ropeEmpty
         )
 
 
@@ -4780,20 +4785,20 @@ fromMultilineCommentNodeOrEmptyOnProblem : Parser Comments
 fromMultilineCommentNodeOrEmptyOnProblem =
     ParserFast.map2OrSucceed
         (\comment commentsAfter ->
-            Rope.one comment |> Rope.filledPrependTo commentsAfter
+            ropeOne comment |> ropeFilledPrependTo commentsAfter
         )
         (multiLineComment
             |> ParserFast.followedBySkipWhileWhitespace
         )
         whitespaceAndCommentsOrEmptyLoop
-        Rope.empty
+        ropeEmpty
 
 
 fromSingleLineCommentNode : Parser Comments
 fromSingleLineCommentNode =
     ParserFast.map2
         (\content commentsAfter ->
-            Rope.one content |> Rope.filledPrependTo commentsAfter
+            ropeOne content |> ropeFilledPrependTo commentsAfter
         )
         (singleLineComment
             |> ParserFast.followedBySkipWhileWhitespace
@@ -4809,8 +4814,8 @@ whitespaceAndCommentsOrEmptyLoop =
             multiLineComment
             |> ParserFast.followedBySkipWhileWhitespace
         )
-        Rope.empty
-        (\right soFar -> soFar |> Rope.prependToFilled (Rope.one right))
+        ropeEmpty
+        (\right soFar -> soFar |> ropePrependToFilled (ropeOne right))
         identity
 
 
@@ -4876,7 +4881,7 @@ whitespaceAndCommentsEndsTopIndentedFollowedByComments : Parser Comments -> Pars
 whitespaceAndCommentsEndsTopIndentedFollowedByComments nextParser =
     ParserFast.map2
         (\commentsBefore afterComments ->
-            commentsBefore |> Rope.prependTo afterComments
+            commentsBefore |> ropePrependTo afterComments
         )
         whitespaceAndComments
         (topIndentedFollowedBy nextParser)
@@ -4886,7 +4891,7 @@ whitespaceAndCommentsEndsTopIndentedFollowedByWithComments : Parser (WithComment
 whitespaceAndCommentsEndsTopIndentedFollowedByWithComments nextParser =
     ParserFast.map2
         (\commentsBefore after ->
-            { comments = commentsBefore |> Rope.prependTo after.comments
+            { comments = commentsBefore |> ropePrependTo after.comments
             , syntax = after.syntax
             }
         )
@@ -4962,8 +4967,8 @@ surroundedByWhitespaceAndCommentsEndsPositivelyIndented x =
         (\before v after ->
             { comments =
                 before
-                    |> Rope.prependTo v.comments
-                    |> Rope.prependTo after
+                    |> ropePrependTo v.comments
+                    |> ropePrependTo after
             , syntax = v.syntax
             }
         )
@@ -4983,14 +4988,14 @@ Access with [`commentsToList`](#commentsToList)
 
 -}
 type alias Comments =
-    Rope (Elm.Syntax.Node.Node String)
+    Maybe (RopeFilled (Elm.Syntax.Node.Node String))
 
 
 {-| Extract a list of comment nodes from parse result [`Comments`](#Comments)
 -}
 commentsToList : Comments -> List (Elm.Syntax.Node.Node String)
 commentsToList comments =
-    Rope.toList comments
+    ropeToList comments
 
 
 untilWithComments : ParserFast.Parser () -> ParserFast.Parser (WithComments a) -> ParserFast.Parser (WithComments (List a))
@@ -4998,9 +5003,9 @@ untilWithComments end element =
     ParserFast.loopUntil
         end
         element
-        ( Rope.empty, [] )
+        ( ropeEmpty, [] )
         (\pResult ( commentsSoFar, itemsSoFar ) ->
-            ( commentsSoFar |> Rope.prependTo pResult.comments
+            ( commentsSoFar |> ropePrependTo pResult.comments
             , pResult.syntax :: itemsSoFar
             )
         )
@@ -5014,9 +5019,9 @@ untilWithComments end element =
 manyWithComments : ParserFast.Parser (WithComments a) -> ParserFast.Parser (WithComments (List a))
 manyWithComments p =
     ParserFast.loopWhileSucceeds p
-        ( Rope.empty, [] )
+        ( ropeEmpty, [] )
         (\pResult ( commentsSoFar, itemsSoFar ) ->
-            ( commentsSoFar |> Rope.prependTo pResult.comments
+            ( commentsSoFar |> ropePrependTo pResult.comments
             , pResult.syntax :: itemsSoFar
             )
         )
@@ -5036,10 +5041,101 @@ Mind you the comments will be reversed either way
 manyWithCommentsReverse : ParserFast.Parser (WithComments a) -> ParserFast.Parser (WithComments (List a))
 manyWithCommentsReverse p =
     ParserFast.loopWhileSucceeds p
-        { comments = Rope.empty, syntax = [] }
+        { comments = ropeEmpty, syntax = [] }
         (\pResult soFar ->
-            { comments = soFar.comments |> Rope.prependTo pResult.comments
+            { comments = soFar.comments |> ropePrependTo pResult.comments
             , syntax = pResult.syntax :: soFar.syntax
             }
         )
         (\result -> result)
+
+
+type alias Rope a =
+    Maybe (RopeFilled a)
+
+
+{-| Constantly appending lists of comments when combining parse can get expensive,
+so we summarize everything in this temporary structure
+and only convert to a list when we're done.
+
+Inspired by [miniBill/elm-rope](https://dark.elm.dmy.fr/packages/miniBill/elm-rope/latest/)
+
+-}
+type RopeFilled a
+    = RopeLeaf a ()
+    | RopeBranch2 (RopeFilled a) (RopeFilled a)
+
+
+ropeEmpty : Rope a_
+ropeEmpty =
+    Nothing
+
+
+ropeOne : a -> RopeFilled a
+ropeOne onlyElement =
+    RopeLeaf onlyElement ()
+
+
+ropeFilledPrependTo : Rope a -> RopeFilled a -> Rope a
+ropeFilledPrependTo right leftLikelyFilled =
+    Just
+        (case right of
+            Nothing ->
+                leftLikelyFilled
+
+            Just rightLikelyFilled ->
+                RopeBranch2 leftLikelyFilled rightLikelyFilled
+        )
+
+
+ropePrependToFilled : RopeFilled a -> Rope a -> Rope a
+ropePrependToFilled rightLikelyFilled left =
+    Just
+        (case left of
+            Nothing ->
+                rightLikelyFilled
+
+            Just leftLikelyFilled ->
+                RopeBranch2 leftLikelyFilled rightLikelyFilled
+        )
+
+
+ropePrependTo : Rope a -> Rope a -> Rope a
+ropePrependTo right left =
+    case left of
+        Nothing ->
+            right
+
+        Just leftLikelyFilled ->
+            case right of
+                Nothing ->
+                    left
+
+                Just rightLikelyFilled ->
+                    Just (RopeBranch2 leftLikelyFilled rightLikelyFilled)
+
+
+ropeToList : Rope a -> List a
+ropeToList rope =
+    case rope of
+        Nothing ->
+            []
+
+        Just ropeLikelyFilled ->
+            ropeLikelyFilledToListInto [] ropeLikelyFilled
+
+
+ropeLikelyFilledToListInto : List a -> RopeFilled a -> List a
+ropeLikelyFilledToListInto initialAcc ropeLikelyFilled =
+    -- IGNORE TCO
+    case ropeLikelyFilled of
+        RopeLeaf onlyElement () ->
+            onlyElement :: initialAcc
+
+        RopeBranch2 left right ->
+            ropeLikelyFilledToListInto
+                (ropeLikelyFilledToListInto
+                    initialAcc
+                    right
+                )
+                left
