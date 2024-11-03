@@ -68,7 +68,7 @@ Some additional lenient parsing:
     →
     `{ field0 = field0, field1 = field1 }`
 
-  - TODO allow matching everything before
+  - allow matching everything before
 
         3 |> String.toInt case
             Nothing ->
@@ -3134,21 +3134,81 @@ extendedSubExpressionOptimisticLayout :
     }
     -> Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 extendedSubExpressionOptimisticLayout info =
-    ParserFast.loopWhileSucceedsOntoResultFromParser
-        (positivelyIndentedFollowedBy
-            (infixOperatorAndThen info)
+    ParserFast.map2
+        (\expressionResult maybeCases ->
+            case maybeCases of
+                Nothing ->
+                    expressionResult
+
+                Just cases ->
+                    { comments =
+                        expressionResult.comments
+                            |> Rope.prependTo cases.comments
+                    , syntax =
+                        Elm.Syntax.Node.Node
+                            { start =
+                                expressionResult.syntax
+                                    |> Elm.Syntax.Node.range
+                                    |> .start
+                            , end = cases.end
+                            }
+                            (Elm.Syntax.Expression.CaseExpression
+                                { expression = expressionResult.syntax
+                                , cases = cases.cases
+                                }
+                            )
+                    }
         )
-        subExpressionMaybeAppliedFollowedByOptimisticLayout
-        (\extensionRightResult leftNodeWithComments ->
-            { comments =
-                leftNodeWithComments.comments
-                    |> Rope.prependTo extensionRightResult.comments
-            , syntax =
-                leftNodeWithComments.syntax
-                    |> applyExtensionRight extensionRightResult.syntax
-            }
+        (ParserFast.loopWhileSucceedsOntoResultFromParser
+            (positivelyIndentedFollowedBy
+                (infixOperatorAndThen info)
+            )
+            subExpressionMaybeAppliedFollowedByOptimisticLayout
+            (\extensionRightResult leftNodeWithComments ->
+                { comments =
+                    leftNodeWithComments.comments
+                        |> Rope.prependTo extensionRightResult.comments
+                , syntax =
+                    leftNodeWithComments.syntax
+                        |> applyExtensionRight extensionRightResult.syntax
+                }
+            )
+            Basics.identity
         )
-        Basics.identity
+        (ParserFast.orSucceed
+            (ParserFast.keywordFollowedBy "case"
+                (ParserFast.map2
+                    (\commentsAfterCase casesResult ->
+                        let
+                            ( firstCase, lastToSecondCase ) =
+                                casesResult.syntax
+                        in
+                        Just
+                            { comments =
+                                commentsAfterCase
+                                    |> Rope.prependTo casesResult.comments
+                            , end =
+                                case lastToSecondCase of
+                                    ( _, Elm.Syntax.Node.Node lastCaseExpressionRange _ ) :: _ ->
+                                        lastCaseExpressionRange.end
+
+                                    [] ->
+                                        let
+                                            ( _, Elm.Syntax.Node.Node firstCaseExpressionRange _ ) =
+                                                firstCase
+                                        in
+                                        firstCaseExpressionRange.end
+                            , cases = firstCase :: List.reverse lastToSecondCase
+                            }
+                    )
+                    whitespaceAndCommentsEndsPositivelyIndented
+                    (ParserFast.withIndentSetToColumn
+                        (ParserFast.lazy (\() -> caseStatementsFollowedByOptimisticLayout))
+                    )
+                )
+            )
+            Nothing
+        )
 
 
 extensionRightParser :
