@@ -2,6 +2,11 @@
   "root": "../src",
   "tests": [
     "Print",
+    "ElmSyntaxPrint",
+    "ParserFast",
+    "Char.Extra",
+    "Rope",
+    "ElmSyntaxParserLenient",
     "./README.md"
   ]
 }

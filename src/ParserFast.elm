@@ -159,13 +159,13 @@ type alias State =
 {-| Try a parser. Here are some examples using the [`keyword`](#keyword)
 parser:
 
-    run (keyword "true" ()) "true" --> Ok ()
+    run (keyword "true" ()) "true" --> Just ()
 
-    run (keyword "true" ()) "True" --> Err ...
+    run (keyword "true" ()) "True" --> Nothing
 
-    run (keyword "true" ()) "false" --> Err ...
+    run (keyword "true" ()) "false" --> Nothing
 
-    run (keyword "true" ()) "true!" --> Err ...
+    run (keyword "true" ()) "true!" --> Nothing
 
 Notice the last case!
 It's guaranteed you have reached the end of the string you are parsing.
