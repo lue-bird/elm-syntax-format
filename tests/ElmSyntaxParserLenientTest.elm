@@ -12,7 +12,6 @@ import Elm.Syntax.TypeAnnotation
 import ElmSyntaxParserLenient
 import ElmSyntaxParserLenientTestFullModules
 import Expect
-import ParserFast
 import Test
 
 
@@ -24,7 +23,7 @@ all =
                 (\( n, s ) ->
                     Test.test ("sample " ++ String.fromInt n)
                         (\() ->
-                            case ParserFast.run ElmSyntaxParserLenient.module_ s of
+                            case ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_ s of
                                 Nothing ->
                                     Expect.fail "failed to parse"
 
@@ -53,14 +52,14 @@ all =
         , Test.test "moduleName"
             (\() ->
                 "Foo"
-                    |> ParserFast.run ElmSyntaxParserLenient.moduleName
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.moduleName
                     |> Maybe.map Elm.Syntax.Node.value
                     |> Expect.equal (Just [ "Foo" ])
             )
         , Test.test "moduleNameDir"
             (\() ->
                 "Foo.Bar"
-                    |> ParserFast.run ElmSyntaxParserLenient.moduleName
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.moduleName
                     |> Maybe.map Elm.Syntax.Node.value
                     |> Expect.equal (Just [ "Foo", "Bar" ])
             )
@@ -116,59 +115,59 @@ all =
             , Test.describe "comment"
                 [ Test.test "singleLineComment"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.singleLineComment "--bar"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.singleLineComment "--bar"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } "--bar"))
                     )
                 , Test.test "singleLineComment state"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.singleLineComment "--bar"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.singleLineComment "--bar"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 6 } } "--bar"))
                     )
                 , Test.test "singleLineComment including 2-part utf-16 char range"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.singleLineComment "--bar🔧"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.singleLineComment "--bar🔧"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } } "--bar🔧"))
                     )
                 , Test.test "singleLineComment does not include new line"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.singleLineComment "--bar\n"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.singleLineComment "--bar\n"
                             |> Expect.equal Nothing
                     )
                 , Test.test "multilineComment parse result"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{-foo\nbar-}"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.multiLineComment "{-foo\nbar-}"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-foo\nbar-}"))
                     )
                 , Test.test "multilineComment range"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{-foo\nbar-}"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.multiLineComment "{-foo\nbar-}"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 6 } } "{-foo\nbar-}"))
                     )
                 , Test.test "multilineComment including 2-part utf-16 char range"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{-foo\nbar🔧-}"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.multiLineComment "{-foo\nbar🔧-}"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 7 } } "{-foo\nbar🔧-}"))
                     )
                 , Test.test "nested multilineComment only open"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{- {- -}"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.multiLineComment "{- {- -}"
                             |> Expect.equal Nothing
                     )
                 , Test.test "nested multilineComment open and close"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{- {- -} -}"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.multiLineComment "{- {- -} -}"
                             |> Expect.equal
                                 (Just (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } } "{- {- -} -}"))
                     )
                 , Test.test "multilineComment on module documentation"
                     (\() ->
-                        ParserFast.run ElmSyntaxParserLenient.multiLineComment "{-|foo\nbar-}"
+                        ElmSyntaxParserLenient.run ElmSyntaxParserLenient.multiLineComment "{-|foo\nbar-}"
                             |> Expect.equal Nothing
                     )
                 ]
@@ -177,177 +176,191 @@ all =
             [ Test.test "formatted moduleDefinition"
                 (\() ->
                     "module Foo exposing (Bar)"
-                        |> moduleHeaderExpectAst
-                            (Elm.Syntax.Module.NormalModule
-                                { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
-                                , exposingList =
-                                    Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 26 } }
-                                        (Elm.Syntax.Exposing.Explicit
-                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 25 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar")
-                                            ]
-                                        )
-                                }
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.moduleHeader
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 26 } }
+                                (Elm.Syntax.Module.NormalModule
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
+                                    , exposingList =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 26 } }
+                                            (Elm.Syntax.Exposing.Explicit
+                                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 25 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar")
+                                                ]
+                                            )
+                                    }
+                                )
                             )
                 )
             , Test.test "port moduleDefinition"
                 (\() ->
                     "port module Foo exposing (Bar)"
-                        |> moduleHeaderExpectAst
-                            (Elm.Syntax.Module.PortModule
-                                { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } [ "Foo" ]
-                                , exposingList =
-                                    Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 31 } }
-                                        (Elm.Syntax.Exposing.Explicit
-                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 30 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar") ]
-                                        )
-                                }
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.moduleHeader
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 31 } }
+                                (Elm.Syntax.Module.PortModule
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } [ "Foo" ]
+                                    , exposingList =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 31 } }
+                                            (Elm.Syntax.Exposing.Explicit
+                                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 30 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar") ]
+                                            )
+                                    }
+                                )
                             )
                 )
             , Test.test "port moduleDefinition with spacing"
                 (\() ->
                     "port module Foo exposing ( Bar )"
-                        |> moduleHeaderExpectAst
-                            (Elm.Syntax.Module.PortModule
-                                { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } [ "Foo" ]
-                                , exposingList =
-                                    Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 33 } }
-                                        (Elm.Syntax.Exposing.Explicit
-                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 28 }, end = { row = 1, column = 31 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar") ]
-                                        )
-                                }
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.moduleHeader
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 33 } }
+                                (Elm.Syntax.Module.PortModule
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } [ "Foo" ]
+                                    , exposingList =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 33 } }
+                                            (Elm.Syntax.Exposing.Explicit
+                                                [ Elm.Syntax.Node.Node { start = { row = 1, column = 28 }, end = { row = 1, column = 31 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar") ]
+                                            )
+                                    }
+                                )
                             )
                 )
             , Test.test "effect moduleDefinition"
                 (\() ->
                     "effect module Foo where {command = MyCmd, subscription = MySub } exposing (Bar)"
-                        |> moduleHeaderExpectAst
-                            (Elm.Syntax.Module.EffectModule
-                                { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 18 } } [ "Foo" ]
-                                , exposingList = Elm.Syntax.Node.Node { start = { row = 1, column = 66 }, end = { row = 1, column = 80 } } (Elm.Syntax.Exposing.Explicit [ Elm.Syntax.Node.Node { start = { row = 1, column = 76 }, end = { row = 1, column = 79 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar") ])
-                                , command = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 36 }, end = { row = 1, column = 41 } } "MyCmd")
-                                , subscription = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 58 }, end = { row = 1, column = 63 } } "MySub")
-                                }
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.moduleHeader
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 80 } }
+                                (Elm.Syntax.Module.EffectModule
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 18 } } [ "Foo" ]
+                                    , exposingList = Elm.Syntax.Node.Node { start = { row = 1, column = 66 }, end = { row = 1, column = 80 } } (Elm.Syntax.Exposing.Explicit [ Elm.Syntax.Node.Node { start = { row = 1, column = 76 }, end = { row = 1, column = 79 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Bar") ])
+                                    , command = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 36 }, end = { row = 1, column = 41 } } "MyCmd")
+                                    , subscription = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 58 }, end = { row = 1, column = 63 } } "MySub")
+                                    }
+                                )
                             )
                 )
             , Test.test "unformatted"
                 (\() ->
                     "module \n Foo \n exposing  (..)"
-                        |> moduleHeaderExpectAst
-                            (Elm.Syntax.Module.NormalModule
-                                { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 2 }, end = { row = 2, column = 5 } } [ "Foo" ]
-                                , exposingList =
-                                    Elm.Syntax.Node.Node { start = { row = 3, column = 2 }, end = { row = 3, column = 16 } }
-                                        (Elm.Syntax.Exposing.All { start = { row = 3, column = 13 }, end = { row = 3, column = 15 } })
-                                }
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.moduleHeader
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 16 } }
+                                (Elm.Syntax.Module.NormalModule
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 2, column = 2 }, end = { row = 2, column = 5 } } [ "Foo" ]
+                                    , exposingList =
+                                        Elm.Syntax.Node.Node { start = { row = 3, column = 2 }, end = { row = 3, column = 16 } }
+                                            (Elm.Syntax.Exposing.All { start = { row = 3, column = 13 }, end = { row = 3, column = 15 } })
+                                    }
+                                )
                             )
                 )
             , Test.test "unformatted wrong"
                 (\() ->
                     "module \nFoo \n exposing  (..)"
-                        |> ParserFast.run ElmSyntaxParserLenient.moduleHeader
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.moduleHeader
                         |> Expect.equal Nothing
                 )
             , Test.test "exposing all"
                 (\() ->
                     "module Foo exposing (..)"
-                        |> moduleHeaderExpectAst
-                            (Elm.Syntax.Module.NormalModule
-                                { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
-                                , exposingList =
-                                    Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 25 } }
-                                        (Elm.Syntax.Exposing.All { start = { row = 1, column = 22 }, end = { row = 1, column = 24 } })
-                                }
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.moduleHeader
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 25 } }
+                                (Elm.Syntax.Module.NormalModule
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
+                                    , exposingList =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 25 } }
+                                            (Elm.Syntax.Exposing.All { start = { row = 1, column = 22 }, end = { row = 1, column = 24 } })
+                                    }
+                                )
                             )
                 )
             , Test.test "module name with _"
                 (\() ->
                     "module I_en_gb exposing (..)"
-                        |> moduleHeaderExpectAst
-                            (Elm.Syntax.Module.NormalModule
-                                { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 15 } } [ "I_en_gb" ]
-                                , exposingList =
-                                    Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 29 } }
-                                        (Elm.Syntax.Exposing.All { start = { row = 1, column = 26 }, end = { row = 1, column = 28 } })
-                                }
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.moduleHeader
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 29 } }
+                                (Elm.Syntax.Module.NormalModule
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 15 } } [ "I_en_gb" ]
+                                    , exposingList =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 29 } }
+                                            (Elm.Syntax.Exposing.All { start = { row = 1, column = 26 }, end = { row = 1, column = 28 } })
+                                    }
+                                )
                             )
                 )
             , Test.describe "uppercase name"
                 [ Test.test "lower and upper simple latin"
                     (\() ->
                         "MyCmd"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal (Just "MyCmd")
                     )
                 , Test.test "typeName not empty"
                     (\() ->
                         ""
-                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "typeName with number"
                     (\() ->
                         "T1"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal (Just "T1")
                     )
                 , Test.test "ρ function"
                     (\() ->
                         "ρ"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "ε2 function"
                     (\() ->
                         "ε2"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "εε function"
                     (\() ->
                         "εε"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "ρ uppercase function"
                     (\() ->
                         String.toUpper "ρ"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "ε uppercase function"
                     (\() ->
                         String.toUpper "ε"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "ρ type name"
                     (\() ->
                         "ρ"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "ε2 type name"
                     (\() ->
                         "ε2"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "εε type name"
                     (\() ->
                         "εε"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "ρ uppercase type name"
                     (\() ->
                         String.toUpper "ρ"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.notEqual Nothing
                     )
                 , Test.test "ε uppercase type name"
                     (\() ->
                         String.toUpper "ε"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameUppercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameUppercase
                             |> Expect.notEqual Nothing
                     )
                 ]
@@ -355,55 +368,55 @@ all =
                 [ Test.test "simple latin"
                     (\() ->
                         "foo"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "foo")
                     )
                 , Test.test "functionName may not be a keyword"
                     (\() ->
                         "type"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "functionName may be a keyword suffixed with an underscore"
                     (\() ->
                         "type_"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "type_")
                     )
                 , Test.test "functionName not empty"
                     (\() ->
                         ""
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "functionName with number"
                     (\() ->
                         "n1"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "n1")
                     )
                 , Test.test "alias can be a functionName (it is not reserved)"
                     (\() ->
                         "alias"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "alias")
                     )
                 , Test.test "infix can be a functionName (it is not reserved)"
                     (\() ->
                         "infix"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "infix")
                     )
                 , Test.test "functionName is not matched with 'if'"
                     (\() ->
                         "if"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal Nothing
                     )
                 , Test.test "functionName with _"
                     (\() ->
                         "foo_"
-                            |> ParserFast.run ElmSyntaxParserLenient.nameLowercase
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.nameLowercase
                             |> Expect.equal (Just "foo_")
                     )
                 ]
@@ -2358,7 +2371,7 @@ type Color = Blue String | Red | Green"""
             , Test.test "type with value on next line "
                 (\() ->
                     "type Maybe a = Just a |\nNothing"
-                        |> ParserFast.run ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
                 )
             , Test.test "fail if declarations not on module-level"
@@ -2976,19 +2989,19 @@ type Color = Blue String | Red | Green"""
             [ Test.test "operatorToken 11 -- is not an operator"
                 (\() ->
                     "a = (--)"
-                        |> ParserFast.run ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
                 )
             , Test.test "operatorToken 14"
                 (\() ->
                     "a = (=)"
-                        |> ParserFast.run ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
                 )
             , Test.test "operatorToken 15"
                 (\() ->
                     "a = (?)"
-                        |> ParserFast.run ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
                 )
             , Test.test "empty"
@@ -3000,7 +3013,7 @@ type Color = Blue String | Red | Green"""
                 [ Test.test "long hex"
                     (\() ->
                         "0x03FFFFFF"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Hex 67108863))
@@ -3008,7 +3021,7 @@ type Color = Blue String | Red | Green"""
                 , Test.test "hex FF"
                     (\() ->
                         "0xFF"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Hex 255))
@@ -3016,7 +3029,7 @@ type Color = Blue String | Red | Green"""
                 , Test.test "hex"
                     (\() ->
                         "0x2A"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Hex 42))
@@ -3034,7 +3047,7 @@ type Color = Blue String | Red | Green"""
                 , Test.test "float"
                     (\() ->
                         "2.0"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Floatable 2.0))
@@ -3042,7 +3055,7 @@ type Color = Blue String | Red | Green"""
                 , Test.test "integer with negative exponent"
                     (\() ->
                         "2e-2"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
@@ -3050,7 +3063,7 @@ type Color = Blue String | Red | Green"""
                 , Test.test "integer with negative exponent (uppercase E)"
                     (\() ->
                         "2E-2"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
@@ -3058,7 +3071,7 @@ type Color = Blue String | Red | Green"""
                 , Test.test "integer with positive exponent"
                     (\() ->
                         "2e+2"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Floatable 2.0e2))
@@ -3066,7 +3079,7 @@ type Color = Blue String | Red | Green"""
                 , Test.test "float with negative exponent"
                     (\() ->
                         "2.0e-2"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
@@ -3074,7 +3087,7 @@ type Color = Blue String | Red | Green"""
                 , Test.test "float with negative exponent (uppercase E)"
                     (\() ->
                         "2.0E-2"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
@@ -3082,7 +3095,7 @@ type Color = Blue String | Red | Green"""
                 , Test.test "float with positive exponent"
                     (\() ->
                         "2.0e+2"
-                            |> ParserFast.run ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Floatable 2.0e2))
@@ -3096,76 +3109,76 @@ type Color = Blue String | Red | Green"""
             , Test.test "multiline string"
                 (\() ->
                     "\"\"\"Bar foo \n a\"\"\""
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal "Bar foo \n a"))
                 )
             , Test.test "multiline string escape"
                 (\() ->
                     """\"\"\" \\\"\"\" \"\"\""""
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal """ \"\"\" """))
                 )
             , Test.test "character escaped"
                 (\() ->
                     "'\\''"
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\''))
                 )
             , Test.test "character escaped - 2"
                 (\() ->
                     "'\\r'"
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\u{000D}'))
                 )
             , Test.test "unicode char"
                 (\() ->
                     "'\\u{000D}'"
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\u{000D}'))
                 )
             , Test.test "unicode char with lowercase hex"
                 (\() ->
                     "'\\u{000d}'"
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\u{000D}'))
                 )
             , Test.test "string escaped 3"
                 (\() ->
                     "\"\\\"\""
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal "\""))
                 )
             , Test.test "string escaped"
                 (\() ->
                     "\"foo\\\\\""
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.Literal "foo\\"))
                 )
             , Test.test "character escaped 3"
                 (\() ->
                     "'\\n'"
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                         |> Expect.equal (Just (Elm.Syntax.Expression.CharLiteral '\n'))
                 )
             , Test.test "long string"
                 (\() ->
                     longString
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Expect.notEqual Nothing
                 )
             , Test.test "long multi line string"
                 (\() ->
                     longMultiLineString
-                        |> ParserFast.run ElmSyntaxParserLenient.expression
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                         |> Expect.notEqual Nothing
                 )
             , Test.test "character literal"
@@ -5415,10 +5428,10 @@ True -> 1"""
             , Test.test "Named pattern without and with spacing should parse to the same"
                 (\() ->
                     "Bar "
-                        |> ParserFast.run ElmSyntaxParserLenient.pattern
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.pattern
                         |> Expect.equal
                             ("Bar"
-                                |> ParserFast.run ElmSyntaxParserLenient.pattern
+                                |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.pattern
                             )
                 )
             , Test.test "Qualified named"
@@ -6599,19 +6612,14 @@ pipeline1 = 1 /= 2
         ]
 
 
-moduleHeaderExpectAst : Elm.Syntax.Module.Module -> String -> Expect.Expectation
-moduleHeaderExpectAst =
-    expectSyntaxWithoutComments (ParserFast.map (\mod -> { comments = mod.comments, syntax = Elm.Syntax.Node.value mod.syntax }) ElmSyntaxParserLenient.moduleHeader)
-
-
-parseSource : String -> ParserFast.Parser a -> Maybe a
+parseSource : String -> ElmSyntaxParserLenient.Parser a -> Maybe a
 parseSource source parser =
-    ParserFast.run parser source
+    ElmSyntaxParserLenient.run parser source
 
 
 moduleExpectInvalid : String -> Expect.Expectation
 moduleExpectInvalid source =
-    case ParserFast.run ElmSyntaxParserLenient.module_ source of
+    case ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_ source of
         Nothing ->
             Expect.pass
 
@@ -6630,12 +6638,12 @@ longMultiLineString =
 
 
 expectSyntaxWithoutComments :
-    ParserFast.Parser { comments : ElmSyntaxParserLenient.Comments, syntax : a }
+    ElmSyntaxParserLenient.Parser { comments : ElmSyntaxParserLenient.Comments, syntax : a }
     -> a
     -> String
     -> Expect.Expectation
 expectSyntaxWithoutComments parser expected source =
-    case ParserFast.run parser source of
+    case ElmSyntaxParserLenient.run parser source of
         Nothing ->
             Expect.fail "Expected the source to be parsed correctly"
 
@@ -6652,12 +6660,12 @@ expectSyntaxWithoutComments parser expected source =
 
 
 expectSyntaxWithComments :
-    ParserFast.Parser { comments : ElmSyntaxParserLenient.Comments, syntax : a }
+    ElmSyntaxParserLenient.Parser { comments : ElmSyntaxParserLenient.Comments, syntax : a }
     -> { syntax : a, comments : List (Elm.Syntax.Node.Node String) }
     -> String
     -> Expect.Expectation
 expectSyntaxWithComments parser expected source =
-    case ParserFast.run parser source of
+    case ElmSyntaxParserLenient.run parser source of
         Nothing ->
             Expect.fail "Expected the source to be parsed correctly"
 
@@ -6670,11 +6678,11 @@ expectSyntaxWithComments parser expected source =
 
 
 expectFailsToParse :
-    ParserFast.Parser { comments : ElmSyntaxParserLenient.Comments, syntax : a_ }
+    ElmSyntaxParserLenient.Parser { comments : ElmSyntaxParserLenient.Comments, syntax : a_ }
     -> String
     -> Expect.Expectation
 expectFailsToParse parser source =
-    case source |> ParserFast.run parser of
+    case source |> ElmSyntaxParserLenient.run parser of
         Nothing ->
             Expect.pass
 
