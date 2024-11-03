@@ -7,7 +7,6 @@ import Ansi.Color
 import Bytes
 import Bytes.Decode
 import Bytes.Encode
-import Elm.Parser
 import Elm.Project
 import Elm.Syntax.Declaration
 import Elm.Syntax.File
@@ -251,14 +250,14 @@ runningInterface running =
                                                 }
 
                                         Just source ->
-                                            case source |> Elm.Parser.parseToFile of
-                                                Err _ ->
+                                            case source |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_ of
+                                                Nothing ->
                                                     SourceFileReadFailed
                                                         { path = sourceFilePath
                                                         , message = "source couldn't be parsed (by elm-syntax). Check for compiler errors and try again."
                                                         }
 
-                                                Ok syntax ->
+                                                Just syntax ->
                                                     Running
                                                         { elmJson = running.elmJson
                                                         , sourceDirectoriesToRead = running.sourceDirectoriesToRead
@@ -444,30 +443,6 @@ typeIsSpaceSeparated type_ =
 
         Elm.Type.Record _ _ ->
             False
-
-
-syntaxTypeParse : String -> Result String Elm.Syntax.TypeAnnotation.TypeAnnotation
-syntaxTypeParse typeSource =
-    let
-        sourceWithDummyWrapperModule =
-            "module A exposing (..)\ntype alias A = "
-                ++ (typeSource
-                        |> String.lines
-                        |> List.map (\line -> "    " ++ line)
-                        |> String.join "\n"
-                   )
-    in
-    case Elm.Parser.parseToFile sourceWithDummyWrapperModule of
-        Err _ ->
-            Err "failed to parse type"
-
-        Ok parsedFile ->
-            case parsedFile.declarations of
-                (Elm.Syntax.Node.Node _ (Elm.Syntax.Declaration.AliasDeclaration typeAliasDeclaration)) :: _ ->
-                    Ok (typeAliasDeclaration.typeAnnotation |> Elm.Syntax.Node.value)
-
-                _ ->
-                    Err "bug: dummy module for parsing has wrong first declaration kind"
 
 
 elmJsonSourceDirectories : Elm.Project.Project -> List String
