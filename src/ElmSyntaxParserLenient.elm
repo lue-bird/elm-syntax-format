@@ -27,7 +27,7 @@ Some additional lenient parsing:
 
   - `a != b` → `a /= b`
 
-  - merge consecutive `,` in TODO record or TODO list
+  - merge consecutive `,` in record or TODO list
 
   - remove extra `,` before first record field or TODO list element
 
@@ -1686,13 +1686,20 @@ recordTypeAnnotation =
                             typeRecordFieldDefinition
                             (manyWithComments
                                 (ParserFast.symbolFollowedBy ","
-                                    (ParserFast.map2
-                                        (\commentsBefore field ->
-                                            { comments = commentsBefore |> Rope.prependTo field.comments
+                                    (ParserFast.map3
+                                        (\commentsBefore commentsWithExtraComma field ->
+                                            { comments =
+                                                commentsBefore
+                                                    |> Rope.prependTo commentsWithExtraComma
+                                                    |> Rope.prependTo field.comments
                                             , syntax = field.syntax
                                             }
                                         )
                                         whitespaceAndCommentsEndsPositivelyIndented
+                                        (ParserFast.orSucceed
+                                            (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                                            Rope.empty
+                                        )
                                         typeRecordFieldDefinition
                                     )
                                 )
@@ -1743,26 +1750,38 @@ type RecordFieldsOrExtensionAfterName
 
 recordFieldsTypeAnnotation : Parser (WithComments Elm.Syntax.TypeAnnotation.RecordDefinition)
 recordFieldsTypeAnnotation =
-    ParserFast.map3
-        (\commentsBefore head tail ->
+    ParserFast.map4
+        (\commentsBefore commentsWithExtraComma head tail ->
             { comments =
-                commentsBefore
+                commentsWithExtraComma
+                    |> Rope.prependTo commentsBefore
                     |> Rope.prependTo head.comments
                     |> Rope.prependTo tail.comments
             , syntax = head.syntax :: tail.syntax
             }
         )
         whitespaceAndCommentsEndsPositivelyIndented
+        (ParserFast.orSucceed
+            (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+            Rope.empty
+        )
         typeRecordFieldDefinition
         (manyWithComments
             (ParserFast.symbolFollowedBy ","
-                (ParserFast.map2
-                    (\commentsBefore field ->
-                        { comments = commentsBefore |> Rope.prependTo field.comments
+                (ParserFast.map3
+                    (\commentsBefore commentsWithExtraComma field ->
+                        { comments =
+                            commentsBefore
+                                |> Rope.prependTo commentsWithExtraComma
+                                |> Rope.prependTo field.comments
                         , syntax = field.syntax
                         }
                     )
                     whitespaceAndCommentsEndsPositivelyIndented
+                    (ParserFast.orSucceed
+                        (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                        Rope.empty
+                    )
                     typeRecordFieldDefinition
                 )
             )
@@ -2319,13 +2338,20 @@ recordFields : Parser (WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Expre
 recordFields =
     manyWithComments
         (ParserFast.symbolFollowedBy ","
-            (ParserFast.map2
-                (\commentsBefore setterResult ->
-                    { comments = commentsBefore |> Rope.prependTo setterResult.comments
+            (ParserFast.map3
+                (\commentsBefore commentsWithExtraComma setterResult ->
+                    { comments =
+                        commentsBefore
+                            |> Rope.prependTo commentsWithExtraComma
+                            |> Rope.prependTo setterResult.comments
                     , syntax = setterResult.syntax
                     }
                 )
                 whitespaceAndCommentsEndsPositivelyIndented
+                (ParserFast.orSucceed
+                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                    Rope.empty
+                )
                 recordSetterNodeWithLayout
             )
         )
@@ -3985,13 +4011,20 @@ recordPattern =
                 whitespaceAndCommentsEndsPositivelyIndented
                 (manyWithComments
                     (ParserFast.symbolFollowedBy ","
-                        (ParserFast.map3
-                            (\beforeName name afterName ->
-                                { comments = beforeName |> Rope.prependTo afterName
+                        (ParserFast.map4
+                            (\commentsBeforeName commentsWithExtraComma name afterName ->
+                                { comments =
+                                    commentsBeforeName
+                                        |> Rope.prependTo commentsWithExtraComma
+                                        |> Rope.prependTo afterName
                                 , syntax = name
                                 }
                             )
                             whitespaceAndCommentsEndsPositivelyIndented
+                            (ParserFast.orSucceed
+                                (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                                Rope.empty
+                            )
                             nameLowercaseNode
                             whitespaceAndCommentsEndsPositivelyIndented
                         )

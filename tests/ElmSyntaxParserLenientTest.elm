@@ -2547,9 +2547,61 @@ type Color = Blue String | Red | Green"""
                                 )
                             )
                 )
+            , Test.test "type record with extra comma between fields"
+                (\() ->
+                    "{   a : Int,,b : Int }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.type_
+                            (Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 1, row = 1 } }
+                                (Elm.Syntax.TypeAnnotation.Record
+                                    [ Elm.Syntax.Node.Node { end = { column = 12, row = 1 }, start = { column = 5, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 6, row = 1 }, start = { column = 5, row = 1 } } "a"
+                                        , Elm.Syntax.Node.Node { end = { column = 12, row = 1 }, start = { column = 9, row = 1 } }
+                                            (Elm.Syntax.TypeAnnotation.Typed
+                                                (Elm.Syntax.Node.Node { end = { column = 12, row = 1 }, start = { column = 9, row = 1 } }
+                                                    ( [], "Int" )
+                                                )
+                                                []
+                                            )
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 22, row = 1 }, start = { column = 14, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 15, row = 1 }, start = { column = 14, row = 1 } } "b"
+                                        , Elm.Syntax.Node.Node { end = { column = 21, row = 1 }, start = { column = 18, row = 1 } }
+                                            (Elm.Syntax.TypeAnnotation.Typed
+                                                (Elm.Syntax.Node.Node { end = { column = 21, row = 1 }, start = { column = 18, row = 1 } }
+                                                    ( [], "Int" )
+                                                )
+                                                []
+                                            )
+                                        )
+                                    ]
+                                )
+                            )
+                )
             , Test.test "record with generic"
                 (\() ->
                     "{ attr | position : Vec2, texture : Vec2 }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.type_
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 43 } }
+                                (Elm.Syntax.TypeAnnotation.GenericRecord (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 7 } } "attr")
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 42 } }
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 25 } }
+                                            ( Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 18 } } "position"
+                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 21 }, end = { row = 1, column = 25 } }
+                                                (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 21 }, end = { row = 1, column = 25 } } ( [], "Vec2" )) [])
+                                            )
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 42 } }
+                                            ( Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 34 } } "texture"
+                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 37 }, end = { row = 1, column = 41 } }
+                                                (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 37 }, end = { row = 1, column = 41 } } ( [], "Vec2" )) [])
+                                            )
+                                        ]
+                                    )
+                                )
+                            )
+                )
+            , Test.test "record with generic with extra comma between fields"
+                (\() ->
+                    "{ attr | position : Vec2,,texture : Vec2 }"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.type_
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 43 } }
                                 (Elm.Syntax.TypeAnnotation.GenericRecord (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 7 } } "attr")
@@ -3571,9 +3623,48 @@ type Color = Blue String | Red | Green"""
                                 )
                             )
                 )
+            , Test.test "record with extra comma between fields"
+                (\() ->
+                    "{   a = 1,,b = 2 }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { end = { column = 19, row = 1 }, start = { column = 1, row = 1 } }
+                                (Elm.Syntax.Expression.RecordExpr
+                                    [ Elm.Syntax.Node.Node { end = { column = 10, row = 1 }, start = { column = 5, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 6, row = 1 }, start = { column = 5, row = 1 } } "a"
+                                        , Elm.Syntax.Node.Node { end = { column = 10, row = 1 }, start = { column = 9, row = 1 } }
+                                            (Elm.Syntax.Expression.Integer 1)
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 18, row = 1 }, start = { column = 12, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 13, row = 1 }, start = { column = 12, row = 1 } } "b"
+                                        , Elm.Syntax.Node.Node { end = { column = 17, row = 1 }, start = { column = 16, row = 1 } }
+                                            (Elm.Syntax.Expression.Integer 2)
+                                        )
+                                    ]
+                                )
+                            )
+                )
             , Test.test "record update"
                 (\() ->
                     "{ model | count = 1, loading = True }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
+                                (Elm.Syntax.Expression.RecordUpdateExpression
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } } "model")
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 20 } }
+                                        ( Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 16 } } "count"
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 20 } } (Elm.Syntax.Expression.Integer 1)
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 37 } }
+                                        ( Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 29 } } "loading"
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 32 }, end = { row = 1, column = 36 } } (Elm.Syntax.Expression.FunctionOrValue [] "True")
+                                        )
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "record update with extra comma between fields"
+                (\() ->
+                    "{ model | count = 1,,loading = True }"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 38 } }
                                 (Elm.Syntax.Expression.RecordUpdateExpression
@@ -5050,6 +5141,18 @@ True -> 1"""
             , Test.test "Record pattern with whitespace"
                 (\() ->
                     "{a , b}"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
+                                (Elm.Syntax.Pattern.RecordPattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } "a"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } } "b"
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "Record pattern with extra comma between fields"
+                (\() ->
+                    "{a,, b}"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.pattern
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 8 } }
                                 (Elm.Syntax.Pattern.RecordPattern
