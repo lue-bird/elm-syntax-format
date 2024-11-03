@@ -29,7 +29,7 @@ Some additional lenient parsing:
 
   - TODO merge consecutive `,`
 
-  - TODO remove extra `,` before first record field or list element or tuple part or triple part
+  - remove extra `,` before first record field or TODO list element
 
   - remove remove extra `|` before first variant declaration
 
@@ -1646,11 +1646,13 @@ recordTypeAnnotation =
         )
         (ParserFast.symbolFollowedBy "{" whitespaceAndCommentsEndsPositivelyIndented)
         (ParserFast.oneOf2
-            (ParserFast.map3
-                (\firstNameNode commentsAfterFirstName afterFirstName ->
+            (ParserFast.symbol "}" Nothing)
+            (ParserFast.map4
+                (\commentsBeforeFirstName firstNameNode commentsAfterFirstName afterFirstName ->
                     Just
                         { comments =
-                            commentsAfterFirstName
+                            commentsBeforeFirstName
+                                |> Rope.prependTo commentsAfterFirstName
                                 |> Rope.prependTo afterFirstName.comments
                         , syntax =
                             case afterFirstName.syntax of
@@ -1660,6 +1662,10 @@ recordTypeAnnotation =
                                 FieldsAfterName fieldsAfterName ->
                                     Elm.Syntax.TypeAnnotation.Record (Elm.Syntax.Node.combine Tuple.pair firstNameNode fieldsAfterName.firstFieldValue :: fieldsAfterName.tailFields)
                         }
+                )
+                (ParserFast.orSucceed
+                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                    Rope.empty
                 )
                 nameLowercaseNode
                 whitespaceAndCommentsEndsPositivelyIndented
@@ -1722,7 +1728,6 @@ recordTypeAnnotation =
                 )
                 |> ParserFast.followedBySymbol "}"
             )
-            (ParserFast.symbol "}" Nothing)
         )
 
 
@@ -2205,7 +2210,7 @@ recordExpressionFollowedByRecordAccess =
 
 recordContentsCurlyEnd : Parser (WithComments Elm.Syntax.Expression.Expression)
 recordContentsCurlyEnd =
-    ParserFast.oneOf2
+    ParserFast.oneOf3
         (ParserFast.map5
             (\nameNode commentsAfterName afterNameBeforeFields tailFields commentsBeforeClosingCurly ->
                 { comments =
@@ -2289,6 +2294,19 @@ recordContentsCurlyEnd =
             (whitespaceAndCommentsEndsPositivelyIndented |> ParserFast.followedBySymbol "}")
         )
         (ParserFast.symbol "}" { comments = Rope.empty, syntax = Elm.Syntax.Expression.RecordExpr [] })
+        -- prefixed comma
+        (ParserFast.map2
+            (\recordFieldsResult commentsAfterFields ->
+                { comments =
+                    recordFieldsResult.comments
+                        |> Rope.prependTo commentsAfterFields
+                , syntax =
+                    Elm.Syntax.Expression.RecordExpr recordFieldsResult.syntax
+                }
+            )
+            recordFields
+            (whitespaceAndCommentsEndsPositivelyIndented |> ParserFast.followedBySymbol "}")
+        )
 
 
 type RecordFieldsOrUpdateAfterName
@@ -3949,13 +3967,19 @@ recordPattern =
         )
         (ParserFast.symbolFollowedBy "{" whitespaceAndCommentsEndsPositivelyIndented)
         (ParserFast.oneOf2
-            (ParserFast.map3
-                (\head commentsAfterHead tail ->
+            (ParserFast.symbol "}" { comments = Rope.empty, syntax = [] })
+            (ParserFast.map4
+                (\commentsBeforeHead head commentsAfterHead tail ->
                     { comments =
-                        commentsAfterHead
+                        commentsBeforeHead
+                            |> Rope.prependTo commentsAfterHead
                             |> Rope.prependTo tail.comments
                     , syntax = head :: tail.syntax
                     }
+                )
+                (ParserFast.orSucceed
+                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                    Rope.empty
                 )
                 nameLowercaseNode
                 whitespaceAndCommentsEndsPositivelyIndented
@@ -3975,7 +3999,6 @@ recordPattern =
                 )
                 |> ParserFast.followedBySymbol "}"
             )
-            (ParserFast.symbol "}" { comments = Rope.empty, syntax = [] })
         )
 
 
