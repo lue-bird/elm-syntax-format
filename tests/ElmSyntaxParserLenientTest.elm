@@ -1844,27 +1844,82 @@ foo = bar"""
                                 )
                             )
                 )
-            , Test.test "function"
+            , Test.test "value/function declaration with signature"
                 (\() ->
-                    """main =
+                    """main : Html msg
+main =
   text "Hello, World!\""""
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
-                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 23 } }
+                            (Elm.Syntax.Node.Node { end = { column = 23, row = 3 }, start = { column = 1, row = 1 } }
                                 (Elm.Syntax.Declaration.FunctionDeclaration
-                                    { documentation = Nothing
-                                    , signature = Nothing
-                                    , declaration =
-                                        Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 23 } }
-                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 5 } } "main"
-                                            , arguments = []
+                                    { declaration =
+                                        Elm.Syntax.Node.Node { end = { column = 23, row = 3 }, start = { column = 1, row = 2 } }
+                                            { arguments = []
                                             , expression =
-                                                Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 23 } }
+                                                Elm.Syntax.Node.Node { end = { column = 23, row = 3 }, start = { column = 3, row = 3 } }
                                                     (Elm.Syntax.Expression.Application
-                                                        [ Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "text")
-                                                        , Elm.Syntax.Node.Node { start = { row = 2, column = 8 }, end = { row = 2, column = 23 } } (Elm.Syntax.Expression.Literal "Hello, World!")
+                                                        [ Elm.Syntax.Node.Node { end = { column = 7, row = 3 }, start = { column = 3, row = 3 } }
+                                                            (Elm.Syntax.Expression.FunctionOrValue [] "text")
+                                                        , Elm.Syntax.Node.Node { end = { column = 23, row = 3 }, start = { column = 8, row = 3 } }
+                                                            (Elm.Syntax.Expression.Literal "Hello, World!")
                                                         ]
                                                     )
+                                            , name = Elm.Syntax.Node.Node { end = { column = 5, row = 2 }, start = { column = 1, row = 2 } } "main"
                                             }
+                                    , documentation = Nothing
+                                    , signature =
+                                        Just
+                                            (Elm.Syntax.Node.Node { end = { column = 16, row = 1 }, start = { column = 1, row = 1 } }
+                                                { name = Elm.Syntax.Node.Node { end = { column = 5, row = 1 }, start = { column = 1, row = 1 } } "main"
+                                                , typeAnnotation =
+                                                    Elm.Syntax.Node.Node { end = { column = 16, row = 1 }, start = { column = 8, row = 1 } }
+                                                        (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { end = { column = 12, row = 1 }, start = { column = 8, row = 1 } } ( [], "Html" ))
+                                                            [ Elm.Syntax.Node.Node { end = { column = 16, row = 1 }, start = { column = 13, row = 1 } }
+                                                                (Elm.Syntax.TypeAnnotation.GenericType "msg")
+                                                            ]
+                                                        )
+                                                }
+                                            )
+                                    }
+                                )
+                            )
+                )
+            , Test.test "value/function declaration with signature omitting start name"
+                (\() ->
+                    """: Html msg
+main =
+  text "Hello, World!\""""
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
+                            (Elm.Syntax.Node.Node { end = { column = 23, row = 3 }, start = { column = 1, row = 1 } }
+                                (Elm.Syntax.Declaration.FunctionDeclaration
+                                    { declaration =
+                                        Elm.Syntax.Node.Node { end = { column = 23, row = 3 }, start = { column = 1, row = 2 } }
+                                            { arguments = []
+                                            , expression =
+                                                Elm.Syntax.Node.Node { end = { column = 23, row = 3 }, start = { column = 3, row = 3 } }
+                                                    (Elm.Syntax.Expression.Application
+                                                        [ Elm.Syntax.Node.Node { end = { column = 7, row = 3 }, start = { column = 3, row = 3 } }
+                                                            (Elm.Syntax.Expression.FunctionOrValue [] "text")
+                                                        , Elm.Syntax.Node.Node { end = { column = 23, row = 3 }, start = { column = 8, row = 3 } }
+                                                            (Elm.Syntax.Expression.Literal "Hello, World!")
+                                                        ]
+                                                    )
+                                            , name = Elm.Syntax.Node.Node { end = { column = 5, row = 2 }, start = { column = 1, row = 2 } } "main"
+                                            }
+                                    , documentation = Nothing
+                                    , signature =
+                                        Just
+                                            (Elm.Syntax.Node.Node { end = { column = 11, row = 1 }, start = { column = 1, row = 1 } }
+                                                { name = Elm.Syntax.Node.Node { end = { column = 1, row = 1 }, start = { column = 1, row = 1 } } "main"
+                                                , typeAnnotation =
+                                                    Elm.Syntax.Node.Node { end = { column = 11, row = 1 }, start = { column = 3, row = 1 } }
+                                                        (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { end = { column = 7, row = 1 }, start = { column = 3, row = 1 } } ( [], "Html" ))
+                                                            [ Elm.Syntax.Node.Node { end = { column = 11, row = 1 }, start = { column = 8, row = 1 } }
+                                                                (Elm.Syntax.TypeAnnotation.GenericType "msg")
+                                                            ]
+                                                        )
+                                                }
+                                            )
                                     }
                                 )
                             )
@@ -4382,6 +4437,43 @@ type Color = Blue String | Red | Green"""
                                                 )
                                             ]
                                         , expression = Elm.Syntax.Node.Node { start = { row = 7, column = 3 }, end = { row = 7, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar")
+                                        }
+                                    )
+                                )
+                    )
+                , Test.test "Let function with type annotation, signature does not repeat the name"
+                    (\() ->
+                        """let
+    : Int
+    bar = 1
+  in
+  bar"""
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 5, column = 6 } }
+                                    (Elm.Syntax.Expression.LetExpression
+                                        { declarations =
+                                            [ Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 3, column = 12 } }
+                                                (Elm.Syntax.Expression.LetFunction
+                                                    { documentation = Nothing
+                                                    , signature =
+                                                        Just
+                                                            (Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 2, column = 10 } }
+                                                                { name = Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 2, column = 5 } } "bar"
+                                                                , typeAnnotation =
+                                                                    Elm.Syntax.Node.Node { start = { row = 2, column = 7 }, end = { row = 2, column = 10 } }
+                                                                        (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 2, column = 7 }, end = { row = 2, column = 10 } } ( [], "Int" )) [])
+                                                                }
+                                                            )
+                                                    , declaration =
+                                                        Elm.Syntax.Node.Node { start = { row = 3, column = 5 }, end = { row = 3, column = 12 } }
+                                                            { name = Elm.Syntax.Node.Node { start = { row = 3, column = 5 }, end = { row = 3, column = 8 } } "bar"
+                                                            , arguments = []
+                                                            , expression = Elm.Syntax.Node.Node { start = { row = 3, column = 11 }, end = { row = 3, column = 12 } } (Elm.Syntax.Expression.Integer 1)
+                                                            }
+                                                    }
+                                                )
+                                            ]
+                                        , expression = Elm.Syntax.Node.Node { start = { row = 5, column = 3 }, end = { row = 5, column = 6 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar")
                                         }
                                     )
                                 )
