@@ -2238,10 +2238,6 @@ expressionAfterOpeningSquareBracket =
         )
 
 
-
--- recordExpression
-
-
 recordExpressionFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 recordExpressionFollowedByRecordAccess =
     ParserFast.symbolFollowedBy "{"
@@ -2461,10 +2457,6 @@ charLiteralExpression =
         )
 
 
-
--- lambda
-
-
 lambdaExpressionFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 lambdaExpressionFollowedByOptimisticLayout =
     ParserFast.map6WithStartLocation
@@ -2511,10 +2503,6 @@ lambdaExpressionFollowedByOptimisticLayout =
         )
         whitespaceAndCommentsEndsPositivelyIndented
         expressionFollowedByOptimisticLayout
-
-
-
--- Case Expression
 
 
 caseExpressionFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
@@ -2601,10 +2589,6 @@ caseStatementFollowedByOptimisticLayout =
             (ParserFast.symbolFollowedBy "->" whitespaceAndCommentsEndsPositivelyIndented)
             expressionFollowedByOptimisticLayout
         )
-
-
-
--- Let Expression
 
 
 letExpressionFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
