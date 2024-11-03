@@ -1079,8 +1079,7 @@ port messageReceiver : (String -> msg) -> Sub msg
                 (\() ->
                     """port module A exposing (..)
 port sendMessage :
-    (String -> Cmd msg
-    )"""
+    String -> Cmd msg"""
                         |> expectPrintedAs
                             """port module A exposing (..)
 
@@ -1089,7 +1088,7 @@ port sendMessage : String -> Cmd msg
                 )
             ]
         , Test.describe "declaration infix"
-            [ Test.test "type on next should be single-line"
+            [ Test.test "from Basics"
                 (\() ->
                     """module A exposing (..)
 infix right 0 (<|) = apL
@@ -1187,7 +1186,7 @@ a _ =
     0
 """
                 )
-            , Test.test "function, comment between signature and implementation name"
+            , Test.test "value, comment between signature and implementation name"
                 (\() ->
                     """module A exposing (..)
 a : Int {- 0 -}
@@ -1252,6 +1251,18 @@ type alias T a =
 
 type alias T a =
     (Int -> Int) -> a
+"""
+                )
+            , Test.test "function input function is parenthesized even in trailing argument"
+                (\() ->
+                    """module A exposing (..)
+type alias T a =
+    Int -> (((Int -> Int))) -> a"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias T a =
+    Int -> (Int -> Int) -> a
 """
                 )
             , Test.test "function comments between types"

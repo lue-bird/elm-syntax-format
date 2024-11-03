@@ -3556,76 +3556,110 @@ lineSpreadInNode (Elm.Syntax.Node.Node range _) =
 typeFunctionNotParenthesized :
     List (Elm.Syntax.Node.Node String)
     ->
-        { inType : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+        { fullRange : Elm.Syntax.Range.Range
+        , inType : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
         , outType : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
         }
     -> Print
 typeFunctionNotParenthesized syntaxComments function =
     let
-        afterArrowTypes : List (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation)
+        afterArrowTypes :
+            { beforeRightest : List (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation)
+            , rightest : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+            }
         afterArrowTypes =
             typeFunctionExpand function.outType
 
-        afterArrowTypesComments : List (List String)
-        afterArrowTypesComments =
-            afterArrowTypes
+        afterArrowTypesBeforeRightestCommentsBefore :
+            { end : Elm.Syntax.Range.Location
+            , reverse : List (Maybe { print : Print, lineSpread : Print.LineSpread })
+            }
+        afterArrowTypesBeforeRightestCommentsBefore =
+            afterArrowTypes.beforeRightest
                 |> List.foldl
                     (\(Elm.Syntax.Node.Node afterArrowTypeRange _) soFar ->
+                        let
+                            commentsBeforeAfterArrowType : List String
+                            commentsBeforeAfterArrowType =
+                                commentsInRange
+                                    { start = soFar.end, end = afterArrowTypeRange.start }
+                                    syntaxComments
+                        in
                         { end = afterArrowTypeRange.end
-                        , commentsReverse =
-                            commentsInRange
-                                { start = soFar.end, end = afterArrowTypeRange.start }
-                                syntaxComments
-                                :: soFar.commentsReverse
+                        , reverse =
+                            (case commentsBeforeAfterArrowType of
+                                [] ->
+                                    Nothing
+
+                                comment0 :: comment1Up ->
+                                    Just (collapsibleComments (comment0 :: comment1Up))
+                            )
+                                :: soFar.reverse
                         }
                     )
                     { end = function.inType |> Elm.Syntax.Node.range |> .end
-                    , commentsReverse = []
+                    , reverse = []
                     }
-                |> .commentsReverse
-                |> List.reverse
+
+        rightestAfterArrowTypePrint : Print
+        rightestAfterArrowTypePrint =
+            typeParenthesizedIfParenthesizedFunction syntaxComments
+                afterArrowTypes.rightest
+
+        commentsBeforeRightestAfterArrowType : List String
+        commentsBeforeRightestAfterArrowType =
+            commentsInRange
+                { start = afterArrowTypesBeforeRightestCommentsBefore.end
+                , end = afterArrowTypes.rightest |> Elm.Syntax.Node.range |> .start
+                }
+                syntaxComments
+
+        commentsCollapsibleBeforeRightestAfterArrowType : { print : Print, lineSpread : Print.LineSpread }
+        commentsCollapsibleBeforeRightestAfterArrowType =
+            collapsibleComments commentsBeforeRightestAfterArrowType
 
         fullLineSpread : Print.LineSpread
         fullLineSpread =
-            if afterArrowTypesComments |> List.all List.isEmpty then
-                lineSpreadBetweenNodes function.inType function.outType
-
-            else
-                Print.MultipleLines
+            Print.lineSpreadsCombine
+                [ lineSpreadInRange function.fullRange
+                , function.inType |> lineSpreadInNode
+                , afterArrowTypes.beforeRightest |> Print.mapAndLineSpreadsCombine lineSpreadInNode
+                , afterArrowTypes.rightest |> lineSpreadInNode
+                , afterArrowTypesBeforeRightestCommentsBefore.reverse
+                    |> List.filterMap identity
+                    |> Print.mapAndLineSpreadsCombine .lineSpread
+                , commentsCollapsibleBeforeRightestAfterArrowType.lineSpread
+                ]
     in
     typeParenthesizedIfFunction syntaxComments function.inType
         |> Print.followedBy
             (Print.sequence
                 (List.map2
-                    (\afterArrowTypeNode commentsBeforeAfterArrowType ->
+                    (\afterArrowTypeNode maybeCommentsBeforeAfterArrowType ->
                         let
                             afterArrowTypePrint : Print
                             afterArrowTypePrint =
-                                typeParenthesizedIfParenthesizedFunction syntaxComments
+                                typeParenthesizedIfFunction syntaxComments
                                     afterArrowTypeNode
                         in
                         Print.spaceOrLinebreakIndented fullLineSpread
                             |> Print.followedBy (Print.exactly "->")
                             |> Print.followedBy
                                 (Print.withIndentAtNextMultipleOf4
-                                    ((case commentsBeforeAfterArrowType of
-                                        [] ->
+                                    ((case maybeCommentsBeforeAfterArrowType of
+                                        Nothing ->
                                             Print.spaceOrLinebreakIndented (lineSpreadInNode afterArrowTypeNode)
 
-                                        comment0 :: comment1Up ->
+                                        Just commentsBeforeAfterArrowType ->
                                             let
-                                                commentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
-                                                commentsCollapsible =
-                                                    collapsibleComments (comment0 :: comment1Up)
-
                                                 lineSpread : Print.LineSpread
                                                 lineSpread =
                                                     Print.lineSpreadMerge
-                                                        commentsCollapsible.lineSpread
+                                                        commentsBeforeAfterArrowType.lineSpread
                                                         (afterArrowTypePrint |> Print.lineSpread)
                                             in
                                             Print.spaceOrLinebreakIndented lineSpread
-                                                |> Print.followedBy commentsCollapsible.print
+                                                |> Print.followedBy commentsBeforeAfterArrowType.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented
                                                         lineSpread
@@ -3635,9 +3669,43 @@ typeFunctionNotParenthesized syntaxComments function =
                                     )
                                 )
                     )
-                    afterArrowTypes
-                    afterArrowTypesComments
+                    afterArrowTypes.beforeRightest
+                    (afterArrowTypesBeforeRightestCommentsBefore.reverse
+                        |> List.reverse
+                    )
                 )
+            )
+        |> Print.followedBy
+            (Print.spaceOrLinebreakIndented fullLineSpread
+                |> Print.followedBy (Print.exactly "->")
+                |> Print.followedBy
+                    (Print.withIndentAtNextMultipleOf4
+                        ((case commentsBeforeRightestAfterArrowType of
+                            [] ->
+                                Print.spaceOrLinebreakIndented (lineSpreadInNode afterArrowTypes.rightest)
+
+                            comment0 :: comment1Up ->
+                                let
+                                    commentsCollapsible : { print : Print, lineSpread : Print.LineSpread }
+                                    commentsCollapsible =
+                                        collapsibleComments (comment0 :: comment1Up)
+
+                                    lineSpread : Print.LineSpread
+                                    lineSpread =
+                                        Print.lineSpreadMerge
+                                            commentsCollapsible.lineSpread
+                                            (rightestAfterArrowTypePrint |> Print.lineSpread)
+                                in
+                                Print.spaceOrLinebreakIndented lineSpread
+                                    |> Print.followedBy commentsCollapsible.print
+                                    |> Print.followedBy
+                                        (Print.spaceOrLinebreakIndented
+                                            lineSpread
+                                        )
+                         )
+                            |> Print.followedBy rightestAfterArrowTypePrint
+                        )
+                    )
             )
 
 
@@ -3745,14 +3813,28 @@ typeToNotParenthesized (Elm.Syntax.Node.Node typeRange syntaxType) =
 
 typeFunctionExpand :
     Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
-    -> List (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation)
+    ->
+        { beforeRightest :
+            List (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation)
+        , rightest : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+        }
 typeFunctionExpand typeNode =
     case typeNode of
         Elm.Syntax.Node.Node _ (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType) ->
-            inType :: typeFunctionExpand outType
+            let
+                outTypeExpanded :
+                    { beforeRightest : List (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation)
+                    , rightest : Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+                    }
+                outTypeExpanded =
+                    typeFunctionExpand outType
+            in
+            { beforeRightest = inType :: outTypeExpanded.beforeRightest
+            , rightest = outTypeExpanded.rightest
+            }
 
         typeNodeNotFunction ->
-            [ typeNodeNotFunction ]
+            { beforeRightest = [], rightest = typeNodeNotFunction }
 
 
 typeParenthesizedIfSpaceSeparated :
@@ -3996,7 +4078,7 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                 }
 
         Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType outType ->
-            { inType = inType, outType = outType }
+            { fullRange = fullRange, inType = inType, outType = outType }
                 |> typeFunctionNotParenthesized syntaxComments
 
 
