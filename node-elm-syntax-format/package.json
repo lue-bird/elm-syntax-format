@@ -1,0 +1,13 @@
+{
+  "type": "module",
+  "name": "elm-type-search",
+  "devDependencies": {
+    "@lue-bird/elm-state-interface-experimental": "^3.0.0",
+    "elm-esm": "^1.1.4"
+  },
+  "bin": "./src/index.js",
+  "scripts": {
+    "build": "elm-esm make src/Main.elm --output=src/elmMain.js --optimize",
+    "start": "elm-esm make src/Main.elm --output=src/elmMain.js && node src/index.js"
+  }
+}

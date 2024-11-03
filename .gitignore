@@ -8,6 +8,7 @@ compare-with-elm-format/pre
 compare-with-elm-format/post
 elm.js
 main.js
+elmMain.js
 
 # Editors
 .idea/
