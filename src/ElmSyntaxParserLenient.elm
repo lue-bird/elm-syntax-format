@@ -124,7 +124,6 @@ import Elm.Syntax.ModuleName
 import Elm.Syntax.Node
 import Elm.Syntax.Pattern
 import Elm.Syntax.Range
-import Elm.Syntax.Signature
 import Elm.Syntax.Type
 import Elm.Syntax.TypeAnnotation
 import ParserFast
@@ -977,7 +976,12 @@ functionDeclarationWithoutDocumentation =
                         Elm.Syntax.Node.Node { start = startNameStart, end = expressionRange.end }
                             (Elm.Syntax.Declaration.FunctionDeclaration
                                 { documentation = Nothing
-                                , signature = Just (Elm.Syntax.Node.combine Elm.Syntax.Signature.Signature startNameNode signature.typeAnnotation)
+                                , signature =
+                                    Just
+                                        (Elm.Syntax.Node.combine (\name typeAnnotation -> { name = name, typeAnnotation = typeAnnotation })
+                                            startNameNode
+                                            signature.typeAnnotation
+                                        )
                                 , declaration =
                                     Elm.Syntax.Node.Node { start = implementationNameRange.start, end = expressionRange.end }
                                         { name = signature.implementationName
@@ -1038,7 +1042,19 @@ functionDeclarationWithoutDocumentation =
                                 in
                                 implementationName == signatureName
 
-                    _ ->
+                    Elm.Syntax.Declaration.AliasDeclaration _ ->
+                        True
+
+                    Elm.Syntax.Declaration.CustomTypeDeclaration _ ->
+                        True
+
+                    Elm.Syntax.Declaration.PortDeclaration _ ->
+                        True
+
+                    Elm.Syntax.Declaration.InfixDeclaration _ ->
+                        True
+
+                    Elm.Syntax.Declaration.Destructuring _ _ ->
                         True
             )
 
@@ -1113,7 +1129,11 @@ infixDirection =
 portDeclarationAfterDocumentation : Parser (WithComments DeclarationAfterDocumentation)
 portDeclarationAfterDocumentation =
     ParserFast.map5
-        (\commentsAfterPort ((Elm.Syntax.Node.Node nameRange _) as name) commentsAfterName commentsAfterColon typeAnnotationResult ->
+        (\commentsAfterPort nameNode commentsAfterName commentsAfterColon typeAnnotationResult ->
+            let
+                (Elm.Syntax.Node.Node nameRange _) =
+                    nameNode
+            in
             { comments =
                 commentsAfterPort
                     |> Rope.prependTo commentsAfterName
@@ -1122,7 +1142,7 @@ portDeclarationAfterDocumentation =
             , syntax =
                 PortDeclarationAfterDocumentation
                     { startLocation = { row = nameRange.start.row, column = 1 }
-                    , name = name
+                    , name = nameNode
                     , typeAnnotation = typeAnnotationResult.syntax
                     }
             }
@@ -1239,7 +1259,7 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
             Rope.empty
         )
         variantDeclarationFollowedByOptimisticLayout
-        (manyWithoutReverseWithComments
+        (manyWithCommentsReverse
             (ParserFast.symbolFollowedBy "|"
                 (positivelyIndentedPlusFollowedBy 1
                     (ParserFast.map2
@@ -1378,7 +1398,7 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
             Rope.empty
         )
         variantDeclarationFollowedByOptimisticLayout
-        (manyWithoutReverseWithComments
+        (manyWithCommentsReverse
             (ParserFast.symbolFollowedBy "|"
                 (positivelyIndentedPlusFollowedBy 1
                     (ParserFast.map2
@@ -1426,7 +1446,7 @@ variantDeclarationFollowedByOptimisticLayout =
         )
         nameUppercaseNode
         whitespaceAndComments
-        (manyWithoutReverseWithComments
+        (manyWithCommentsReverse
             (positivelyIndentedFollowedBy
                 (ParserFast.map2
                     (\typeAnnotationResult commentsAfter ->
@@ -1897,7 +1917,7 @@ typedTypeAnnotationWithArgumentsOptimisticLayout =
             maybeDotNamesUppercaseTuple
         )
         whitespaceAndComments
-        (manyWithoutReverseWithComments
+        (manyWithCommentsReverse
             (positivelyIndentedFollowedBy
                 (ParserFast.map2
                     (\typeAnnotationResult commentsAfter ->
@@ -2560,7 +2580,7 @@ caseStatementsFollowedByOptimisticLayout =
         whitespaceAndCommentsEndsPositivelyIndented
         (ParserFast.symbolFollowedBy "->" whitespaceAndCommentsEndsPositivelyIndented)
         expressionFollowedByOptimisticLayout
-        (manyWithoutReverseWithComments caseStatementFollowedByOptimisticLayout)
+        (manyWithCommentsReverse caseStatementFollowedByOptimisticLayout)
 
 
 caseStatementFollowedByOptimisticLayout : Parser (WithComments Elm.Syntax.Expression.Case)
@@ -3581,20 +3601,20 @@ followedByMultiArgumentApplication appliedExpressionParser =
                     [] ->
                         leftExpressionResult.syntax
 
-                    ((Elm.Syntax.Node.Node lastArgRange _) :: _) as argsReverse ->
+                    (Elm.Syntax.Node.Node lastArgRange _) :: _ ->
                         let
                             (Elm.Syntax.Node.Node leftRange _) =
                                 leftExpressionResult.syntax
                         in
                         Elm.Syntax.Node.Node { start = leftRange.start, end = lastArgRange.end }
                             (Elm.Syntax.Expression.Application
-                                (leftExpressionResult.syntax :: List.reverse argsReverse)
+                                (leftExpressionResult.syntax :: List.reverse maybeArgsReverse.syntax)
                             )
             }
         )
         appliedExpressionParser
         whitespaceAndComments
-        (manyWithoutReverseWithComments
+        (manyWithCommentsReverse
             (positivelyIndentedFollowedBy
                 (ParserFast.map2
                     (\arg commentsAfter ->
@@ -4021,7 +4041,7 @@ qualifiedPatternWithConsumeArgs =
         )
         qualifiedNameRefNode
         whitespaceAndComments
-        (manyWithoutReverseWithComments
+        (manyWithCommentsReverse
             (positivelyIndentedFollowedBy
                 (ParserFast.map2
                     (\arg commentsAfterArg ->
@@ -4399,7 +4419,14 @@ functionNameNotInfixNode =
     ParserFast.ifFollowedByWhileValidateMapWithRangeWithoutLinebreak Elm.Syntax.Node.Node
         Char.Extra.unicodeIsLowerFast
         Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
-        (\name -> name /= "infix" && isNotReserved name)
+        (\name ->
+            case name of
+                "infix" ->
+                    False
+
+                nameNotInfix ->
+                    nameNotInfix |> isNotReserved
+        )
 
 
 {-| [`Parser`](#Parser) for a name used for
@@ -4576,7 +4603,7 @@ singleLineComment =
 
 
 {-| [`Parser`](#Parser) for a `{-...-}` comment,
-also verifying that it itself isn't a [`documentationComment`](#documentationComment)
+also verifying that it itself isn't a documentation comment
 -}
 multiLineComment : Parser (Elm.Syntax.Node.Node String)
 multiLineComment =
@@ -4680,7 +4707,7 @@ endsPositivelyIndented parser =
 
 
 {-| Check that the indentation of an already parsed token
-would be valid after [`maybeLayout`](#maybeLayout)
+would be valid
 -}
 positivelyIndentedPlusFollowedBy : Int -> Parser a -> Parser a
 positivelyIndentedPlusFollowedBy extraIndent nextParser =
@@ -4864,14 +4891,14 @@ manyWithComments p =
         )
 
 
-{-| Same as [`many`](#many), except that it doesn't reverse the list.
+{-| Same as `manyWithComments` except that it doesn't reverse the list.
 This can be useful if you need to access the range of the last item.
 
 Mind you the comments will be reversed either way
 
 -}
-manyWithoutReverseWithComments : ParserFast.Parser (WithComments a) -> ParserFast.Parser (WithComments (List a))
-manyWithoutReverseWithComments p =
+manyWithCommentsReverse : ParserFast.Parser (WithComments a) -> ParserFast.Parser (WithComments (List a))
+manyWithCommentsReverse p =
     ParserFast.loopWhileSucceeds p
         { comments = Rope.empty, syntax = [] }
         (\pResult soFar ->
