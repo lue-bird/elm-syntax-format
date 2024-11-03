@@ -27,7 +27,7 @@ Some additional lenient parsing:
 
   - `a != b` → `a /= b`
 
-  - TODO merge consecutive `,`
+  - merge consecutive `,` in TODO record or TODO list
 
   - remove extra `,` before first record field or TODO list element
 
