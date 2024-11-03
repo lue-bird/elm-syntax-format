@@ -1,3 +1,6 @@
+### 1.1.0
+  - add module `ElmSyntaxParserLenient`
+
 #### 1.0.2
   - fix linebreak count for modules with documentation comment but without imports
 
