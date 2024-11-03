@@ -542,6 +542,28 @@ a =
 {-| A module about A.
 -}
 
+
+a =
+    "a"
+"""
+                )
+            , Test.test "before comments"
+                (\() ->
+                    """module A exposing (..)
+{-| A module about A.
+-}
+--
+a =
+    "a\""""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+{-| A module about A.
+-}
+
+--
+
+
 a =
     "a"
 """

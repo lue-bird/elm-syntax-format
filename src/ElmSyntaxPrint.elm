@@ -106,6 +106,20 @@ module_ syntaxModule =
                     syntaxModule.moduleDefinition
                         |> Elm.Syntax.Node.range
                         |> .end
+
+        commentsBeforeDeclarations : List String
+        commentsBeforeDeclarations =
+            case syntaxModule.declarations of
+                [] ->
+                    -- invalid syntax
+                    []
+
+                (Elm.Syntax.Node.Node declaration0Range _) :: _ ->
+                    commentsInRange
+                        { start = lastSyntaxLocationBeforeDeclarations
+                        , end = declaration0Range.start
+                        }
+                        commentsAndPortDocumentationComments.comments
     in
     syntaxModule.moduleDefinition
         |> Elm.Syntax.Node.value
@@ -123,7 +137,18 @@ module_ syntaxModule =
         |> Print.followedBy
             (case syntaxModule.imports of
                 [] ->
-                    Print.empty
+                    case maybeModuleDocumentation of
+                        Nothing ->
+                            Print.linebreak
+
+                        Just _ ->
+                            case commentsBeforeDeclarations of
+                                [] ->
+                                    Print.linebreak
+                                        |> Print.followedBy Print.linebreak
+
+                                _ :: _ ->
+                                    Print.empty
 
                 (Elm.Syntax.Node.Node import0Range import0) :: import1Up ->
                     (case
@@ -151,29 +176,17 @@ module_ syntaxModule =
                                 |> imports commentsAndPortDocumentationComments.comments
                             )
                         |> Print.followedBy Print.linebreak
+                        |> Print.followedBy Print.linebreak
             )
         |> Print.followedBy Print.linebreak
-        |> Print.followedBy Print.linebreak
         |> Print.followedBy
-            (case syntaxModule.declarations of
+            (case commentsBeforeDeclarations of
                 [] ->
-                    -- invalid syntax
                     Print.empty
 
-                (Elm.Syntax.Node.Node declaration0Range _) :: _ ->
-                    case
-                        commentsInRange
-                            { start = lastSyntaxLocationBeforeDeclarations
-                            , end = declaration0Range.start
-                            }
-                            commentsAndPortDocumentationComments.comments
-                    of
-                        [] ->
-                            Print.empty
-
-                        comment0 :: comment1Up ->
-                            moduleLevelCommentsBeforeDeclaration
-                                { comment0 = comment0, comment1Up = comment1Up }
+                comment0 :: comment1Up ->
+                    moduleLevelCommentsBeforeDeclaration
+                        { comment0 = comment0, comment1Up = comment1Up }
             )
         |> Print.followedBy
             (syntaxModule.declarations
