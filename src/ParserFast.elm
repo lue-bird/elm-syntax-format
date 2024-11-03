@@ -150,7 +150,7 @@ type PStep value
 type alias State =
     { src : String
     , offset : Int
-    , indent : Int
+    , indent : List Int
     , row : Int
     , col : Int
     }
@@ -177,7 +177,7 @@ to avoid breaking changes
 -}
 run : Parser a -> String -> Maybe a
 run (Parser parse) src =
-    case parse { src = src, offset = 0, indent = 1, row = 1, col = 1 } of
+    case parse { src = src, offset = 0, indent = [], row = 1, col = 1 } of
         Good value finalState ->
             if finalState.offset - String.length finalState.src == 0 then
                 Just value
@@ -289,7 +289,7 @@ So the `checkIndent` parser only succeeds when you are "deeper" than the
 current indent level. You could use this to parse elm-style `let` expressions.
 
 -}
-columnIndentAndThen : (Int -> Int -> Parser b) -> Parser b
+columnIndentAndThen : (Int -> List Int -> Parser b) -> Parser b
 columnIndentAndThen callback =
     Parser
         (\s ->
@@ -301,7 +301,7 @@ columnIndentAndThen callback =
         )
 
 
-validateEndColumnIndentation : (Int -> Int -> Bool) -> Parser a -> Parser a
+validateEndColumnIndentation : (Int -> List Int -> Bool) -> Parser a -> Parser a
 validateEndColumnIndentation isOkay (Parser parse) =
     Parser
         (\s0 ->
@@ -2641,7 +2641,7 @@ whileMapWithRange isGood rangeAndConsumedStringToRes =
         )
 
 
-skipWhileHelp : (Char -> Bool) -> Int -> Int -> Int -> String -> Int -> State
+skipWhileHelp : (Char -> Bool) -> Int -> Int -> Int -> String -> List Int -> State
 skipWhileHelp isGood offset row col src indent =
     let
         actualChar : String
@@ -2673,7 +2673,7 @@ skipWhileHelp isGood offset row col src indent =
         }
 
 
-skipWhileWithoutLinebreakHelp : (Char -> Bool) -> Int -> Int -> Int -> String -> Int -> State
+skipWhileWithoutLinebreakHelp : (Char -> Bool) -> Int -> Int -> Int -> String -> List Int -> State
 skipWhileWithoutLinebreakHelp isGood offset row col src indent =
     let
         actualChar : String
@@ -2723,7 +2723,7 @@ skipWhileWhitespaceBacktrackableFollowedBy (Parser parseNext) =
         )
 
 
-skipWhileWhitespaceHelp : Int -> Int -> Int -> String -> Int -> State
+skipWhileWhitespaceHelp : Int -> Int -> Int -> String -> List Int -> State
 skipWhileWhitespaceHelp offset row col src indent =
     case String.slice offset (offset + 1) src of
         " " ->
@@ -2740,11 +2740,11 @@ skipWhileWhitespaceHelp offset row col src indent =
             { src = src, offset = offset, indent = indent, row = row, col = col }
 
 
-changeIndent : Int -> State -> State
+changeIndent : (List Int -> List Int) -> State -> State
 changeIndent newIndent s =
     { src = s.src
     , offset = s.offset
-    , indent = newIndent
+    , indent = s.indent |> newIndent
     , row = s.row
     , col = s.col
     }
@@ -2757,9 +2757,9 @@ withIndentSetToColumn : Parser a -> Parser a
 withIndentSetToColumn (Parser parse) =
     Parser
         (\s0 ->
-            case parse (changeIndent s0.col s0) of
+            case parse (changeIndent (\indent -> s0.col :: indent) s0) of
                 Good a s1 ->
-                    Good a (changeIndent s0.indent s1)
+                    Good a (changeIndent (\indent -> indent |> List.drop 1) s1)
 
                 bad ->
                     bad

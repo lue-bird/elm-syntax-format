@@ -7,7 +7,7 @@ module ElmSyntaxParserLenient exposing
     )
 
 {-| Like [`Elm.Parser`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Parser)
-but able to parse badly indented code (TODO) and similar somewhat incorrect syntax,
+but able to parse badly indented code and similar somewhat incorrect syntax,
 similar to elm-format.
 
 This is **not** a fault-tolerant parser!
@@ -4578,7 +4578,10 @@ whitespaceAndCommentsEndsPositivelyIndented =
 endsPositivelyIndented : Parser a -> Parser a
 endsPositivelyIndented parser =
     ParserFast.validateEndColumnIndentation
-        (\column indent -> column > indent)
+        (\column indent ->
+            (column > 1)
+                && (indent |> List.all (\nestedIndent -> column /= nestedIndent))
+        )
         parser
 
 
@@ -4589,11 +4592,24 @@ positivelyIndentedPlusFollowedBy : Int -> Parser a -> Parser a
 positivelyIndentedPlusFollowedBy extraIndent nextParser =
     ParserFast.columnIndentAndThen
         (\column indent ->
-            if column > indent + extraIndent then
-                nextParser
+            case indent of
+                [] ->
+                    if column > 1 + extraIndent then
+                        nextParser
 
-            else
-                ParserFast.problem
+                    else
+                        ParserFast.problem
+
+                highestIndent :: lowerIndents ->
+                    if
+                        (column > 1)
+                            && (column /= highestIndent + extraIndent)
+                            && (lowerIndents |> List.all (\nestedIndent -> column /= nestedIndent))
+                    then
+                        nextParser
+
+                    else
+                        ParserFast.problem
         )
 
 
@@ -4601,7 +4617,10 @@ positivelyIndentedFollowedBy : Parser a -> Parser a
 positivelyIndentedFollowedBy nextParser =
     ParserFast.columnIndentAndThen
         (\column indent ->
-            if column > indent then
+            if
+                (column > 1)
+                    && (indent |> List.all (\nestedIndent -> column /= nestedIndent))
+            then
                 nextParser
 
             else
@@ -4661,7 +4680,14 @@ moduleLevelIndentedFollowedBy nextParser =
 endsTopIndented : Parser a -> Parser a
 endsTopIndented parser =
     ParserFast.validateEndColumnIndentation
-        (\column indent -> column - indent == 0)
+        (\column indent ->
+            case indent of
+                [] ->
+                    column == 1
+
+                highestIndent :: _ ->
+                    column - highestIndent == 0
+        )
         parser
 
 
@@ -4669,11 +4695,20 @@ topIndentedFollowedBy : Parser a -> Parser a
 topIndentedFollowedBy nextParser =
     ParserFast.columnIndentAndThen
         (\column indent ->
-            if column - indent == 0 then
-                nextParser
+            case indent of
+                [] ->
+                    if column == 1 then
+                        nextParser
 
-            else
-                ParserFast.problem
+                    else
+                        ParserFast.problem
+
+                highestIndent :: _ ->
+                    if column - highestIndent == 0 then
+                        nextParser
+
+                    else
+                        ParserFast.problem
         )
 
 
