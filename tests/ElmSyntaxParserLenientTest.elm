@@ -13,7 +13,6 @@ import ElmSyntaxParserLenient
 import ElmSyntaxParserLenientTestFullModules
 import Expect
 import ParserFast
-import Rope exposing (Rope)
 import Test
 
 
@@ -411,15 +410,16 @@ all =
             , Test.describe "exposing"
                 [ Test.test "Exposing all"
                     (\() ->
-                        "exposing (..)"
-                            |> expectSyntaxWithoutComments exposeDefinition (Elm.Syntax.Exposing.All { start = { row = 1, column = 11 }, end = { row = 1, column = 13 } })
+                        "(..)"
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.exposing_
+                                (Elm.Syntax.Exposing.All { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } })
                     )
                 , Test.test "Exposing all with spacing and comment"
                     (\() ->
-                        """exposing (
+                        """(
   .. -- foo
   )"""
-                            |> expectSyntaxWithComments exposeDefinition
+                            |> expectSyntaxWithComments ElmSyntaxParserLenient.exposing_
                                 { syntax = Elm.Syntax.Exposing.All { start = { row = 2, column = 3 }, end = { row = 3, column = 3 } }
                                 , comments = [ Elm.Syntax.Node.Node { start = { row = 2, column = 6 }, end = { row = 2, column = 12 } } "-- foo" ]
                                 }
@@ -429,79 +429,79 @@ all =
                         """exposing (
   ..
 )"""
-                            |> expectFailsToParse exposeDefinition
+                            |> expectFailsToParse ElmSyntaxParserLenient.exposing_
                     )
                 , Test.test "should fail to parse empty with just 1 `.`"
                     (\() ->
                         "exposing ( . )"
-                            |> expectFailsToParse exposeDefinition
+                            |> expectFailsToParse ElmSyntaxParserLenient.exposing_
                     )
                 , Test.test "should fail to parse empty with just 3 `...`"
                     (\() ->
                         "exposing ( ... )"
-                            |> expectFailsToParse exposeDefinition
+                            |> expectFailsToParse ElmSyntaxParserLenient.exposing_
                     )
                 , Test.test "should fail to parse empty with 2 spaced `.`"
                     (\() ->
                         "exposing (. .)"
-                            |> expectFailsToParse exposeDefinition
+                            |> expectFailsToParse ElmSyntaxParserLenient.exposing_
                     )
                 , Test.test "should fail to parse empty exposing list"
                     (\() ->
                         "exposing ()"
-                            |> expectFailsToParse exposeDefinition
+                            |> expectFailsToParse ElmSyntaxParserLenient.exposing_
                     )
                 , Test.test "Explicit exposing list"
                     (\() ->
-                        "exposing (Model,Msg(..),Info(..),init,(::))"
-                            |> expectSyntaxWithoutComments exposeDefinition
+                        "(Model,Msg(..),Info(..),init,(::))"
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.exposing_
                                 (Elm.Syntax.Exposing.Explicit
-                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 16 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Model")
-                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 24 } }
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Model")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 15 } }
                                         (Elm.Syntax.Exposing.TypeExpose
                                             { name = "Msg"
+                                            , open = Just { start = { row = 1, column = 11 }, end = { row = 1, column = 15 } }
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 24 } }
+                                        (Elm.Syntax.Exposing.TypeExpose
+                                            { name = "Info"
                                             , open = Just { start = { row = 1, column = 20 }, end = { row = 1, column = 24 } }
                                             }
                                         )
-                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 25 }, end = { row = 1, column = 33 } }
-                                        (Elm.Syntax.Exposing.TypeExpose
-                                            { name = "Info"
-                                            , open = Just { start = { row = 1, column = 29 }, end = { row = 1, column = 33 } }
-                                            }
-                                        )
-                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 34 }, end = { row = 1, column = 38 } } (Elm.Syntax.Exposing.FunctionExpose "init")
-                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 39 }, end = { row = 1, column = 43 } } (Elm.Syntax.Exposing.InfixExpose "::")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 25 }, end = { row = 1, column = 29 } } (Elm.Syntax.Exposing.FunctionExpose "init")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 30 }, end = { row = 1, column = 34 } } (Elm.Syntax.Exposing.InfixExpose "::")
                                     ]
                                 )
                     )
                 , Test.test "exposingList with spacing on one line"
                     (\() ->
-                        "exposing (Model, Msg, Info   (..)   ,init,(::) )"
-                            |> expectSyntaxWithoutComments exposeDefinition
+                        "(Model, Msg, Info   (..)   ,init,(::) )"
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.exposing_
                                 (Elm.Syntax.Exposing.Explicit
-                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 16 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Model")
-                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 18 }, end = { row = 1, column = 21 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Msg")
-                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 23 }, end = { row = 1, column = 34 } }
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Model")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Msg")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 25 } }
                                         (Elm.Syntax.Exposing.TypeExpose
                                             { name = "Info"
-                                            , open = Just { start = { row = 1, column = 30 }, end = { row = 1, column = 34 } }
+                                            , open = Just { start = { row = 1, column = 21 }, end = { row = 1, column = 25 } }
                                             }
                                         )
-                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 38 }, end = { row = 1, column = 42 } } (Elm.Syntax.Exposing.FunctionExpose "init")
-                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 43 }, end = { row = 1, column = 47 } } (Elm.Syntax.Exposing.InfixExpose "::")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 29 }, end = { row = 1, column = 33 } } (Elm.Syntax.Exposing.FunctionExpose "init")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 34 }, end = { row = 1, column = 38 } } (Elm.Syntax.Exposing.InfixExpose "::")
                                     ]
                                 )
                     )
                 , Test.test "Explicit exposing list with spaces and newlines"
                     (\() ->
-                        """exposing
-    ( A
+                        """(
+      A
     , B(..)
     , Info (..)
          , init    ,
  (::)
     )"""
-                            |> expectSyntaxWithoutComments exposeDefinition
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.exposing_
                                 (Elm.Syntax.Exposing.Explicit
                                     [ Elm.Syntax.Node.Node { start = { row = 2, column = 7 }, end = { row = 2, column = 8 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "A")
                                     , Elm.Syntax.Node.Node { start = { row = 3, column = 7 }, end = { row = 3, column = 12 } }
@@ -523,11 +523,11 @@ all =
                     )
                 , Test.test "Comments inside the exposing clause"
                     (\() ->
-                        "exposing (foo\n --bar\n )"
-                            |> expectSyntaxWithComments exposeDefinition
+                        "(foo\n --bar\n )"
+                            |> expectSyntaxWithComments ElmSyntaxParserLenient.exposing_
                                 { syntax =
                                     Elm.Syntax.Exposing.Explicit
-                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 14 } }
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 5 } }
                                             (Elm.Syntax.Exposing.FunctionExpose "foo")
                                         ]
                                 , comments = [ Elm.Syntax.Node.Node { start = { row = 2, column = 2 }, end = { row = 2, column = 7 } } "--bar" ]
@@ -6599,20 +6599,6 @@ pipeline1 = 1 /= 2
         ]
 
 
-exposeDefinition : ParserFast.Parser { comments : Rope (Elm.Syntax.Node.Node String), syntax : Elm.Syntax.Exposing.Exposing }
-exposeDefinition =
-    ParserFast.map2
-        (\commentsAfterExposing exposingListInnerResult ->
-            { comments =
-                commentsAfterExposing
-                    |> Rope.prependTo exposingListInnerResult.comments
-            , syntax = exposingListInnerResult.syntax
-            }
-        )
-        (ParserFast.symbolFollowedBy "exposing" ElmSyntaxParserLenient.whitespaceAndComments)
-        ElmSyntaxParserLenient.exposing_
-
-
 moduleHeaderExpectAst : Elm.Syntax.Module.Module -> String -> Expect.Expectation
 moduleHeaderExpectAst =
     expectSyntaxWithoutComments (ParserFast.map (\mod -> { comments = mod.comments, syntax = Elm.Syntax.Node.value mod.syntax }) ElmSyntaxParserLenient.moduleHeader)
@@ -6643,15 +6629,11 @@ longMultiLineString =
     "\"\"\"" ++ String.repeat (5 * 10 ^ 5) "a" ++ "\"\"\""
 
 
-type alias WithComments res =
-    { comments : Comments, syntax : res }
-
-
-type alias Comments =
-    Rope (Elm.Syntax.Node.Node String)
-
-
-expectSyntaxWithoutComments : ParserFast.Parser (WithComments a) -> a -> String -> Expect.Expectation
+expectSyntaxWithoutComments :
+    ParserFast.Parser { comments : ElmSyntaxParserLenient.Comments, syntax : a }
+    -> a
+    -> String
+    -> Expect.Expectation
 expectSyntaxWithoutComments parser expected source =
     case ParserFast.run parser source of
         Nothing ->
@@ -6662,14 +6644,18 @@ expectSyntaxWithoutComments parser expected source =
                 [ \() -> actual.syntax |> Expect.equal expected
                 , \() ->
                     actual.comments
-                        |> Rope.toList
+                        |> ElmSyntaxParserLenient.commentsToList
                         |> Expect.equalLists []
                         |> Expect.onFail "This parser should not produce any comments. If this is expected, then you should use expectAstWithComments instead."
                 ]
                 ()
 
 
-expectSyntaxWithComments : ParserFast.Parser (WithComments a) -> { syntax : a, comments : List (Elm.Syntax.Node.Node String) } -> String -> Expect.Expectation
+expectSyntaxWithComments :
+    ParserFast.Parser { comments : ElmSyntaxParserLenient.Comments, syntax : a }
+    -> { syntax : a, comments : List (Elm.Syntax.Node.Node String) }
+    -> String
+    -> Expect.Expectation
 expectSyntaxWithComments parser expected source =
     case ParserFast.run parser source of
         Nothing ->
@@ -6678,12 +6664,15 @@ expectSyntaxWithComments parser expected source =
         Just actual ->
             Expect.all
                 [ \() -> actual.syntax |> Expect.equal expected.syntax
-                , \() -> actual.comments |> Rope.toList |> Expect.equal expected.comments
+                , \() -> actual.comments |> ElmSyntaxParserLenient.commentsToList |> Expect.equal expected.comments
                 ]
                 ()
 
 
-expectFailsToParse : ParserFast.Parser (WithComments a_) -> String -> Expect.Expectation
+expectFailsToParse :
+    ParserFast.Parser { comments : ElmSyntaxParserLenient.Comments, syntax : a_ }
+    -> String
+    -> Expect.Expectation
 expectFailsToParse parser source =
     case source |> ParserFast.run parser of
         Nothing ->
