@@ -1,6 +1,5 @@
 module ElmSyntaxParserLenientTest exposing (all)
 
-import Elm.Parser
 import Elm.Syntax.Declaration
 import Elm.Syntax.Exposing
 import Elm.Syntax.Expression
@@ -1216,10 +1215,10 @@ f =
 {- 6 -}
 """
                 in
-                Elm.Parser.parseToFile input
-                    |> Result.map .comments
+                ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_ input
+                    |> Maybe.map .comments
                     |> Expect.equal
-                        (Ok
+                        (Just
                             [ Elm.Syntax.Node.Node { start = { row = 4, column = 1 }, end = { row = 5, column = 3 } } "{-| Module documentation\n-}"
                             , Elm.Syntax.Node.Node { start = { row = 9, column = 1 }, end = { row = 9, column = 5 } } "-- 1"
                             , Elm.Syntax.Node.Node { start = { row = 10, column = 1 }, end = { row = 10, column = 8 } } "{- 2 -}"
@@ -1250,10 +1249,10 @@ b =
     1
 
 """
-                    |> Elm.Parser.parseToFile
-                    |> Result.map .comments
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                    |> Maybe.map .comments
                     |> Expect.equal
-                        (Ok
+                        (Just
                             [ Elm.Syntax.Node.Node { start = { row = 7, column = 17 }, end = { row = 7, column = 21 } } "-- 1"
                             , Elm.Syntax.Node.Node { start = { row = 13, column = 1 }, end = { row = 13, column = 5 } } "-- 2"
                             ]
@@ -1277,9 +1276,9 @@ caseWhitespace f = case f   of
 
     
     """
-                    |> Elm.Parser.parseToFile
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
                     |> Expect.equal
-                        (Ok
+                        (Just
                             { moduleDefinition =
                                 Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 41 } }
                                     (Elm.Syntax.Module.NormalModule
@@ -1336,9 +1335,9 @@ lambdaWhitespace =   \\ a b ->    a
 --some comment
 
     """
-                    |> Elm.Parser.parseToFile
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
                     |> Expect.equal
-                        (Ok
+                        (Just
                             { moduleDefinition =
                                 Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 41 } }
                                     (Elm.Syntax.Module.NormalModule
@@ -1397,9 +1396,9 @@ letWhitespace = let
 --some comment
 
     """
-                    |> Elm.Parser.parseToFile
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
                     |> Expect.equal
-                        (Ok
+                        (Just
                             { moduleDefinition =
                                 Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 41 } }
                                     (Elm.Syntax.Module.NormalModule
@@ -1459,9 +1458,9 @@ import Dict
 type Configuration
     = Configuration
 """
-                    |> Elm.Parser.parseToFile
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
                     |> Expect.equal
-                        (Ok
+                        (Just
                             { moduleDefinition =
                                 Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 25 } }
                                     (Elm.Syntax.Module.NormalModule
@@ -1507,9 +1506,9 @@ module Foo exposing (..)
 type Configuration
     = Configuration
 """
-                    |> Elm.Parser.parseToFile
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
                     |> Expect.equal
-                        (Ok
+                        (Just
                             { moduleDefinition =
                                 Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 25 } }
                                     (Elm.Syntax.Module.NormalModule
@@ -1550,9 +1549,9 @@ import String
 -}
 port sendResponse : String -> Cmd msg
 """
-                    |> Elm.Parser.parseToFile
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
                     |> Expect.equal
-                        (Ok
+                        (Just
                             { moduleDefinition =
                                 Elm.Syntax.Node.Node { start = { row = 2, column = 1 }, end = { row = 2, column = 30 } }
                                     (Elm.Syntax.Module.PortModule
@@ -1688,9 +1687,9 @@ port sendResponse : String -> Cmd msg
                 ("""module Foo exposing (..)
 a = 1
 """ ++ comments)
-                    |> Elm.Parser.parseToFile
-                    |> Result.map (\ast -> List.length ast.comments)
-                    |> Expect.equal (Ok 3000)
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                    |> Maybe.map (\ast -> List.length ast.comments)
+                    |> Expect.equal (Just 3000)
             )
         , Test.describe "declaration"
             [ Test.test "value/function declaration"
