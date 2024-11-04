@@ -3,6 +3,8 @@
       - removes extra commas in explicit exposing
       - corrects exposing `(...)` → `(..)`
       - moves import statements anywhere at the top level to the import section
+  - in module `ElmSyntaxPrint`
+      - faster
 
 ### 1.1.0
   - add module `ElmSyntaxParserLenient`

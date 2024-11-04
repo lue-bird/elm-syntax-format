@@ -41,11 +41,9 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
 Please [report](https://github.com/lue-bird/elm-syntax-format/issues/new) others you notice <3
 
 ## performance problems?
-Great performance is not a primary goal
-but if you notice it's unusable for your use case, please [open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new).
+If you notice it's unusable for your use case, please [open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new).
 
 Ideas:
-  - combine `LineSpread`s lazily
   - pre-filter comments per declaration
   - pre-define prints for static parts like symbols
-  - convert Print to defunctionalized (this will likely make `Print.lineSpread` faster)
+  - make `Print.lineSpread` faster (cache in Print and or convert Print to defunctionalized)

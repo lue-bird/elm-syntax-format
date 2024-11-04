@@ -2240,14 +2240,18 @@ patternList syntaxComments syntaxList =
 
                 lineSpread : Print.LineSpread
                 lineSpread =
-                    Print.lineSpreadsCombine
-                        [ lineSpreadInRange syntaxList.fullRange
-                        , elementPrints
-                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
-                        , commentsBeforeElements.reverse
-                            |> List.filterMap identity
-                            |> Print.mapAndLineSpreadsCombine .lineSpread
-                        ]
+                    lineSpreadInRange syntaxList.fullRange
+                        |> Print.lineSpreadMergeWith
+                            (\() ->
+                                elementPrints
+                                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
+                            )
+                        |> Print.lineSpreadMergeWith
+                            (\() ->
+                                commentsBeforeElements.reverse
+                                    |> Print.mapAndLineSpreadsCombine
+                                        (\c -> c |> maybeLineSpread .lineSpread)
+                            )
             in
             Print.exactly "["
                 |> Print.followedBy Print.space
@@ -2264,9 +2268,9 @@ patternList syntaxComments syntaxList =
                                             commentsBeforeElement.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented
-                                                        (Print.lineSpreadMerge
-                                                            commentsBeforeElement.lineSpread
-                                                            (elementPrint |> Print.lineSpread)
+                                                        (commentsBeforeElement.lineSpread
+                                                            |> Print.lineSpreadMergeWith
+                                                                (\() -> elementPrint |> Print.lineSpread)
                                                         )
                                                     )
                                      )
@@ -2295,6 +2299,16 @@ patternList syntaxComments syntaxList =
                     )
                 |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                 |> Print.followedBy (Print.exactly "]")
+
+
+maybeLineSpread : (a -> Print.LineSpread) -> Maybe a -> Print.LineSpread
+maybeLineSpread valueToLineSpread maybe =
+    case maybe of
+        Nothing ->
+            Print.SingleLine
+
+        Just value ->
+            value |> valueToLineSpread
 
 
 patternCons :
@@ -2354,13 +2368,16 @@ patternCons syntaxComments syntaxCons =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            Print.lineSpreadsCombine
-                [ headPrint |> Print.lineSpread
-                , tailPatternPrints |> Print.mapAndLineSpreadsCombine Print.lineSpread
-                , tailPatternsCommentsBefore
-                    |> List.filterMap identity
-                    |> Print.mapAndLineSpreadsCombine .lineSpread
-                ]
+            headPrint
+                |> Print.lineSpread
+                |> Print.lineSpreadMergeWith
+                    (\() -> tailPatternPrints |> Print.mapAndLineSpreadsCombine Print.lineSpread)
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        tailPatternsCommentsBefore
+                            |> Print.mapAndLineSpreadsCombine
+                                (\c -> c |> maybeLineSpread .lineSpread)
+                    )
     in
     headPrint
         |> Print.followedBy
@@ -2382,9 +2399,9 @@ patternCons syntaxComments syntaxCons =
                                                         commentsBefore.print
                                                             |> Print.followedBy
                                                                 (Print.spaceOrLinebreakIndented
-                                                                    (Print.lineSpreadMerge
-                                                                        commentsBefore.lineSpread
-                                                                        (tailPatternPrint |> Print.lineSpread)
+                                                                    (commentsBefore.lineSpread
+                                                                        |> Print.lineSpreadMergeWith
+                                                                            (\() -> tailPatternPrint |> Print.lineSpread)
                                                                     )
                                                                 )
                                                  )
@@ -2497,9 +2514,9 @@ patternAs syntaxComments syntaxAs =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            Print.lineSpreadMerge
-                (aliasedPatternPrint |> Print.lineSpread)
-                commentsCollapsibleBeforeAliasName.lineSpread
+            commentsCollapsibleBeforeAliasName.lineSpread
+                |> Print.lineSpreadMergeWith
+                    (\() -> aliasedPatternPrint |> Print.lineSpread)
     in
     aliasedPatternPrint
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
@@ -2733,37 +2750,46 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            Print.lineSpreadsCombine
-                [ lineSpreadInRange syntaxRecordExtension.fullRange
-                , commentsCollapsibleBeforeRecordVariable.lineSpread
-                , commentsBeforeFields.reverse
-                    |> Print.mapAndLineSpreadsCombine
-                        (\fieldComments ->
-                            Print.lineSpreadMerge
-                                (case fieldComments.beforeName of
-                                    Nothing ->
-                                        Print.SingleLine
+            lineSpreadInRange syntaxRecordExtension.fullRange
+                |> Print.lineSpreadMergeWithStrict
+                    commentsCollapsibleBeforeRecordVariable.lineSpread
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        commentsBeforeFields.reverse
+                            |> Print.mapAndLineSpreadsCombine
+                                (\fieldComments ->
+                                    (case fieldComments.beforeName of
+                                        Nothing ->
+                                            Print.SingleLine
 
-                                    Just commentsBeforeName ->
-                                        commentsBeforeName.lineSpread
+                                        Just commentsBeforeName ->
+                                            commentsBeforeName.lineSpread
+                                    )
+                                        |> Print.lineSpreadMergeWith
+                                            (\() ->
+                                                case fieldComments.betweenNameAndValue of
+                                                    Nothing ->
+                                                        Print.SingleLine
+
+                                                    Just commentsBetweenNameAndValue ->
+                                                        commentsBetweenNameAndValue.lineSpread
+                                            )
                                 )
-                                (case fieldComments.betweenNameAndValue of
-                                    Nothing ->
-                                        Print.SingleLine
+                    )
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        fieldValuePrints
+                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
+                    )
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        case commentsAfterFields of
+                            [] ->
+                                Print.SingleLine
 
-                                    Just commentsBetweenNameAndValue ->
-                                        commentsBetweenNameAndValue.lineSpread
-                                )
-                        )
-                , fieldValuePrints
-                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
-                , case commentsAfterFields of
-                    [] ->
-                        Print.SingleLine
-
-                    _ :: _ ->
-                        Print.MultipleLines
-                ]
+                            _ :: _ ->
+                                Print.MultipleLines
+                    )
     in
     Print.exactly "{"
         |> Print.followedBy Print.space
@@ -2797,15 +2823,14 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                             (List.map3
                                 (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) valuePrint fieldComments ->
                                     let
-                                        lineSpreadBetweenNameAndValueNotConsideringComments : Print.LineSpread
-                                        lineSpreadBetweenNameAndValueNotConsideringComments =
-                                            Print.lineSpreadMerge
-                                                (lineSpreadInRange
-                                                    { start = fieldNameRange.start
-                                                    , end = fieldValue |> Elm.Syntax.Node.range |> .end
-                                                    }
-                                                )
-                                                (valuePrint |> Print.lineSpread)
+                                        lineSpreadBetweenNameAndValueNotConsideringComments : () -> Print.LineSpread
+                                        lineSpreadBetweenNameAndValueNotConsideringComments () =
+                                            lineSpreadInRange
+                                                { start = fieldNameRange.start
+                                                , end = fieldValue |> Elm.Syntax.Node.range |> .end
+                                                }
+                                                |> Print.lineSpreadMergeWith
+                                                    (\() -> valuePrint |> Print.lineSpread)
                                     in
                                     Print.withIndentIncreasedBy 2
                                         (case fieldComments.beforeName of
@@ -2830,20 +2855,20 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                                             ((case fieldComments.betweenNameAndValue of
                                                                 Nothing ->
                                                                     Print.spaceOrLinebreakIndented
-                                                                        lineSpreadBetweenNameAndValueNotConsideringComments
+                                                                        (lineSpreadBetweenNameAndValueNotConsideringComments ())
 
                                                                 Just commentsBetweenNameAndValue ->
                                                                     Print.spaceOrLinebreakIndented
-                                                                        (Print.lineSpreadMerge
-                                                                            commentsBetweenNameAndValue.lineSpread
-                                                                            lineSpreadBetweenNameAndValueNotConsideringComments
+                                                                        (commentsBetweenNameAndValue.lineSpread
+                                                                            |> Print.lineSpreadMergeWith
+                                                                                lineSpreadBetweenNameAndValueNotConsideringComments
                                                                         )
                                                                         |> Print.followedBy commentsBetweenNameAndValue.print
                                                                         |> Print.followedBy
                                                                             (Print.spaceOrLinebreakIndented
-                                                                                (Print.lineSpreadMerge
-                                                                                    commentsBetweenNameAndValue.lineSpread
-                                                                                    (valuePrint |> Print.lineSpread)
+                                                                                (commentsBetweenNameAndValue.lineSpread
+                                                                                    |> Print.lineSpreadMergeWith
+                                                                                        (\() -> valuePrint |> Print.lineSpread)
                                                                                 )
                                                                             )
                                                              )
@@ -2937,15 +2962,20 @@ construct specific syntaxComments syntaxConstruct =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            Print.lineSpreadsCombine
-                [ specific.lineSpreadMinimum
-                , syntaxConstruct.start |> Print.lineSpread
-                , commentsBeforeArguments
-                    |> List.filterMap identity
-                    |> Print.mapAndLineSpreadsCombine .lineSpread
-                , argumentPrints
-                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
-                ]
+            specific.lineSpreadMinimum
+                |> Print.lineSpreadMergeWith
+                    (\() -> syntaxConstruct.start |> Print.lineSpread)
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        commentsBeforeArguments
+                            |> Print.mapAndLineSpreadsCombine
+                                (\c -> c |> maybeLineSpread .lineSpread)
+                    )
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        argumentPrints
+                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
+                    )
     in
     syntaxConstruct.start
         |> Print.followedBy
@@ -2963,9 +2993,9 @@ construct specific syntaxComments syntaxConstruct =
                                             commentsBeforeArgument.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented
-                                                        (Print.lineSpreadMerge
-                                                            commentsBeforeArgument.lineSpread
-                                                            (argumentPrint |> Print.lineSpread)
+                                                        (commentsBeforeArgument.lineSpread
+                                                            |> Print.lineSpreadMergeWith
+                                                                (\() -> argumentPrint |> Print.lineSpread)
                                                         )
                                                     )
                                     )
@@ -3023,17 +3053,20 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            Print.lineSpreadsCombine
-                [ lineSpreadInRange syntaxTuple.fullRange
-                , beforePart0CommentsCollapsible.lineSpread
-                , beforePart1CommentsCollapsible.lineSpread
-                , case afterPart1Comments of
-                    _ :: _ ->
-                        Print.MultipleLines
+            lineSpreadInRange syntaxTuple.fullRange
+                |> Print.lineSpreadMergeWithStrict
+                    beforePart0CommentsCollapsible.lineSpread
+                |> Print.lineSpreadMergeWithStrict
+                    beforePart1CommentsCollapsible.lineSpread
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        case afterPart1Comments of
+                            _ :: _ ->
+                                Print.MultipleLines
 
-                    [] ->
-                        Print.SingleLine
-                ]
+                            [] ->
+                                Print.SingleLine
+                    )
 
         part0Print : Print
         part0Print =
@@ -3055,9 +3088,9 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                         beforePart0CommentsCollapsible.print
                             |> Print.followedBy
                                 (Print.spaceOrLinebreakIndented
-                                    (Print.lineSpreadMerge
-                                        beforePart0CommentsCollapsible.lineSpread
-                                        (part0Print |> Print.lineSpread)
+                                    (beforePart0CommentsCollapsible.lineSpread
+                                        |> Print.lineSpreadMergeWith
+                                            (\() -> part0Print |> Print.lineSpread)
                                     )
                                 )
                  )
@@ -3077,9 +3110,9 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                         beforePart1CommentsCollapsible.print
                             |> Print.followedBy
                                 (Print.spaceOrLinebreakIndented
-                                    (Print.lineSpreadMerge
-                                        beforePart1CommentsCollapsible.lineSpread
-                                        (part1Print |> Print.lineSpread)
+                                    (beforePart1CommentsCollapsible.lineSpread
+                                        |> Print.lineSpreadMergeWith
+                                            (\() -> part1Print |> Print.lineSpread)
                                     )
                                 )
                  )
@@ -3157,18 +3190,22 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            Print.lineSpreadsCombine
-                [ lineSpreadInRange syntaxTriple.fullRange
-                , beforePart0CommentsCollapsible.lineSpread
-                , beforePart1CommentsCollapsible.lineSpread
-                , beforePart2CommentsCollapsible.lineSpread
-                , case afterPart2Comments of
-                    _ :: _ ->
-                        Print.MultipleLines
+            lineSpreadInRange syntaxTriple.fullRange
+                |> Print.lineSpreadMergeWithStrict
+                    beforePart0CommentsCollapsible.lineSpread
+                |> Print.lineSpreadMergeWithStrict
+                    beforePart1CommentsCollapsible.lineSpread
+                |> Print.lineSpreadMergeWithStrict
+                    beforePart2CommentsCollapsible.lineSpread
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        case afterPart2Comments of
+                            _ :: _ ->
+                                Print.MultipleLines
 
-                    [] ->
-                        Print.SingleLine
-                ]
+                            [] ->
+                                Print.SingleLine
+                    )
 
         part0Print : Print
         part0Print =
@@ -3194,9 +3231,9 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                         beforePart0CommentsCollapsible.print
                             |> Print.followedBy
                                 (Print.spaceOrLinebreakIndented
-                                    (Print.lineSpreadMerge
-                                        beforePart0CommentsCollapsible.lineSpread
-                                        (part0Print |> Print.lineSpread)
+                                    (beforePart0CommentsCollapsible.lineSpread
+                                        |> Print.lineSpreadMergeWith
+                                            (\() -> part0Print |> Print.lineSpread)
                                     )
                                 )
                  )
@@ -3216,9 +3253,9 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                         beforePart1CommentsCollapsible.print
                             |> Print.followedBy
                                 (Print.spaceOrLinebreakIndented
-                                    (Print.lineSpreadMerge
-                                        beforePart1CommentsCollapsible.lineSpread
-                                        (part1Print |> Print.lineSpread)
+                                    (beforePart1CommentsCollapsible.lineSpread
+                                        |> Print.lineSpreadMergeWith
+                                            (\() -> part1Print |> Print.lineSpread)
                                     )
                                 )
                  )
@@ -3238,9 +3275,9 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                         beforePart2CommentsCollapsible.print
                             |> Print.followedBy
                                 (Print.spaceOrLinebreakIndented
-                                    (Print.lineSpreadMerge
-                                        beforePart2CommentsCollapsible.lineSpread
-                                        (part2Print |> Print.lineSpread)
+                                    (beforePart2CommentsCollapsible.lineSpread
+                                        |> Print.lineSpreadMergeWith
+                                            (\() -> part2Print |> Print.lineSpread)
                                     )
                                 )
                  )
@@ -3409,36 +3446,44 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
 
                 lineSpread : Print.LineSpread
                 lineSpread =
-                    Print.lineSpreadsCombine
-                        [ lineSpreadInRange syntaxRecord.fullRange
-                        , commentsBeforeFields.reverse
-                            |> Print.mapAndLineSpreadsCombine
-                                (\fieldComments ->
-                                    Print.lineSpreadMerge
-                                        (case fieldComments.beforeName of
-                                            Nothing ->
-                                                Print.SingleLine
+                    lineSpreadInRange syntaxRecord.fullRange
+                        |> Print.lineSpreadMergeWith
+                            (\() ->
+                                commentsBeforeFields.reverse
+                                    |> Print.mapAndLineSpreadsCombine
+                                        (\fieldComments ->
+                                            (case fieldComments.beforeName of
+                                                Nothing ->
+                                                    Print.SingleLine
 
-                                            Just commentsBeforeName ->
-                                                commentsBeforeName.lineSpread
+                                                Just commentsBeforeName ->
+                                                    commentsBeforeName.lineSpread
+                                            )
+                                                |> Print.lineSpreadMergeWith
+                                                    (\() ->
+                                                        case fieldComments.betweenNameAndValue of
+                                                            Nothing ->
+                                                                Print.SingleLine
+
+                                                            Just commentsBetweenNameAndValue ->
+                                                                commentsBetweenNameAndValue.lineSpread
+                                                    )
                                         )
-                                        (case fieldComments.betweenNameAndValue of
-                                            Nothing ->
-                                                Print.SingleLine
+                            )
+                        |> Print.lineSpreadMergeWith
+                            (\() ->
+                                fieldValuePrints
+                                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
+                            )
+                        |> Print.lineSpreadMergeWith
+                            (\() ->
+                                case commentsAfterFields of
+                                    [] ->
+                                        Print.SingleLine
 
-                                            Just commentsBetweenNameAndValue ->
-                                                commentsBetweenNameAndValue.lineSpread
-                                        )
-                                )
-                        , fieldValuePrints
-                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
-                        , case commentsAfterFields of
-                            [] ->
-                                Print.SingleLine
-
-                            _ :: _ ->
-                                Print.MultipleLines
-                        ]
+                                    _ :: _ ->
+                                        Print.MultipleLines
+                            )
             in
             Print.exactly "{"
                 |> Print.followedBy Print.space
@@ -3447,15 +3492,14 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                         (List.map3
                             (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) valuePrint fieldComments ->
                                 let
-                                    lineSpreadBetweenNameAndValueNotConsideringComments : Print.LineSpread
-                                    lineSpreadBetweenNameAndValueNotConsideringComments =
-                                        Print.lineSpreadMerge
-                                            (lineSpreadInRange
-                                                { start = fieldNameRange.start
-                                                , end = fieldValue |> Elm.Syntax.Node.range |> .end
-                                                }
-                                            )
-                                            (valuePrint |> Print.lineSpread)
+                                    lineSpreadBetweenNameAndValueNotConsideringComments : () -> Print.LineSpread
+                                    lineSpreadBetweenNameAndValueNotConsideringComments () =
+                                        lineSpreadInRange
+                                            { start = fieldNameRange.start
+                                            , end = fieldValue |> Elm.Syntax.Node.range |> .end
+                                            }
+                                            |> Print.lineSpreadMergeWith
+                                                (\() -> valuePrint |> Print.lineSpread)
                                 in
                                 Print.withIndentIncreasedBy 2
                                     (case fieldComments.beforeName of
@@ -3480,20 +3524,20 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                                         ((case fieldComments.betweenNameAndValue of
                                                             Nothing ->
                                                                 Print.spaceOrLinebreakIndented
-                                                                    lineSpreadBetweenNameAndValueNotConsideringComments
+                                                                    (lineSpreadBetweenNameAndValueNotConsideringComments ())
 
                                                             Just commentsBetweenNameAndValue ->
                                                                 Print.spaceOrLinebreakIndented
-                                                                    (Print.lineSpreadMerge
-                                                                        commentsBetweenNameAndValue.lineSpread
-                                                                        lineSpreadBetweenNameAndValueNotConsideringComments
+                                                                    (commentsBetweenNameAndValue.lineSpread
+                                                                        |> Print.lineSpreadMergeWith
+                                                                            lineSpreadBetweenNameAndValueNotConsideringComments
                                                                     )
                                                                     |> Print.followedBy commentsBetweenNameAndValue.print
                                                                     |> Print.followedBy
                                                                         (Print.spaceOrLinebreakIndented
-                                                                            (Print.lineSpreadMerge
-                                                                                commentsBetweenNameAndValue.lineSpread
-                                                                                (valuePrint |> Print.lineSpread)
+                                                                            (commentsBetweenNameAndValue.lineSpread
+                                                                                |> Print.lineSpreadMergeWith
+                                                                                    (\() -> valuePrint |> Print.lineSpread)
                                                                             )
                                                                         )
                                                          )
@@ -3633,16 +3677,21 @@ typeFunctionNotParenthesized syntaxComments function =
 
         fullLineSpread : Print.LineSpread
         fullLineSpread =
-            Print.lineSpreadsCombine
-                [ lineSpreadInRange function.fullRange
-                , function.inType |> lineSpreadInNode
-                , afterArrowTypes.beforeRightest |> Print.mapAndLineSpreadsCombine lineSpreadInNode
-                , afterArrowTypes.rightest |> lineSpreadInNode
-                , afterArrowTypesBeforeRightestCommentsBefore.reverse
-                    |> List.filterMap identity
-                    |> Print.mapAndLineSpreadsCombine .lineSpread
-                , commentsCollapsibleBeforeRightestAfterArrowType.lineSpread
-                ]
+            lineSpreadInRange function.fullRange
+                |> Print.lineSpreadMergeWith
+                    (\() -> function.inType |> lineSpreadInNode)
+                |> Print.lineSpreadMergeWith
+                    (\() -> afterArrowTypes.beforeRightest |> Print.mapAndLineSpreadsCombine lineSpreadInNode)
+                |> Print.lineSpreadMergeWith
+                    (\() -> afterArrowTypes.rightest |> lineSpreadInNode)
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        afterArrowTypesBeforeRightestCommentsBefore.reverse
+                            |> Print.mapAndLineSpreadsCombine
+                                (\c -> c |> maybeLineSpread .lineSpread)
+                    )
+                |> Print.lineSpreadMergeWith
+                    (\() -> commentsCollapsibleBeforeRightestAfterArrowType.lineSpread)
     in
     typeParenthesizedIfFunction syntaxComments function.inType
         |> Print.followedBy
@@ -3667,9 +3716,9 @@ typeFunctionNotParenthesized syntaxComments function =
                                             let
                                                 lineSpread : Print.LineSpread
                                                 lineSpread =
-                                                    Print.lineSpreadMerge
-                                                        commentsBeforeAfterArrowType.lineSpread
-                                                        (afterArrowTypePrint |> Print.lineSpread)
+                                                    commentsBeforeAfterArrowType.lineSpread
+                                                        |> Print.lineSpreadMergeWith
+                                                            (\() -> afterArrowTypePrint |> Print.lineSpread)
                                             in
                                             Print.spaceOrLinebreakIndented lineSpread
                                                 |> Print.followedBy commentsBeforeAfterArrowType.print
@@ -3705,9 +3754,9 @@ typeFunctionNotParenthesized syntaxComments function =
 
                                     lineSpread : Print.LineSpread
                                     lineSpread =
-                                        Print.lineSpreadMerge
-                                            commentsCollapsible.lineSpread
-                                            (rightestAfterArrowTypePrint |> Print.lineSpread)
+                                        commentsCollapsible.lineSpread
+                                            |> Print.lineSpreadMergeWith
+                                                (\() -> rightestAfterArrowTypePrint |> Print.lineSpread)
                                 in
                                 Print.spaceOrLinebreakIndented lineSpread
                                     |> Print.followedBy commentsCollapsible.print
@@ -3914,11 +3963,12 @@ parenthesized printNotParenthesized syntax syntaxComments =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            Print.lineSpreadsCombine
-                [ notParenthesizedPrint |> Print.lineSpread
-                , commentsBeforeInnerCollapsible.lineSpread
-                , commentsAfterInnerCollapsible.lineSpread
-                ]
+            notParenthesizedPrint
+                |> Print.lineSpread
+                |> Print.lineSpreadMergeWithStrict
+                    commentsBeforeInnerCollapsible.lineSpread
+                |> Print.lineSpreadMergeWithStrict
+                    commentsAfterInnerCollapsible.lineSpread
     in
     Print.exactly "("
         |> Print.followedBy
@@ -4647,9 +4697,9 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                         commentsCollapsible.print
                                             |> Print.followedBy
                                                 (Print.spaceOrLinebreakIndented
-                                                    (Print.lineSpreadMerge
-                                                        commentsCollapsible.lineSpread
-                                                        (variantPrint |> Print.lineSpread)
+                                                    (commentsCollapsible.lineSpread
+                                                        |> Print.lineSpreadMergeWith
+                                                            (\() -> variantPrint |> Print.lineSpread)
                                                     )
                                                 )
                                 )
@@ -4814,14 +4864,14 @@ declarationExpressionImplementation syntaxComments implementation =
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
-            Print.lineSpreadMerge
-                (parameterCommentsBefore.reverse
-                    |> List.filterMap identity
-                    |> Print.mapAndLineSpreadsCombine .lineSpread
-                )
-                (parameterPrints
-                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
-                )
+            parameterCommentsBefore.reverse
+                |> Print.mapAndLineSpreadsCombine
+                    (\c -> c |> maybeLineSpread .lineSpread)
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        parameterPrints
+                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
+                    )
 
         commentsBetweenParametersAndResult : List String
         commentsBetweenParametersAndResult =
@@ -4850,9 +4900,9 @@ declarationExpressionImplementation syntaxComments implementation =
                                             commentsBefore.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented
-                                                        (Print.lineSpreadMerge
-                                                            commentsBefore.lineSpread
-                                                            (parameterPrint |> Print.lineSpread)
+                                                        (commentsBefore.lineSpread
+                                                            |> Print.lineSpreadMergeWith
+                                                                (\() -> parameterPrint |> Print.lineSpread)
                                                         )
                                                     )
                                     )
@@ -5401,26 +5451,34 @@ expressionCall syntaxComments syntaxCall =
 
         argument0LineSpread : Print.LineSpread
         argument0LineSpread =
-            Print.lineSpreadsCombine
-                [ appliedPrint |> Print.lineSpread
-                , lineSpreadBetweenNodes
-                    syntaxCall.applied
-                    syntaxCall.argument0
-                , collapsibleCommentsBeforeArgument0.lineSpread
-                , argument0Print |> Print.lineSpread
-                ]
+            appliedPrint
+                |> Print.lineSpread
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        lineSpreadBetweenNodes
+                            syntaxCall.applied
+                            syntaxCall.argument0
+                    )
+                |> Print.lineSpreadMergeWithStrict
+                    collapsibleCommentsBeforeArgument0.lineSpread
+                |> Print.lineSpreadMergeWith
+                    (\() -> argument0Print |> Print.lineSpread)
 
         argument1UpLineSpread : Print.LineSpread
         argument1UpLineSpread =
-            Print.lineSpreadsCombine
-                [ lineSpreadInRange syntaxCall.fullRange
-                , argument0LineSpread
-                , argument1UpCommentsBefore
-                    |> List.filterMap identity
-                    |> Print.mapAndLineSpreadsCombine .lineSpread
-                , argument1UpPrints
-                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
-                ]
+            lineSpreadInRange syntaxCall.fullRange
+                |> Print.lineSpreadMergeWithStrict argument0LineSpread
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        argument1UpCommentsBefore
+                            |> Print.mapAndLineSpreadsCombine
+                                (\c -> c |> maybeLineSpread .lineSpread)
+                    )
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        argument1UpPrints
+                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
+                    )
 
         argument1UpPrints : List Print
         argument1UpPrints =
@@ -5441,9 +5499,9 @@ expressionCall syntaxComments syntaxCall =
                                 collapsibleCommentsBeforeArgument0.print
                                     |> Print.followedBy
                                         (Print.spaceOrLinebreakIndented
-                                            (Print.lineSpreadMerge
-                                                collapsibleCommentsBeforeArgument0.lineSpread
-                                                (argument0Print |> Print.lineSpread)
+                                            (collapsibleCommentsBeforeArgument0.lineSpread
+                                                |> Print.lineSpreadMergeWith
+                                                    (\() -> argument0Print |> Print.lineSpread)
                                             )
                                         )
                         )
@@ -5462,9 +5520,9 @@ expressionCall syntaxComments syntaxCall =
                                                     commentsBeforeArgument.print
                                                         |> Print.followedBy
                                                             (Print.spaceOrLinebreakIndented
-                                                                (Print.lineSpreadMerge
-                                                                    commentsBeforeArgument.lineSpread
-                                                                    (argumentPrint |> Print.lineSpread)
+                                                                (commentsBeforeArgument.lineSpread
+                                                                    |> Print.lineSpreadMergeWith
+                                                                        (\() -> argumentPrint |> Print.lineSpread)
                                                                 )
                                                             )
                                             )
@@ -5562,13 +5620,15 @@ expressionOperation syntaxComments syntaxOperation =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            Print.lineSpreadsCombine
-                [ lineSpreadInRange syntaxOperation.fullRange
-                , beforeRightestComments.commentsReverse
-                    |> List.filterMap identity
-                    |> Print.mapAndLineSpreadsCombine .lineSpread
-                , commentsCollapsibleBeforeRightestExpression.lineSpread
-                ]
+            lineSpreadInRange syntaxOperation.fullRange
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        beforeRightestComments.commentsReverse
+                            |> Print.mapAndLineSpreadsCombine
+                                (\c -> c |> maybeLineSpread .lineSpread)
+                    )
+                |> Print.lineSpreadMergeWithStrict
+                    commentsCollapsibleBeforeRightestExpression.lineSpread
 
         beforeRightestOperatorExpressionChainWithPreviousLineSpread :
             { previousLineSpread : Print.LineSpread
@@ -5638,9 +5698,9 @@ expressionOperation syntaxComments syntaxOperation =
                                                 commentsCollapsibleBeforeRightestExpression.print
                                                     |> Print.followedBy
                                                         (Print.spaceOrLinebreakIndented
-                                                            (Print.lineSpreadMerge
-                                                                commentsCollapsibleBeforeRightestExpression.lineSpread
-                                                                (expressionPrint |> Print.lineSpread)
+                                                            (commentsCollapsibleBeforeRightestExpression.lineSpread
+                                                                |> Print.lineSpreadMergeWith
+                                                                    (\() -> expressionPrint |> Print.lineSpread)
                                                             )
                                                         )
                                         )
@@ -5673,9 +5733,9 @@ expressionOperation syntaxComments syntaxOperation =
                                             (commentsCollapsibleBeforeRightestExpression.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented
-                                                        (Print.lineSpreadMerge
-                                                            commentsCollapsibleBeforeRightestExpression.lineSpread
-                                                            (expressionPrint |> Print.lineSpread)
+                                                        (commentsCollapsibleBeforeRightestExpression.lineSpread
+                                                            |> Print.lineSpreadMergeWith
+                                                                (\() -> expressionPrint |> Print.lineSpread)
                                                         )
                                                     )
                                             )
@@ -5704,9 +5764,9 @@ expressionOperation syntaxComments syntaxOperation =
                                                             commentsBeforeExpression.print
                                                                 |> Print.followedBy
                                                                     (Print.spaceOrLinebreakIndented
-                                                                        (Print.lineSpreadMerge
-                                                                            commentsBeforeExpression.lineSpread
-                                                                            (operatorExpression.expressionPrint |> Print.lineSpread)
+                                                                        (commentsBeforeExpression.lineSpread
+                                                                            |> Print.lineSpreadMergeWith
+                                                                                (\() -> operatorExpression.expressionPrint |> Print.lineSpread)
                                                                         )
                                                                     )
                                                     )
@@ -5730,9 +5790,9 @@ expressionOperation syntaxComments syntaxOperation =
                                                         (commentsBeforeExpression.print
                                                             |> Print.followedBy
                                                                 (Print.spaceOrLinebreakIndented
-                                                                    (Print.lineSpreadMerge
-                                                                        commentsBeforeExpression.lineSpread
-                                                                        (operatorExpression.expressionPrint |> Print.lineSpread)
+                                                                    (commentsBeforeExpression.lineSpread
+                                                                        |> Print.lineSpreadMergeWith
+                                                                            (\() -> operatorExpression.expressionPrint |> Print.lineSpread)
                                                                     )
                                                                 )
                                                         )
@@ -5964,14 +6024,18 @@ expressionList syntaxComments syntaxList =
 
                 lineSpread : Print.LineSpread
                 lineSpread =
-                    Print.lineSpreadsCombine
-                        [ lineSpreadInRange syntaxList.fullRange
-                        , elementPrints
-                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
-                        , commentsBeforeElements.reverse
-                            |> List.filterMap identity
-                            |> Print.mapAndLineSpreadsCombine .lineSpread
-                        ]
+                    lineSpreadInRange syntaxList.fullRange
+                        |> Print.lineSpreadMergeWith
+                            (\() ->
+                                elementPrints
+                                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
+                            )
+                        |> Print.lineSpreadMergeWith
+                            (\() ->
+                                commentsBeforeElements.reverse
+                                    |> Print.mapAndLineSpreadsCombine
+                                        (\c -> c |> maybeLineSpread .lineSpread)
+                            )
             in
             Print.exactly "["
                 |> Print.followedBy Print.space
@@ -5988,9 +6052,9 @@ expressionList syntaxComments syntaxList =
                                             commentsBeforeElement.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented
-                                                        (Print.lineSpreadMerge
-                                                            commentsBeforeElement.lineSpread
-                                                            (elementPrint |> Print.lineSpread)
+                                                        (commentsBeforeElement.lineSpread
+                                                            |> Print.lineSpreadMergeWith
+                                                                (\() -> elementPrint |> Print.lineSpread)
                                                         )
                                                     )
                                      )
@@ -6246,14 +6310,14 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
-            Print.lineSpreadMerge
-                (parameterCommentsBefore.reverse
-                    |> List.filterMap identity
-                    |> Print.mapAndLineSpreadsCombine .lineSpread
-                )
-                (parameterPrints
-                    |> Print.mapAndLineSpreadsCombine Print.lineSpread
-                )
+            parameterCommentsBefore.reverse
+                |> Print.mapAndLineSpreadsCombine
+                    (\c -> c |> maybeLineSpread .lineSpread)
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        parameterPrints
+                            |> Print.mapAndLineSpreadsCombine Print.lineSpread
+                    )
     in
     Print.exactly "\\"
         |> Print.followedBy
@@ -6271,9 +6335,9 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                                             commentsBefore.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented
-                                                        (Print.lineSpreadMerge
-                                                            commentsBefore.lineSpread
-                                                            (parameterPrint |> Print.lineSpread)
+                                                        (commentsBefore.lineSpread
+                                                            |> Print.lineSpreadMergeWith
+                                                                (\() -> parameterPrint |> Print.lineSpread)
                                                         )
                                                     )
                                     )
@@ -6293,9 +6357,9 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                         ((case commentsBeforeResult of
                             [] ->
                                 Print.spaceOrLinebreakIndented
-                                    (Print.lineSpreadMerge
-                                        (lineSpreadInRange fullRange)
-                                        parametersLineSpread
+                                    (parametersLineSpread
+                                        |> Print.lineSpreadMergeWith
+                                            (\() -> lineSpreadInRange fullRange)
                                     )
 
                             comment0 :: comment1Up ->
@@ -6366,14 +6430,17 @@ expressionIfThenElse syntaxComments syntaxIfThenElse =
 
         conditionLineSpread : Print.LineSpread
         conditionLineSpread =
-            case commentsBeforeCondition of
+            (case commentsBeforeCondition of
                 _ :: _ ->
                     Print.MultipleLines
 
                 [] ->
-                    Print.lineSpreadMerge
-                        syntaxIfThenElse.conditionLineSpreadMinimum
-                        (Print.lineSpread conditionPrint)
+                    Print.SingleLine
+            )
+                |> Print.lineSpreadMergeWithStrict
+                    syntaxIfThenElse.conditionLineSpreadMinimum
+                |> Print.lineSpreadMergeWith
+                    (\() -> Print.lineSpread conditionPrint)
 
         onTruePrint : Print
         onTruePrint =

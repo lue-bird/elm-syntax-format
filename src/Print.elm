@@ -3,7 +3,7 @@ module Print exposing
     , exactly, empty, space, linebreak
     , followedBy, sequence
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
-    , LineSpread(..), lineSpreadMerge, lineSpreadsCombine, mapAndLineSpreadsCombine, lineSpread
+    , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, mapAndLineSpreadsCombine, lineSpread
     )
 
 {-| simple pretty printing
@@ -24,7 +24,7 @@ module Print exposing
 ### indent
 
 @docs withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
-@docs LineSpread, lineSpreadMerge, lineSpreadsCombine, mapAndLineSpreadsCombine, lineSpread
+@docs LineSpread, lineSpreadMergeWith, lineSpreadMergeWithStrict, mapAndLineSpreadsCombine, lineSpread
 
 -}
 
@@ -180,42 +180,41 @@ type LineSpread
 {-| If either spans [`MultipleLines`](#LineSpread), gives [`MultipleLines`](#LineSpread).
 If both are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
 
-To merge more than 2, use [`Print.lineSpreadsCombine`](#lineSpreadsCombine)
+To merge 2 already known [`LineSpread`](#LineSpread)s, use [`Print.lineSpreadMergeWithStrict`](#lineSpreadMergeWithStrict)
+To merge a list, use [`Print.lineSpreadsCombine`](#lineSpreadsCombine)
 
 -}
-lineSpreadMerge : LineSpread -> LineSpread -> LineSpread
-lineSpreadMerge aLineSpread bLineSpread =
+lineSpreadMergeWith : (() -> LineSpread) -> LineSpread -> LineSpread
+lineSpreadMergeWith bLineSpreadLazy aLineSpread =
     case aLineSpread of
         MultipleLines ->
             MultipleLines
 
         SingleLine ->
-            bLineSpread
+            bLineSpreadLazy ()
 
 
-{-| If any spans [`MultipleLines`](#LineSpread), gives [`MultipleLines`](#LineSpread).
-If all are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
+{-| If either spans [`MultipleLines`](#LineSpread), gives [`MultipleLines`](#LineSpread).
+If both are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
 
-To only combine 2, use [`Print.lineSpreadsCombine`](#lineSpreadsCombine)
+To merge more a list, use [`Print.lineSpreadsCombine`](#lineSpreadsCombine)
 
 -}
-lineSpreadsCombine : List LineSpread -> LineSpread
-lineSpreadsCombine lineSpreads =
-    case lineSpreads of
-        [] ->
-            SingleLine
+lineSpreadMergeWithStrict : LineSpread -> LineSpread -> LineSpread
+lineSpreadMergeWithStrict bLineSpreadLazy aLineSpread =
+    case aLineSpread of
+        MultipleLines ->
+            MultipleLines
 
-        head :: tail ->
-            case head of
-                MultipleLines ->
-                    MultipleLines
-
-                SingleLine ->
-                    lineSpreadsCombine tail
+        SingleLine ->
+            bLineSpreadLazy
 
 
-{-| Equivalent to `|> List.map ... |>` [`Print.lineSpreadsCombine`](#lineSpreadsCombine)
-but faster
+{-| If any element spans [`MultipleLines`](#LineSpread), gives [`MultipleLines`](#LineSpread).
+If all are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
+
+To only combine 2, use [`Print.lineSpreadMergeWith`](#lineSpreadMergeWith)
+
 -}
 mapAndLineSpreadsCombine : (a -> LineSpread) -> (List a -> LineSpread)
 mapAndLineSpreadsCombine elementLineSpread lineSpreads =
