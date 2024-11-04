@@ -4,6 +4,7 @@ port module Main exposing (main)
 -}
 
 import Ansi.Color
+import Ansi.Font
 import Bytes
 import Bytes.Decode
 import Bytes.Encode
@@ -19,10 +20,13 @@ import ElmSyntaxPrint
 import Json.Decode
 import Json.Encode
 import Node
+import Set exposing (Set)
 
 
 type State
-    = WaitingForElmJson
+    = WaitingForLaunchArguments
+    | ShowingHelp
+    | WaitingForElmJson { mode : Mode }
     | Running RunningState
     | ElmJsonReadFailed String
     | SourceDirectoryReadFailed { path : String, message : String }
@@ -30,9 +34,10 @@ type State
 
 
 type alias RunningState =
-    { elmJson : Elm.Project.Project
-    , sourceDirectoriesToRead : List String
-    , sourceFilesToRead : List String
+    { mode : Mode
+    , elmJsonSourceDirectories : List String
+    , sourceDirectoriesToRead : Set String
+    , sourceFilesToRead : Set String
     , modulesToFormat :
         List
             { path : String
@@ -41,15 +46,74 @@ type alias RunningState =
     }
 
 
+type Mode
+    = SingleRun
+    | Watch
+
+
 initialState : State
 initialState =
-    WaitingForElmJson
+    WaitingForLaunchArguments
 
 
 interface : State -> Node.Interface State
 interface state =
     case state of
-        WaitingForElmJson ->
+        WaitingForLaunchArguments ->
+            Node.launchArgumentsRequest
+                |> Node.interfaceFutureMap
+                    (\launchArguments ->
+                        case launchArguments |> List.drop 2 of
+                            [] ->
+                                WaitingForElmJson { mode = SingleRun }
+
+                            [ "watch" ] ->
+                                WaitingForElmJson { mode = Watch }
+
+                            [ "help" ] ->
+                                ShowingHelp
+
+                            [ "--help" ] ->
+                                ShowingHelp
+
+                            [ "-h" ] ->
+                                ShowingHelp
+
+                            _ ->
+                                ShowingHelp
+                    )
+
+        ShowingHelp ->
+            Node.standardOutWrite
+                ("""Format elm 0.19 """
+                    ++ ("source directory" |> Ansi.Font.bold)
+                    ++ """ modules like elm-format (https://github.com/avh4/elm-format).
+
+"""
+                    ++ ([ { command = "elm-syntax-format"
+                          , description = "format all of them once"
+                          }
+                        , { command = "elm-syntax-format watch"
+                          , description = "format edited and added modules on save"
+                          }
+                        ]
+                            |> List.map
+                                (\commandAndDescription ->
+                                    "  - "
+                                        ++ (commandAndDescription.command
+                                                |> Ansi.Color.fontColor Ansi.Color.cyan
+                                           )
+                                        ++ ": "
+                                        ++ commandAndDescription.description
+                                )
+                            |> String.join "\n"
+                       )
+                    ++ """
+
+"""
+                )
+
+        WaitingForElmJson waitingForElmJson ->
             Node.fileRequest "elm.json"
                 |> Node.interfaceFutureMap
                     (\elmJsonBytesOrError ->
@@ -77,10 +141,17 @@ interface state =
                                                     )
 
                                             Ok elmJson ->
+                                                let
+                                                    computedElmJsonSourceDirectories : List String
+                                                    computedElmJsonSourceDirectories =
+                                                        elmJson |> elmJsonSourceDirectories
+                                                in
                                                 Running
-                                                    { elmJson = elmJson
-                                                    , sourceDirectoriesToRead = elmJson |> elmJsonSourceDirectories
-                                                    , sourceFilesToRead = []
+                                                    { mode = waitingForElmJson.mode
+                                                    , elmJsonSourceDirectories = computedElmJsonSourceDirectories
+                                                    , sourceDirectoriesToRead =
+                                                        computedElmJsonSourceDirectories |> Set.fromList
+                                                    , sourceFilesToRead = Set.empty
                                                     , modulesToFormat = []
                                                     }
                     )
@@ -118,29 +189,57 @@ badExitWith errorMessage =
 
 runningInterface : RunningState -> Node.Interface State
 runningInterface running =
-    [ case ( running.sourceDirectoriesToRead, running.sourceFilesToRead ) of
-        ( _ :: _, _ ) ->
+    [ case running.mode of
+        SingleRun ->
             Node.interfaceNone
 
-        ( _, _ :: _ ) ->
-            Node.interfaceNone
-
-        ( [], [] ) ->
-            running.modulesToFormat
+        Watch ->
+            running.elmJsonSourceDirectories
                 |> List.map
-                    (\moduleToFormat ->
-                        Node.fileWrite
-                            { path = moduleToFormat.path
-                            , content =
-                                moduleToFormat.syntax
-                                    |> ElmSyntaxPrint.module_
-                                    |> ElmSyntaxPrint.toString
-                                    |> Bytes.Encode.string
-                                    |> Bytes.Encode.encode
-                            }
+                    (\elmJsonSourceDirectory ->
+                        Node.fileChangeListen elmJsonSourceDirectory
+                            |> Node.interfaceFutureMap
+                                (\fileChange ->
+                                    case fileChange of
+                                        Node.FileRemoved removedSubPath ->
+                                            Running running
+
+                                        Node.FileAddedOrChanged addedOrChangedPath ->
+                                            if addedOrChangedPath |> String.endsWith ".elm" then
+                                                Running
+                                                    { mode = running.mode
+                                                    , elmJsonSourceDirectories = running.elmJsonSourceDirectories
+                                                    , sourceDirectoriesToRead = running.sourceDirectoriesToRead
+                                                    , sourceFilesToRead =
+                                                        running.sourceFilesToRead |> Set.insert addedOrChangedPath
+                                                    , modulesToFormat = running.modulesToFormat
+                                                    }
+
+                                            else
+                                                Running running
+                                )
                     )
                 |> Node.interfaceBatch
+    , if (running.sourceDirectoriesToRead |> Set.isEmpty) && (running.sourceFilesToRead |> Set.isEmpty) then
+        running.modulesToFormat
+            |> List.map
+                (\moduleToFormat ->
+                    Node.fileWrite
+                        { path = moduleToFormat.path
+                        , content =
+                            moduleToFormat.syntax
+                                |> ElmSyntaxPrint.module_
+                                |> ElmSyntaxPrint.toString
+                                |> Bytes.Encode.string
+                                |> Bytes.Encode.encode
+                        }
+                )
+            |> Node.interfaceBatch
+
+      else
+        Node.interfaceNone
     , running.sourceDirectoriesToRead
+        |> Set.toList
         |> List.map
             (\sourceDirectoryPath ->
                 Node.directorySubPathsRequest sourceDirectoryPath
@@ -155,35 +254,29 @@ runningInterface running =
 
                                 Ok subPaths ->
                                     Running
-                                        { elmJson = running.elmJson
+                                        { mode = running.mode
+                                        , elmJsonSourceDirectories = running.elmJsonSourceDirectories
                                         , sourceDirectoriesToRead =
                                             running.sourceDirectoriesToRead
-                                                |> List.filterMap
-                                                    (\sourceDirectoryToRead ->
-                                                        if sourceDirectoryToRead == sourceDirectoryPath then
-                                                            Nothing
-
-                                                        else
-                                                            Just sourceDirectoryToRead
-                                                    )
+                                                |> Set.remove sourceDirectoryPath
                                         , sourceFilesToRead =
-                                            (subPaths
-                                                |> List.filterMap
-                                                    (\subPath ->
+                                            subPaths
+                                                |> List.foldl
+                                                    (\subPath soFar ->
                                                         if subPath |> String.endsWith ".elm" then
-                                                            Just (sourceDirectoryPath ++ "/" ++ subPath)
+                                                            soFar |> Set.insert (sourceDirectoryPath ++ "/" ++ subPath)
 
                                                         else
-                                                            Nothing
+                                                            soFar
                                                     )
-                                            )
-                                                ++ running.sourceFilesToRead
+                                                    running.sourceFilesToRead
                                         , modulesToFormat = running.modulesToFormat
                                         }
                         )
             )
         |> Node.interfaceBatch
     , running.sourceFilesToRead
+        |> Set.toList
         |> List.map
             (\sourceFilePath ->
                 Node.fileRequest sourceFilePath
@@ -214,18 +307,12 @@ runningInterface running =
 
                                                 Just syntax ->
                                                     Running
-                                                        { elmJson = running.elmJson
+                                                        { mode = running.mode
+                                                        , elmJsonSourceDirectories = running.elmJsonSourceDirectories
                                                         , sourceDirectoriesToRead = running.sourceDirectoriesToRead
                                                         , sourceFilesToRead =
                                                             running.sourceFilesToRead
-                                                                |> List.filterMap
-                                                                    (\sourceFileToRead ->
-                                                                        if sourceFileToRead == sourceFilePath then
-                                                                            Nothing
-
-                                                                        else
-                                                                            Just sourceFileToRead
-                                                                    )
+                                                                |> Set.remove sourceFilePath
                                                         , modulesToFormat =
                                                             { path = sourceFilePath, syntax = syntax }
                                                                 :: running.modulesToFormat
