@@ -88,7 +88,7 @@ Some additional lenient parsing:
             Just n ->
                 n
 
-  - move import statements anywhere at the top level to the import section
+  - moves import statements anywhere at the top level to the import section
 
   - corrects exposing `(...)` → `(..)`
 
