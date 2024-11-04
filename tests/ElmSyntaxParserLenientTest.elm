@@ -1592,6 +1592,92 @@ port sendResponse : String -> Cmd msg
                             }
                         )
             )
+        , Test.test "port module without port gets parsed to normal module"
+            (\() ->
+                """
+port module Foo exposing (..)
+
+sendResponse =
+    Cmd.none
+"""
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                    |> Expect.equal
+                        (Just
+                            { comments = []
+                            , declarations =
+                                [ Elm.Syntax.Node.Node { end = { column = 13, row = 5 }, start = { column = 1, row = 4 } }
+                                    (Elm.Syntax.Declaration.FunctionDeclaration
+                                        { declaration =
+                                            Elm.Syntax.Node.Node { end = { column = 13, row = 5 }, start = { column = 1, row = 4 } }
+                                                { arguments = []
+                                                , expression =
+                                                    Elm.Syntax.Node.Node { end = { column = 13, row = 5 }, start = { column = 5, row = 5 } }
+                                                        (Elm.Syntax.Expression.FunctionOrValue [ "Cmd" ] "none")
+                                                , name = Elm.Syntax.Node.Node { end = { column = 13, row = 4 }, start = { column = 1, row = 4 } } "sendResponse"
+                                                }
+                                        , documentation = Nothing
+                                        , signature = Nothing
+                                        }
+                                    )
+                                ]
+                            , imports = []
+                            , moduleDefinition =
+                                Elm.Syntax.Node.Node { end = { column = 30, row = 2 }, start = { column = 1, row = 2 } }
+                                    (Elm.Syntax.Module.NormalModule
+                                        { exposingList =
+                                            Elm.Syntax.Node.Node { end = { column = 30, row = 2 }, start = { column = 17, row = 2 } }
+                                                (Elm.Syntax.Exposing.All { end = { column = 29, row = 2 }, start = { column = 27, row = 2 } })
+                                        , moduleName = Elm.Syntax.Node.Node { end = { column = 16, row = 2 }, start = { column = 13, row = 2 } } [ "Foo" ]
+                                        }
+                                    )
+                            }
+                        )
+            )
+        , Test.test "normal module with port gets parsed to port module"
+            (\() ->
+                """
+module Foo exposing (..)
+
+port sendResponse : String -> Cmd msg
+"""
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                    |> Expect.equal
+                        (Just
+                            { comments = []
+                            , declarations =
+                                [ Elm.Syntax.Node.Node { end = { column = 38, row = 4 }, start = { column = 1, row = 4 } }
+                                    (Elm.Syntax.Declaration.PortDeclaration
+                                        { name = Elm.Syntax.Node.Node { end = { column = 18, row = 4 }, start = { column = 6, row = 4 } } "sendResponse"
+                                        , typeAnnotation =
+                                            Elm.Syntax.Node.Node { end = { column = 38, row = 4 }, start = { column = 21, row = 4 } }
+                                                (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
+                                                    (Elm.Syntax.Node.Node { end = { column = 27, row = 4 }, start = { column = 21, row = 4 } }
+                                                        (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { end = { column = 27, row = 4 }, start = { column = 21, row = 4 } } ( [], "String" )) [])
+                                                    )
+                                                    (Elm.Syntax.Node.Node { end = { column = 38, row = 4 }, start = { column = 31, row = 4 } }
+                                                        (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { end = { column = 34, row = 4 }, start = { column = 31, row = 4 } } ( [], "Cmd" ))
+                                                            [ Elm.Syntax.Node.Node { end = { column = 38, row = 4 }, start = { column = 35, row = 4 } }
+                                                                (Elm.Syntax.TypeAnnotation.GenericType "msg")
+                                                            ]
+                                                        )
+                                                    )
+                                                )
+                                        }
+                                    )
+                                ]
+                            , imports = []
+                            , moduleDefinition =
+                                Elm.Syntax.Node.Node { end = { column = 25, row = 2 }, start = { column = 1, row = 2 } }
+                                    (Elm.Syntax.Module.PortModule
+                                        { exposingList =
+                                            Elm.Syntax.Node.Node { end = { column = 25, row = 2 }, start = { column = 12, row = 2 } }
+                                                (Elm.Syntax.Exposing.All { end = { column = 24, row = 2 }, start = { column = 22, row = 2 } })
+                                        , moduleName = Elm.Syntax.Node.Node { end = { column = 11, row = 2 }, start = { column = 8, row = 2 } } [ "Foo" ]
+                                        }
+                                    )
+                            }
+                        )
+            )
         , Test.test "A file with a large number of comments should not create a stack overflow"
             (\() ->
                 let
@@ -4436,6 +4522,30 @@ type Color = Blue String | Red | Green"""
                                     )
                                 )
                     )
+                , Test.test "lambda with => instead of ->"
+                    (\() ->
+                        "\\() => foo"
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
+                                    (Elm.Syntax.Expression.LambdaExpression
+                                        { args = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } Elm.Syntax.Pattern.UnitPattern ]
+                                        , expression = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
+                                        }
+                                    )
+                                )
+                    )
+                , Test.test "lambda with . instead of ->"
+                    (\() ->
+                        "\\().   foo"
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
+                                    (Elm.Syntax.Expression.LambdaExpression
+                                        { args = [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 4 } } Elm.Syntax.Pattern.UnitPattern ]
+                                        , expression = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo")
+                                        }
+                                    )
+                                )
+                    )
                 ]
             , Test.describe "let-in"
                 [ Test.test "let expression with multiple declarations"
@@ -6756,6 +6866,225 @@ pipeline1 = 1 /= 2
                                                                     (Elm.Syntax.Expression.Integer 1)
                                                                 )
                                                                 (Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 18, row = 5 } }
+                                                                    (Elm.Syntax.Expression.Integer 2)
+                                                                )
+                                                            )
+                                                    , name = Elm.Syntax.Node.Node { end = { column = 10, row = 5 }, start = { column = 1, row = 5 } } "pipeline1"
+                                                    }
+                                            , documentation = Nothing
+                                            , signature = Nothing
+                                            }
+                                        )
+                                    ]
+                                , imports = []
+                                , moduleDefinition =
+                                    Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 1, row = 1 } }
+                                        (Elm.Syntax.Module.NormalModule
+                                            { exposingList =
+                                                Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 10, row = 1 } }
+                                                    (Elm.Syntax.Exposing.All { end = { column = 22, row = 1 }, start = { column = 20, row = 1 } })
+                                            , moduleName = Elm.Syntax.Node.Node { end = { column = 9, row = 1 }, start = { column = 8, row = 1 } } [ "A" ]
+                                            }
+                                        )
+                                }
+                            )
+                )
+            , Test.test "!== is equivalent to /="
+                (\() ->
+                    """
+module A exposing (..)
+
+pipeline0 = 1 !== 2
+
+pipeline1 = 1 /= 2
+"""
+                        |> String.trim
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                        |> Expect.equal
+                            (Just
+                                { comments = []
+                                , declarations =
+                                    [ Elm.Syntax.Node.Node { end = { column = 20, row = 3 }, start = { column = 1, row = 3 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { declaration =
+                                                Elm.Syntax.Node.Node { end = { column = 20, row = 3 }, start = { column = 1, row = 3 } }
+                                                    { arguments = []
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { end = { column = 20, row = 3 }, start = { column = 13, row = 3 } }
+                                                            (Elm.Syntax.Expression.OperatorApplication "/="
+                                                                Elm.Syntax.Infix.Non
+                                                                (Elm.Syntax.Node.Node { end = { column = 14, row = 3 }, start = { column = 13, row = 3 } }
+                                                                    (Elm.Syntax.Expression.Integer 1)
+                                                                )
+                                                                (Elm.Syntax.Node.Node { end = { column = 20, row = 3 }, start = { column = 19, row = 3 } }
+                                                                    (Elm.Syntax.Expression.Integer 2)
+                                                                )
+                                                            )
+                                                    , name = Elm.Syntax.Node.Node { end = { column = 10, row = 3 }, start = { column = 1, row = 3 } } "pipeline0"
+                                                    }
+                                            , documentation = Nothing
+                                            , signature = Nothing
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 1, row = 5 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { declaration =
+                                                Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 1, row = 5 } }
+                                                    { arguments = []
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 13, row = 5 } }
+                                                            (Elm.Syntax.Expression.OperatorApplication "/="
+                                                                Elm.Syntax.Infix.Non
+                                                                (Elm.Syntax.Node.Node { end = { column = 14, row = 5 }, start = { column = 13, row = 5 } }
+                                                                    (Elm.Syntax.Expression.Integer 1)
+                                                                )
+                                                                (Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 18, row = 5 } }
+                                                                    (Elm.Syntax.Expression.Integer 2)
+                                                                )
+                                                            )
+                                                    , name = Elm.Syntax.Node.Node { end = { column = 10, row = 5 }, start = { column = 1, row = 5 } } "pipeline1"
+                                                    }
+                                            , documentation = Nothing
+                                            , signature = Nothing
+                                            }
+                                        )
+                                    ]
+                                , imports = []
+                                , moduleDefinition =
+                                    Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 1, row = 1 } }
+                                        (Elm.Syntax.Module.NormalModule
+                                            { exposingList =
+                                                Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 10, row = 1 } }
+                                                    (Elm.Syntax.Exposing.All { end = { column = 22, row = 1 }, start = { column = 20, row = 1 } })
+                                            , moduleName = Elm.Syntax.Node.Node { end = { column = 9, row = 1 }, start = { column = 8, row = 1 } } [ "A" ]
+                                            }
+                                        )
+                                }
+                            )
+                )
+            , Test.test "=== is equivalent to =="
+                (\() ->
+                    """
+module A exposing (..)
+
+pipeline0 = 1 === 2
+
+pipeline1 = 1 == 2
+"""
+                        |> String.trim
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                        |> Expect.equal
+                            (Just
+                                { comments = []
+                                , declarations =
+                                    [ Elm.Syntax.Node.Node { end = { column = 20, row = 3 }, start = { column = 1, row = 3 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { declaration =
+                                                Elm.Syntax.Node.Node { end = { column = 20, row = 3 }, start = { column = 1, row = 3 } }
+                                                    { arguments = []
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { end = { column = 20, row = 3 }, start = { column = 13, row = 3 } }
+                                                            (Elm.Syntax.Expression.OperatorApplication "=="
+                                                                Elm.Syntax.Infix.Non
+                                                                (Elm.Syntax.Node.Node { end = { column = 14, row = 3 }, start = { column = 13, row = 3 } }
+                                                                    (Elm.Syntax.Expression.Integer 1)
+                                                                )
+                                                                (Elm.Syntax.Node.Node { end = { column = 20, row = 3 }, start = { column = 19, row = 3 } }
+                                                                    (Elm.Syntax.Expression.Integer 2)
+                                                                )
+                                                            )
+                                                    , name = Elm.Syntax.Node.Node { end = { column = 10, row = 3 }, start = { column = 1, row = 3 } } "pipeline0"
+                                                    }
+                                            , documentation = Nothing
+                                            , signature = Nothing
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 1, row = 5 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { declaration =
+                                                Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 1, row = 5 } }
+                                                    { arguments = []
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 13, row = 5 } }
+                                                            (Elm.Syntax.Expression.OperatorApplication "=="
+                                                                Elm.Syntax.Infix.Non
+                                                                (Elm.Syntax.Node.Node { end = { column = 14, row = 5 }, start = { column = 13, row = 5 } }
+                                                                    (Elm.Syntax.Expression.Integer 1)
+                                                                )
+                                                                (Elm.Syntax.Node.Node { end = { column = 19, row = 5 }, start = { column = 18, row = 5 } }
+                                                                    (Elm.Syntax.Expression.Integer 2)
+                                                                )
+                                                            )
+                                                    , name = Elm.Syntax.Node.Node { end = { column = 10, row = 5 }, start = { column = 1, row = 5 } } "pipeline1"
+                                                    }
+                                            , documentation = Nothing
+                                            , signature = Nothing
+                                            }
+                                        )
+                                    ]
+                                , imports = []
+                                , moduleDefinition =
+                                    Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 1, row = 1 } }
+                                        (Elm.Syntax.Module.NormalModule
+                                            { exposingList =
+                                                Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 10, row = 1 } }
+                                                    (Elm.Syntax.Exposing.All { end = { column = 22, row = 1 }, start = { column = 20, row = 1 } })
+                                            , moduleName = Elm.Syntax.Node.Node { end = { column = 9, row = 1 }, start = { column = 8, row = 1 } } [ "A" ]
+                                            }
+                                        )
+                                }
+                            )
+                )
+            , Test.test "** is equivalent to ^"
+                (\() ->
+                    """
+module A exposing (..)
+
+pipeline0 = 1 ** 2
+
+pipeline1 = 1 ^ 2
+"""
+                        |> String.trim
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                        |> Expect.equal
+                            (Just
+                                { comments = []
+                                , declarations =
+                                    [ Elm.Syntax.Node.Node { end = { column = 19, row = 3 }, start = { column = 1, row = 3 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { declaration =
+                                                Elm.Syntax.Node.Node { end = { column = 19, row = 3 }, start = { column = 1, row = 3 } }
+                                                    { arguments = []
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { end = { column = 19, row = 3 }, start = { column = 13, row = 3 } }
+                                                            (Elm.Syntax.Expression.OperatorApplication "^"
+                                                                Elm.Syntax.Infix.Right
+                                                                (Elm.Syntax.Node.Node { end = { column = 14, row = 3 }, start = { column = 13, row = 3 } }
+                                                                    (Elm.Syntax.Expression.Integer 1)
+                                                                )
+                                                                (Elm.Syntax.Node.Node { end = { column = 19, row = 3 }, start = { column = 18, row = 3 } }
+                                                                    (Elm.Syntax.Expression.Integer 2)
+                                                                )
+                                                            )
+                                                    , name = Elm.Syntax.Node.Node { end = { column = 10, row = 3 }, start = { column = 1, row = 3 } } "pipeline0"
+                                                    }
+                                            , documentation = Nothing
+                                            , signature = Nothing
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 18, row = 5 }, start = { column = 1, row = 5 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { declaration =
+                                                Elm.Syntax.Node.Node { end = { column = 18, row = 5 }, start = { column = 1, row = 5 } }
+                                                    { arguments = []
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { end = { column = 18, row = 5 }, start = { column = 13, row = 5 } }
+                                                            (Elm.Syntax.Expression.OperatorApplication "^"
+                                                                Elm.Syntax.Infix.Right
+                                                                (Elm.Syntax.Node.Node { end = { column = 14, row = 5 }, start = { column = 13, row = 5 } }
+                                                                    (Elm.Syntax.Expression.Integer 1)
+                                                                )
+                                                                (Elm.Syntax.Node.Node { end = { column = 18, row = 5 }, start = { column = 17, row = 5 } }
                                                                     (Elm.Syntax.Expression.Integer 2)
                                                                 )
                                                             )

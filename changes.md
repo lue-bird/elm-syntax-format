@@ -1,4 +1,13 @@
-### 1.1.1
+#### 1.1.2
+
+  - in module `ElmSyntaxParserLenient`
+      - corrects `port module` to `module` if no ports exist and the other way round
+      - corrects infix operator symbol `===` → `==`
+      - corrects infix operator symbol `!==` → `/=`
+      - corrects infix operator symbol `**` → `^`
+      - corrects lambda `=>` or `.` to `->`
+
+#### 1.1.1
   - in module `ElmSyntaxParserLenient`
       - removes extra commas in explicit exposing (thanks [@jfmengels](https://github.com/jfmengels) for suggesting!)
       - corrects exposing `(...)` → `(..)`

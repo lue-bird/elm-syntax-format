@@ -28,13 +28,23 @@ Some additional lenient parsing:
 
   - `f | g` → `f |> g`
 
-  - `a != b` → `a /= b`
+  - `a != b` or `a !== b` → `a /= b`
+
+  - `a === b` → `a == b`
+
+  - `a ** b` → `a ^ b`
+
+  - `\a => b` or `\a. b` → `\a -> b`
 
   - merges consecutive `,` in record, list or explicit exposing
 
   - removes extra `,` before first record field, list element or expose
 
   - removes remove extra `|` before first variant declaration
+
+  - corrects `port module` to `module` if no ports exist and the other way round
+
+  - corrects exposing `(...)` → `(..)`
 
   - corrects expression record field name-value separators
 
@@ -89,8 +99,6 @@ Some additional lenient parsing:
                 n
 
   - moves import statements anywhere at the top level to the import section
-
-  - corrects exposing `(...)` → `(..)`
 
 @docs Parser, run, module_
 
@@ -161,7 +169,7 @@ run syntaxParser source =
 module_ : Parser Elm.Syntax.File.File
 module_ =
     ParserFast.map4
-        (\moduleHeaderResults moduleComments importsResult declarationsResult ->
+        (\moduleHeaderResult moduleComments importsResult declarationsResult ->
             let
                 importStartLocation : Elm.Syntax.Range.Location
                 importStartLocation =
@@ -179,8 +187,39 @@ module_ =
                                 [] ->
                                     -- invalid syntax
                                     { row = 2, column = 1 }
+
+                moduleHeaderBasedOnExistingPorts :
+                    Elm.Syntax.Module.DefaultModuleData
+                    -> Elm.Syntax.Module.Module
+                moduleHeaderBasedOnExistingPorts existingModuleHeaderInfo =
+                    if
+                        declarationsResult.syntax
+                            |> List.any
+                                (\declarationAndLateImports ->
+                                    declarationAndLateImports.declaration
+                                        |> Elm.Syntax.Node.value
+                                        |> declarationIsPort
+                                )
+                    then
+                        Elm.Syntax.Module.PortModule existingModuleHeaderInfo
+
+                    else
+                        Elm.Syntax.Module.NormalModule existingModuleHeaderInfo
             in
-            { moduleDefinition = moduleHeaderResults.syntax
+            { moduleDefinition =
+                moduleHeaderResult.syntax
+                    |> Elm.Syntax.Node.map
+                        (\syntaxModuleHeader ->
+                            case syntaxModuleHeader of
+                                Elm.Syntax.Module.EffectModule effectModuleHeader ->
+                                    Elm.Syntax.Module.EffectModule effectModuleHeader
+
+                                Elm.Syntax.Module.NormalModule normalModuleHeader ->
+                                    moduleHeaderBasedOnExistingPorts normalModuleHeader
+
+                                Elm.Syntax.Module.PortModule normalModuleHeader ->
+                                    moduleHeaderBasedOnExistingPorts normalModuleHeader
+                        )
             , imports =
                 (declarationsResult.syntax
                     |> List.concatMap .lateImports
@@ -198,7 +237,7 @@ module_ =
                 declarationsResult.syntax
                     |> List.map .declaration
             , comments =
-                moduleHeaderResults.comments
+                moduleHeaderResult.comments
                     |> ropePrependTo moduleComments
                     |> ropePrependTo importsResult.comments
                     |> ropePrependTo declarationsResult.comments
@@ -239,6 +278,28 @@ module_ =
                 )
             )
         )
+
+
+declarationIsPort : Elm.Syntax.Declaration.Declaration -> Bool
+declarationIsPort syntaxDeclaration =
+    case syntaxDeclaration of
+        Elm.Syntax.Declaration.PortDeclaration _ ->
+            True
+
+        Elm.Syntax.Declaration.FunctionDeclaration _ ->
+            False
+
+        Elm.Syntax.Declaration.AliasDeclaration _ ->
+            False
+
+        Elm.Syntax.Declaration.CustomTypeDeclaration _ ->
+            False
+
+        Elm.Syntax.Declaration.InfixDeclaration _ ->
+            False
+
+        Elm.Syntax.Declaration.Destructuring _ _ ->
+            False
 
 
 {-| [`Parser`](#Parser) for an [`Elm.Syntax.ModuleName.ModuleName`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-ModuleName#ModuleName)
@@ -2662,7 +2723,11 @@ lambdaExpressionFollowedByOptimisticLayout =
         patternNotSpaceSeparated
         whitespaceAndCommentsEndsPositivelyIndented
         (untilWithComments
-            (ParserFast.symbol "->" ())
+            (ParserFast.oneOf3
+                (ParserFast.symbol "->" ())
+                (ParserFast.symbol "=>" ())
+                (ParserFast.symbol "." ())
+            )
             (ParserFast.map2
                 (\patternResult commentsAfter ->
                     { comments =
@@ -3599,6 +3664,9 @@ infixOperatorAndThen extensionRightConstraints =
                 "==" ->
                     eqResult
 
+                "===" ->
+                    eqResult
+
                 "*" ->
                     mulResult
 
@@ -3629,6 +3697,9 @@ infixOperatorAndThen extensionRightConstraints =
                 "!=" ->
                     neqResult
 
+                "!==" ->
+                    neqResult
+
                 "//" ->
                     idivResult
 
@@ -3657,6 +3728,9 @@ infixOperatorAndThen extensionRightConstraints =
                     ltResult
 
                 "^" ->
+                    powResult
+
+                "**" ->
                     powResult
 
                 _ ->
