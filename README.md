@@ -41,7 +41,7 @@ If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https
 Please [report](https://github.com/lue-bird/elm-syntax-format/issues/new) others you notice <3
 
 ## performance problems?
-If you notice it's unusable for your use case, please [open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new).
+Please [open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new).
 
 Ideas:
   - pre-filter comments per declaration
