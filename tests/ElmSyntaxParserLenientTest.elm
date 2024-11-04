@@ -918,7 +918,7 @@ b = 2
                 )
             , Test.test "trailing comments at the end of declarations"
                 (\() ->
-                    parseSource """module A exposing (fun1, fun2)
+                    """module A exposing (fun1, fun2)
 
 fun1 n =
   fun2 n
@@ -927,7 +927,7 @@ fun1 n =
 fun2 n =
   fun1 n    -- b
 """
-                        ElmSyntaxParserLenient.module_
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
                         |> Expect.equal
                             (Just
                                 { moduleDefinition = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 31 } } (Elm.Syntax.Module.NormalModule { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 9 } } [ "A" ], exposingList = Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 31 } } (Elm.Syntax.Exposing.Explicit [ Elm.Syntax.Node.Node { start = { row = 1, column = 20 }, end = { row = 1, column = 24 } } (Elm.Syntax.Exposing.FunctionExpose "fun1"), Elm.Syntax.Node.Node { start = { row = 1, column = 26 }, end = { row = 1, column = 30 } } (Elm.Syntax.Exposing.FunctionExpose "fun2") ]) })
@@ -983,6 +983,130 @@ fun2 n =
                                         )
                                     ]
                                 , comments = [ Elm.Syntax.Node.Node { start = { row = 5, column = 13 }, end = { row = 5, column = 17 } } "-- a", Elm.Syntax.Node.Node { start = { row = 8, column = 13 }, end = { row = 8, column = 17 } } "-- b" ]
+                                }
+                            )
+                )
+            , Test.test "import between declarations, no existing import"
+                (\() ->
+                    """module A exposing (fun1, fun2)
+
+fun1 n =
+  fun2 n
+import B
+
+fun2 n =
+  fun1 n
+"""
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                        |> Expect.equal
+                            (Just
+                                { moduleDefinition = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 31 } } (Elm.Syntax.Module.NormalModule { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 9 } } [ "A" ], exposingList = Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 31 } } (Elm.Syntax.Exposing.Explicit [ Elm.Syntax.Node.Node { start = { row = 1, column = 20 }, end = { row = 1, column = 24 } } (Elm.Syntax.Exposing.FunctionExpose "fun1"), Elm.Syntax.Node.Node { start = { row = 1, column = 26 }, end = { row = 1, column = 30 } } (Elm.Syntax.Exposing.FunctionExpose "fun2") ]) })
+                                , imports =
+                                    [ Elm.Syntax.Node.Node { end = { column = 1, row = 3 }, start = { column = 1, row = 3 } }
+                                        { exposingList = Nothing, moduleAlias = Nothing, moduleName = Elm.Syntax.Node.Node { end = { column = 9, row = 5 }, start = { column = 8, row = 5 } } [ "B" ] }
+                                    ]
+                                , declarations =
+                                    [ Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 4, column = 9 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { documentation = Nothing
+                                            , signature = Nothing
+                                            , declaration =
+                                                Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 4, column = 9 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 3, column = 5 } } "fun1"
+                                                    , arguments = [ Elm.Syntax.Node.Node { start = { row = 3, column = 6 }, end = { row = 3, column = 7 } } (Elm.Syntax.Pattern.VarPattern "n") ]
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 9 } }
+                                                            (Elm.Syntax.Expression.Application
+                                                                [ Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "fun2")
+                                                                , Elm.Syntax.Node.Node { start = { row = 4, column = 8 }, end = { row = 4, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [] "n")
+                                                                ]
+                                                            )
+                                                    }
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 7, column = 1 }, end = { row = 8, column = 9 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { documentation = Nothing
+                                            , signature = Nothing
+                                            , declaration =
+                                                Elm.Syntax.Node.Node { start = { row = 7, column = 1 }, end = { row = 8, column = 9 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 7, column = 1 }, end = { row = 7, column = 5 } } "fun2"
+                                                    , arguments = [ Elm.Syntax.Node.Node { start = { row = 7, column = 6 }, end = { row = 7, column = 7 } } (Elm.Syntax.Pattern.VarPattern "n") ]
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { start = { row = 8, column = 3 }, end = { row = 8, column = 9 } }
+                                                            (Elm.Syntax.Expression.Application
+                                                                [ Elm.Syntax.Node.Node { start = { row = 8, column = 3 }, end = { row = 8, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "fun1")
+                                                                , Elm.Syntax.Node.Node { start = { row = 8, column = 8 }, end = { row = 8, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [] "n")
+                                                                ]
+                                                            )
+                                                    }
+                                            }
+                                        )
+                                    ]
+                                , comments = []
+                                }
+                            )
+                )
+            , Test.test "import between declarations, existing import"
+                (\() ->
+                    """module A exposing (fun1, fun2)
+import C
+fun1 n =
+  fun2 n
+import B
+
+fun2 n =
+  fun1 n
+"""
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                        |> Expect.equal
+                            (Just
+                                { moduleDefinition = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 31 } } (Elm.Syntax.Module.NormalModule { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 9 } } [ "A" ], exposingList = Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 31 } } (Elm.Syntax.Exposing.Explicit [ Elm.Syntax.Node.Node { start = { row = 1, column = 20 }, end = { row = 1, column = 24 } } (Elm.Syntax.Exposing.FunctionExpose "fun1"), Elm.Syntax.Node.Node { start = { row = 1, column = 26 }, end = { row = 1, column = 30 } } (Elm.Syntax.Exposing.FunctionExpose "fun2") ]) })
+                                , imports =
+                                    [ Elm.Syntax.Node.Node { end = { column = 1, row = 2 }, start = { column = 1, row = 2 } }
+                                        { exposingList = Nothing, moduleAlias = Nothing, moduleName = Elm.Syntax.Node.Node { end = { column = 9, row = 5 }, start = { column = 8, row = 5 } } [ "B" ] }
+                                    , Elm.Syntax.Node.Node { end = { column = 9, row = 2 }, start = { column = 1, row = 2 } }
+                                        { exposingList = Nothing, moduleAlias = Nothing, moduleName = Elm.Syntax.Node.Node { end = { column = 9, row = 2 }, start = { column = 8, row = 2 } } [ "C" ] }
+                                    ]
+                                , declarations =
+                                    [ Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 4, column = 9 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { documentation = Nothing
+                                            , signature = Nothing
+                                            , declaration =
+                                                Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 4, column = 9 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 3, column = 1 }, end = { row = 3, column = 5 } } "fun1"
+                                                    , arguments = [ Elm.Syntax.Node.Node { start = { row = 3, column = 6 }, end = { row = 3, column = 7 } } (Elm.Syntax.Pattern.VarPattern "n") ]
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 9 } }
+                                                            (Elm.Syntax.Expression.Application
+                                                                [ Elm.Syntax.Node.Node { start = { row = 4, column = 3 }, end = { row = 4, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "fun2")
+                                                                , Elm.Syntax.Node.Node { start = { row = 4, column = 8 }, end = { row = 4, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [] "n")
+                                                                ]
+                                                            )
+                                                    }
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 7, column = 1 }, end = { row = 8, column = 9 } }
+                                        (Elm.Syntax.Declaration.FunctionDeclaration
+                                            { documentation = Nothing
+                                            , signature = Nothing
+                                            , declaration =
+                                                Elm.Syntax.Node.Node { start = { row = 7, column = 1 }, end = { row = 8, column = 9 } }
+                                                    { name = Elm.Syntax.Node.Node { start = { row = 7, column = 1 }, end = { row = 7, column = 5 } } "fun2"
+                                                    , arguments = [ Elm.Syntax.Node.Node { start = { row = 7, column = 6 }, end = { row = 7, column = 7 } } (Elm.Syntax.Pattern.VarPattern "n") ]
+                                                    , expression =
+                                                        Elm.Syntax.Node.Node { start = { row = 8, column = 3 }, end = { row = 8, column = 9 } }
+                                                            (Elm.Syntax.Expression.Application
+                                                                [ Elm.Syntax.Node.Node { start = { row = 8, column = 3 }, end = { row = 8, column = 7 } } (Elm.Syntax.Expression.FunctionOrValue [] "fun1")
+                                                                , Elm.Syntax.Node.Node { start = { row = 8, column = 8 }, end = { row = 8, column = 9 } } (Elm.Syntax.Expression.FunctionOrValue [] "n")
+                                                                ]
+                                                            )
+                                                    }
+                                            }
+                                        )
+                                    ]
+                                , comments = []
                                 }
                             )
                 )

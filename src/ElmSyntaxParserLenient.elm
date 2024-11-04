@@ -162,9 +162,41 @@ module_ : Parser Elm.Syntax.File.File
 module_ =
     ParserFast.map4
         (\moduleHeaderResults moduleComments importsResult declarationsResult ->
+            let
+                importStartLocation : Elm.Syntax.Range.Location
+                importStartLocation =
+                    case importsResult.syntax of
+                        (Elm.Syntax.Node.Node import0Range _) :: _ ->
+                            import0Range.start
+
+                        [] ->
+                            case declarationsResult.syntax of
+                                declarationAndLateImports0 :: _ ->
+                                    declarationAndLateImports0.declaration
+                                        |> Elm.Syntax.Node.range
+                                        |> .start
+
+                                [] ->
+                                    -- invalid syntax
+                                    { row = 2, column = 1 }
+            in
             { moduleDefinition = moduleHeaderResults.syntax
-            , imports = importsResult.syntax
-            , declarations = declarationsResult.syntax
+            , imports =
+                (declarationsResult.syntax
+                    |> List.concatMap .lateImports
+                    |> List.map
+                        (\(Elm.Syntax.Node.Node _ lateImport) ->
+                            Elm.Syntax.Node.Node
+                                { start = importStartLocation
+                                , end = importStartLocation
+                                }
+                                lateImport
+                        )
+                )
+                    ++ importsResult.syntax
+            , declarations =
+                declarationsResult.syntax
+                    |> List.map .declaration
             , comments =
                 moduleHeaderResults.comments
                     |> ropePrependTo moduleComments
@@ -189,14 +221,21 @@ module_ =
         (manyWithComments import_)
         (manyWithComments
             (topIndentedFollowedBy
-                (ParserFast.map2
-                    (\declarationParsed commentsAfter ->
-                        { comments = declarationParsed.comments |> ropePrependTo commentsAfter
-                        , syntax = declarationParsed.syntax
+                (ParserFast.map3
+                    (\declarationParsed commentsAfter lateImportsResult ->
+                        { comments =
+                            declarationParsed.comments
+                                |> ropePrependTo commentsAfter
+                                |> ropePrependTo lateImportsResult.comments
+                        , syntax =
+                            { declaration = declarationParsed.syntax
+                            , lateImports = lateImportsResult.syntax
+                            }
                         }
                     )
                     declaration
                     whitespaceAndComments
+                    (manyWithComments import_)
                 )
             )
         )
