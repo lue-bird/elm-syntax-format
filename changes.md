@@ -1,5 +1,4 @@
 #### 1.1.2
-
   - in module `ElmSyntaxParserLenient`
       - corrects `port module` to `module` if no ports exist and the other way round
       - corrects infix operator symbol `===` → `==`
