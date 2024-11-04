@@ -30,9 +30,9 @@ Some additional lenient parsing:
 
   - `a != b` → `a /= b`
 
-  - merges consecutive `,` in record or list
+  - merges consecutive `,` in record, list or explicit exposing
 
-  - removes extra `,` before first record field or list element
+  - removes extra `,` before first record field, list element or expose
 
   - removes remove extra `|` before first variant declaration
 
@@ -87,6 +87,10 @@ Some additional lenient parsing:
 
             Just n ->
                 n
+
+  - move import statements anywhere at the top level to the import section
+
+  - corrects exposing `(...)` → `(..)`
 
 @docs Parser, run, module_
 
@@ -183,7 +187,19 @@ module_ =
             )
         )
         (manyWithComments import_)
-        declarations
+        (manyWithComments
+            (topIndentedFollowedBy
+                (ParserFast.map2
+                    (\declarationParsed commentsAfter ->
+                        { comments = declarationParsed.comments |> ropePrependTo commentsAfter
+                        , syntax = declarationParsed.syntax
+                        }
+                    )
+                    declaration
+                    whitespaceAndComments
+                )
+            )
+        )
 
 
 {-| [`Parser`](#Parser) for an [`Elm.Syntax.ModuleName.ModuleName`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-ModuleName#ModuleName)
@@ -230,11 +246,28 @@ exposing_ =
                 }
             )
             whitespaceAndComments
-            (ParserFast.oneOf2
-                (ParserFast.map3
-                    (\headElement commentsAfterHeadElement tailElements ->
+            (ParserFast.oneOf3
+                (ParserFast.mapWithRange
+                    (\range commentsAfterDotDot ->
+                        { comments = commentsAfterDotDot
+                        , syntax = Elm.Syntax.Exposing.All range
+                        }
+                    )
+                    (ParserFast.symbolFollowedBy ".." whitespaceAndCommentsEndsPositivelyIndented)
+                )
+                (ParserFast.mapWithRange
+                    (\range commentsAfterDotDot ->
+                        { comments = commentsAfterDotDot
+                        , syntax = Elm.Syntax.Exposing.All range
+                        }
+                    )
+                    (ParserFast.symbolFollowedBy "..." whitespaceAndCommentsEndsPositivelyIndented)
+                )
+                (ParserFast.map4
+                    (\commentsBeforeHeadElement headElement commentsAfterHeadElement tailElements ->
                         { comments =
-                            headElement.comments
+                            commentsBeforeHeadElement
+                                |> ropePrependTo headElement.comments
                                 |> ropePrependTo commentsAfterHeadElement
                                 |> ropePrependTo tailElements.comments
                         , syntax =
@@ -244,21 +277,34 @@ exposing_ =
                                 )
                         }
                     )
+                    (ParserFast.orSucceed
+                        (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                        ropeEmpty
+                    )
                     expose
                     whitespaceAndCommentsEndsPositivelyIndented
                     (manyWithComments
                         (ParserFast.symbolFollowedBy ","
-                            (surroundedByWhitespaceAndCommentsEndsPositivelyIndented expose)
+                            (ParserFast.map4
+                                (\commentsBefore commentsWithExtraComma result commentsAfter ->
+                                    { comments =
+                                        commentsBefore
+                                            |> ropePrependTo commentsWithExtraComma
+                                            |> ropePrependTo result.comments
+                                            |> ropePrependTo commentsAfter
+                                    , syntax = result.syntax
+                                    }
+                                )
+                                whitespaceAndCommentsEndsPositivelyIndented
+                                (ParserFast.orSucceed
+                                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                                    ropeEmpty
+                                )
+                                expose
+                                whitespaceAndCommentsEndsPositivelyIndented
+                            )
                         )
                     )
-                )
-                (ParserFast.mapWithRange
-                    (\range commentsAfterDotDot ->
-                        { comments = commentsAfterDotDot
-                        , syntax = Elm.Syntax.Exposing.All range
-                        }
-                    )
-                    (ParserFast.symbolFollowedBy ".." whitespaceAndCommentsEndsPositivelyIndented)
                 )
             )
         )
@@ -633,7 +679,7 @@ and comments in between
 declarations : Parser { comments : Comments, syntax : List (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration) }
 declarations =
     manyWithComments
-        (moduleLevelIndentedFollowedBy
+        (topIndentedFollowedBy
             (ParserFast.map2
                 (\declarationParsed commentsAfter ->
                     { comments = declarationParsed.comments |> ropePrependTo commentsAfter
@@ -4912,18 +4958,6 @@ whitespaceAndCommentsEndsTopIndentedFollowedBy nextParser =
 whitespaceAndCommentsEndsTopIndented : Parser Comments
 whitespaceAndCommentsEndsTopIndented =
     whitespaceAndComments |> endsTopIndented
-
-
-moduleLevelIndentedFollowedBy : Parser a -> Parser a
-moduleLevelIndentedFollowedBy nextParser =
-    ParserFast.columnAndThen
-        (\column ->
-            if column == 1 then
-                nextParser
-
-            else
-                ParserFast.problem
-        )
 
 
 endsTopIndented : Parser a -> Parser a

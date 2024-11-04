@@ -449,7 +449,7 @@ all =
                         "exposing ( . )"
                             |> expectFailsToParse ElmSyntaxParserLenient.exposing_
                     )
-                , Test.test "should fail to parse empty with just 3 `...`"
+                , Test.test "should allow `...`"
                     (\() ->
                         "exposing ( ... )"
                             |> expectFailsToParse ElmSyntaxParserLenient.exposing_
@@ -505,10 +505,57 @@ all =
                                     ]
                                 )
                     )
+                , Test.test "exposingList with extra commas between exposes"
+                    (\() ->
+                        "(Model,,Msg,,Info   (..)  ,,init,(::) )"
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.exposing_
+                                (Elm.Syntax.Exposing.Explicit
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 7 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Model")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 12 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "Msg")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 25 } }
+                                        (Elm.Syntax.Exposing.TypeExpose
+                                            { name = "Info"
+                                            , open = Just { start = { row = 1, column = 21 }, end = { row = 1, column = 25 } }
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 29 }, end = { row = 1, column = 33 } } (Elm.Syntax.Exposing.FunctionExpose "init")
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 34 }, end = { row = 1, column = 38 } } (Elm.Syntax.Exposing.InfixExpose "::")
+                                    ]
+                                )
+                    )
                 , Test.test "Explicit exposing list with spaces and newlines"
                     (\() ->
                         """(
       A
+    , B(..)
+    , Info (..)
+         , init    ,
+ (::)
+    )"""
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.exposing_
+                                (Elm.Syntax.Exposing.Explicit
+                                    [ Elm.Syntax.Node.Node { start = { row = 2, column = 7 }, end = { row = 2, column = 8 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "A")
+                                    , Elm.Syntax.Node.Node { start = { row = 3, column = 7 }, end = { row = 3, column = 12 } }
+                                        (Elm.Syntax.Exposing.TypeExpose
+                                            { name = "B"
+                                            , open = Just { start = { row = 3, column = 8 }, end = { row = 3, column = 12 } }
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 4, column = 7 }, end = { row = 4, column = 16 } }
+                                        (Elm.Syntax.Exposing.TypeExpose
+                                            { name = "Info"
+                                            , open = Just { start = { row = 4, column = 12 }, end = { row = 4, column = 16 } }
+                                            }
+                                        )
+                                    , Elm.Syntax.Node.Node { start = { row = 5, column = 12 }, end = { row = 5, column = 16 } } (Elm.Syntax.Exposing.FunctionExpose "init")
+                                    , Elm.Syntax.Node.Node { start = { row = 6, column = 2 }, end = { row = 6, column = 6 } } (Elm.Syntax.Exposing.InfixExpose "::")
+                                    ]
+                                )
+                    )
+                , Test.test "Explicit exposing list with extra comma before first expose"
+                    (\() ->
+                        """(
+    , A
     , B(..)
     , Info (..)
          , init    ,
