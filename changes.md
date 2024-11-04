@@ -1,8 +1,8 @@
 ### 1.1.1
   - in module `ElmSyntaxParserLenient`
-      - removes extra commas in explicit exposing
+      - removes extra commas in explicit exposing (thanks [@jfmengels](https://github.com/jfmengels) for suggesting!)
       - corrects exposing `(...)` → `(..)`
-      - moves import statements anywhere at the top level to the import section
+      - moves import statements anywhere at the top level to the import section (thanks [@jfmengels](https://github.com/jfmengels) for suggesting!)
   - in module `ElmSyntaxPrint`
       - faster
 
