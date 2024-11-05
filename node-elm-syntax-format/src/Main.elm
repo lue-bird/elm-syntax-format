@@ -8,6 +8,7 @@ import Ansi.Font
 import Bytes exposing (Bytes)
 import Bytes.Decode
 import Bytes.Encode
+import Dict exposing (Dict)
 import Elm.Project
 import Elm.Syntax.Declaration
 import Elm.Syntax.File
@@ -42,18 +43,14 @@ type alias SingleRunRunningState =
     { elmJsonSourceDirectories : List String
     , sourceDirectoriesToRead : Set String
     , sourceFilesToRead : Set String
-    , formattedModulesToWrite : List { path : String, content : Bytes }
+    , formattedModulesToWrite : Dict String Bytes
     }
 
 
 type alias WatchState =
     { elmJsonSourceDirectories : List String
     , sourceFilesToRead : Set String
-    , formattedModulesToWrite :
-        List
-            { path : String
-            , content : Bytes
-            }
+    , formattedModulesToWrite : Dict String Bytes
     }
 
 
@@ -159,7 +156,7 @@ interface state =
                                                                 , sourceDirectoriesToRead =
                                                                     computedElmJsonSourceDirectories |> Set.fromList
                                                                 , sourceFilesToRead = Set.empty
-                                                                , formattedModulesToWrite = []
+                                                                , formattedModulesToWrite = Dict.empty
                                                                 }
                                                             )
 
@@ -167,7 +164,7 @@ interface state =
                                                         Watching
                                                             { elmJsonSourceDirectories = computedElmJsonSourceDirectories
                                                             , sourceFilesToRead = Set.empty
-                                                            , formattedModulesToWrite = []
+                                                            , formattedModulesToWrite = Dict.empty
                                                             }
                     )
 
@@ -215,23 +212,25 @@ badExitWith errorMessage =
 singleRunRunningInterface : SingleRunRunningState -> Node.Interface State
 singleRunRunningInterface running =
     [ running.formattedModulesToWrite
+        |> Dict.toList
         |> List.map
-            (\moduleToFormat ->
+            (\( moduleToFormatPath, moduleToFormatContent ) ->
                 Node.fileWrite
-                    { path = moduleToFormat.path
-                    , content = moduleToFormat.content
+                    { path = moduleToFormatPath
+                    , content = moduleToFormatContent
                     }
-             {- TODO
-                |> Node.interfaceFutureMap (\() ->
-                  Running
-                    { elmJsonSourceDirectories = running.elmJsonSourceDirectories
-                    , sourceDirectoriesToRead = running.sourceDirectoriesToRead
-                    , sourceFilesToRead = running.sourceFilesToRead
-                    , formattedModulesToWrite =
-                         running.formattedModulesToWrite |> Dict.remove moduleToFormat
-                    }
-                )
-             -}
+                    |> Node.interfaceFutureMap
+                        (\result ->
+                            SingleRun
+                                (SingleRunRunning
+                                    { elmJsonSourceDirectories = running.elmJsonSourceDirectories
+                                    , sourceDirectoriesToRead = running.sourceDirectoriesToRead
+                                    , sourceFilesToRead = running.sourceFilesToRead
+                                    , formattedModulesToWrite =
+                                        running.formattedModulesToWrite |> Dict.remove moduleToFormatPath
+                                    }
+                                )
+                        )
             )
         |> Node.interfaceBatch
     , running.sourceDirectoriesToRead
@@ -291,7 +290,7 @@ singleRunRunningInterface running =
                                         )
 
                                 Ok sourceBytes ->
-                                    case sourceBytes |> bytesToElmSyntax of
+                                    case sourceBytes |> bytesToElmSyntaxModule of
                                         Err message ->
                                             SingleRun
                                                 (SingleRunSourceFileReadFailed
@@ -309,15 +308,9 @@ singleRunRunningInterface running =
                                                         running.sourceFilesToRead
                                                             |> Set.remove sourceFilePath
                                                     , formattedModulesToWrite =
-                                                        { path = sourceFilePath
-                                                        , content =
-                                                            syntax
-                                                                |> ElmSyntaxPrint.module_
-                                                                |> ElmSyntaxPrint.toString
-                                                                |> Bytes.Encode.string
-                                                                |> Bytes.Encode.encode
-                                                        }
-                                                            :: running.formattedModulesToWrite
+                                                        running.formattedModulesToWrite
+                                                            |> Dict.insert sourceFilePath
+                                                                (syntax |> elmSyntaxModuleToBytes)
                                                     }
                                                 )
                         )
@@ -327,8 +320,8 @@ singleRunRunningInterface running =
         |> Node.interfaceBatch
 
 
-bytesToElmSyntax : Bytes -> Result String Elm.Syntax.File.File
-bytesToElmSyntax sourceBytes =
+bytesToElmSyntaxModule : Bytes -> Result String Elm.Syntax.File.File
+bytesToElmSyntaxModule sourceBytes =
     case sourceBytes |> Bytes.Decode.decode (Bytes.Decode.string (sourceBytes |> Bytes.width)) of
         Nothing ->
             Err "source bytes couldn't be decoded into UTF-8"
@@ -340,6 +333,15 @@ bytesToElmSyntax sourceBytes =
 
                 Just syntax ->
                     Ok syntax
+
+
+elmSyntaxModuleToBytes : Elm.Syntax.File.File -> Bytes
+elmSyntaxModuleToBytes elmSyntaxModule =
+    elmSyntaxModule
+        |> ElmSyntaxPrint.module_
+        |> ElmSyntaxPrint.toString
+        |> Bytes.Encode.string
+        |> Bytes.Encode.encode
 
 
 watchInterface : WatchState -> Node.Interface State
@@ -369,22 +371,22 @@ watchInterface watching =
             )
         |> Node.interfaceBatch
     , watching.formattedModulesToWrite
+        |> Dict.toList
         |> List.map
-            (\moduleToFormat ->
+            (\( moduleToFormatPath, moduleToFormatContent ) ->
                 Node.fileWrite
-                    { path = moduleToFormat.path
-                    , content = moduleToFormat.content
+                    { path = moduleToFormatPath
+                    , content = moduleToFormatContent
                     }
-             {- TODO
-                |> Node.interfaceFutureMap (\() ->
-                  Running
-                    { elmJsonSourceDirectories = running.elmJsonSourceDirectories
-                    , sourceFilesToRead = running.sourceFilesToRead
-                    , formattedModulesToWrite =
-                         running.formattedModulesToWrite |> Dict.remove moduleToFormat
-                    }
-                )
-             -}
+                    |> Node.interfaceFutureMap
+                        (\result ->
+                            Watching
+                                { elmJsonSourceDirectories = watching.elmJsonSourceDirectories
+                                , sourceFilesToRead = watching.sourceFilesToRead
+                                , formattedModulesToWrite =
+                                    watching.formattedModulesToWrite |> Dict.remove moduleToFormatPath
+                                }
+                        )
             )
         |> Node.interfaceBatch
     , watching.sourceFilesToRead
@@ -400,7 +402,7 @@ watchInterface watching =
                                     Watching watching
 
                                 Ok sourceBytes ->
-                                    case sourceBytes |> bytesToElmSyntax of
+                                    case sourceBytes |> bytesToElmSyntaxModule of
                                         Err _ ->
                                             -- maybe add a note to display?
                                             Watching watching
@@ -412,15 +414,9 @@ watchInterface watching =
                                                     watching.sourceFilesToRead
                                                         |> Set.remove sourceFilePath
                                                 , formattedModulesToWrite =
-                                                    { path = sourceFilePath
-                                                    , content =
-                                                        syntax
-                                                            |> ElmSyntaxPrint.module_
-                                                            |> ElmSyntaxPrint.toString
-                                                            |> Bytes.Encode.string
-                                                            |> Bytes.Encode.encode
-                                                    }
-                                                        :: watching.formattedModulesToWrite
+                                                    watching.formattedModulesToWrite
+                                                        |> Dict.insert sourceFilePath
+                                                            (syntax |> elmSyntaxModuleToBytes)
                                                 }
                         )
             )
