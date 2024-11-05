@@ -425,7 +425,7 @@ exposingMulti syntaxComments syntaxExposing =
                 [] ->
                     lineSpreadInRange syntaxExposing.fullRange
     in
-    Print.exactly "("
+    printExactlyParensOpening
         |> Print.followedBy
             (case lineSpread of
                 Print.SingleLine ->
@@ -439,7 +439,7 @@ exposingMulti syntaxComments syntaxExposing =
                 |> Print.listMapAndIntersperseAndFlatten
                     (\(Elm.Syntax.Node.Node _ syntaxExpose) -> expose syntaxExpose)
                     (Print.emptyOrLinebreakIndented lineSpread
-                        |> Print.followedBy (Print.exactly ",")
+                        |> Print.followedBy printExactlyComma
                         |> Print.followedBy Print.space
                     )
             )
@@ -453,7 +453,7 @@ exposingMulti syntaxComments syntaxExposing =
                     comments (comment0 :: comment1Up)
                         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
             )
-        |> Print.followedBy (Print.exactly ")")
+        |> Print.followedBy printExactlyParensClosing
 
 
 exposeCompare : Elm.Syntax.Exposing.TopLevelExpose -> Elm.Syntax.Exposing.TopLevelExpose -> Basics.Order
@@ -605,14 +605,14 @@ moduleExposing :
 moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
     case syntaxExposing of
         Elm.Syntax.Exposing.All _ ->
-            Print.exactly "("
-                |> Print.followedBy (Print.exactly "..")
-                |> Print.followedBy (Print.exactly ")")
+            printExactlyParensOpening
+                |> Print.followedBy printExactlyDotDot
+                |> Print.followedBy printExactlyParensClosing
 
         Elm.Syntax.Exposing.Explicit exposingSet ->
             case exposingSet |> exposeListToNormal of
                 [] ->
-                    Print.exactly "()"
+                    printExactlyParensOpeningClosing
 
                 [ Elm.Syntax.Node.Node _ onlySyntaxExpose ] ->
                     let
@@ -629,7 +629,7 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                 [] ->
                                     Print.SingleLine
                     in
-                    Print.exactly "("
+                    printExactlyParensOpening
                         |> Print.followedBy
                             (case lineSpread of
                                 Print.SingleLine ->
@@ -649,7 +649,7 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                     comments (comment0 :: comment1Up)
                                         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
                             )
-                        |> Print.followedBy (Print.exactly ")")
+                        |> Print.followedBy printExactlyParensClosing
 
                 expose0 :: expose1 :: expose2Up ->
                     case context.atDocsLines of
@@ -702,7 +702,7 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                         }
 
                                 atDocsExposeLine0 :: atDocsExposeLine1Up ->
-                                    Print.exactly "("
+                                    printExactlyParensOpening
                                         |> Print.followedBy Print.space
                                         |> Print.followedBy
                                             ((atDocsExposeLine0 :: atDocsExposeLine1Up)
@@ -711,12 +711,12 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                                         atDocsLine
                                                             |> Print.listMapAndIntersperseAndFlatten
                                                                 expose
-                                                                (Print.exactly ","
+                                                                (printExactlyComma
                                                                     |> Print.followedBy Print.space
                                                                 )
                                                     )
                                                     (Print.linebreakIndented
-                                                        |> Print.followedBy (Print.exactly ",")
+                                                        |> Print.followedBy printExactlyComma
                                                         |> Print.followedBy Print.space
                                                     )
                                             )
@@ -727,19 +727,19 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                                     Print.empty
 
                                                 remainingExpose0 :: remainingExpose1Up ->
-                                                    Print.exactly ","
+                                                    printExactlyComma
                                                         |> Print.followedBy Print.space
                                                         |> Print.followedBy
                                                             ((remainingExpose0 :: remainingExpose1Up)
                                                                 |> Print.listMapAndIntersperseAndFlatten
                                                                     expose
-                                                                    (Print.exactly ","
+                                                                    (printExactlyComma
                                                                         |> Print.followedBy Print.space
                                                                     )
                                                             )
                                                         |> Print.followedBy Print.linebreakIndented
                                             )
-                                        |> Print.followedBy (Print.exactly ")")
+                                        |> Print.followedBy printExactlyParensClosing
 
                         [] ->
                             exposingMulti context.comments
@@ -836,11 +836,11 @@ moduleHeader context syntaxModuleHeader =
                 lineSpread =
                     exposingPrint |> Print.lineSpread
             in
-            Print.exactly "module"
+            printExactlyModule
                 |> Print.followedBy Print.space
                 |> Print.followedBy (moduleName (defaultModuleData.moduleName |> Elm.Syntax.Node.value))
                 |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "exposing")
+                |> Print.followedBy printExactlyExposing
                 |> Print.followedBy
                     (Print.withIndentAtNextMultipleOf4
                         (Print.spaceOrLinebreakIndented lineSpread
@@ -859,13 +859,16 @@ moduleHeader context syntaxModuleHeader =
                 lineSpread =
                     exposingPrint |> Print.lineSpread
             in
-            Print.exactly "port"
+            printExactlyPort
                 |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "module")
+                |> Print.followedBy printExactlyModule
                 |> Print.followedBy Print.space
-                |> Print.followedBy (moduleName (defaultModuleData.moduleName |> Elm.Syntax.Node.value))
+                |> Print.followedBy
+                    (moduleName
+                        (defaultModuleData.moduleName |> Elm.Syntax.Node.value)
+                    )
                 |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "exposing")
+                |> Print.followedBy printExactlyExposing
                 |> Print.followedBy
                     (Print.withIndentAtNextMultipleOf4
                         (Print.spaceOrLinebreakIndented lineSpread
@@ -884,15 +887,18 @@ moduleHeader context syntaxModuleHeader =
                 lineSpread =
                     exposingPrint |> Print.lineSpread
             in
-            Print.exactly "effect"
+            printExactEffect
                 |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "module")
+                |> Print.followedBy printExactlyModule
                 |> Print.followedBy Print.space
-                |> Print.followedBy (moduleName (effectModuleData.moduleName |> Elm.Syntax.Node.value))
+                |> Print.followedBy
+                    (moduleName
+                        (effectModuleData.moduleName |> Elm.Syntax.Node.value)
+                    )
                 |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "where")
+                |> Print.followedBy printExactWhere
                 |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "{")
+                |> Print.followedBy printExactlyCurlyOpening
                 |> Print.followedBy Print.space
                 |> Print.followedBy
                     ([ case effectModuleData.command of
@@ -901,9 +907,9 @@ moduleHeader context syntaxModuleHeader =
 
                         Just (Elm.Syntax.Node.Node _ name) ->
                             Just
-                                (Print.exactly "command"
+                                (printExactCommand
                                     |> Print.followedBy Print.space
-                                    |> Print.followedBy (Print.exactly "=")
+                                    |> Print.followedBy printExactlyEquals
                                     |> Print.followedBy Print.space
                                     |> Print.followedBy (Print.exactly name)
                                 )
@@ -913,23 +919,23 @@ moduleHeader context syntaxModuleHeader =
 
                         Just (Elm.Syntax.Node.Node _ name) ->
                             Just
-                                (Print.exactly "subscription"
+                                (printExactSubscription
                                     |> Print.followedBy Print.space
-                                    |> Print.followedBy (Print.exactly "=")
+                                    |> Print.followedBy printExactlyEquals
                                     |> Print.followedBy Print.space
                                     |> Print.followedBy (Print.exactly name)
                                 )
                      ]
                         |> List.filterMap identity
                         |> Print.listIntersperseAndFlatten
-                            (Print.exactly ","
+                            (printExactlyComma
                                 |> Print.followedBy Print.space
                             )
                     )
                 |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "}")
+                |> Print.followedBy printExactlyCurlyClosing
                 |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "exposing")
+                |> Print.followedBy printExactlyExposing
                 |> Print.followedBy
                     (Print.withIndentAtNextMultipleOf4
                         (Print.spaceOrLinebreakIndented lineSpread
@@ -1111,7 +1117,7 @@ import_ syntaxComments (Elm.Syntax.Node.Node incorrectImportRange syntaxImport) 
         (Elm.Syntax.Node.Node moduleNameRange syntaxModuleName) =
             syntaxImport.moduleName
     in
-    Print.exactly "import"
+    printExactImport
         |> Print.followedBy
             (case syntaxImport.moduleAlias of
                 Nothing ->
@@ -1145,7 +1151,7 @@ import_ syntaxComments (Elm.Syntax.Node.Node incorrectImportRange syntaxImport) 
                                         )
                             )
                                 |> Print.followedBy Print.space
-                                |> Print.followedBy (Print.exactly "as")
+                                |> Print.followedBy printExactlyAs
                                 |> Print.followedBy Print.space
                                 |> Print.followedBy (moduleName moduleAlias)
 
@@ -1165,7 +1171,7 @@ import_ syntaxComments (Elm.Syntax.Node.Node incorrectImportRange syntaxImport) 
                                     |> Print.followedBy
                                         (Print.withIndentAtNextMultipleOf4
                                             (Print.linebreakIndented
-                                                |> Print.followedBy (Print.exactly "as")
+                                                |> Print.followedBy printExactlyAs
                                                 |> Print.followedBy
                                                     (Print.withIndentAtNextMultipleOf4
                                                         (Print.linebreakIndented
@@ -1207,7 +1213,7 @@ import_ syntaxComments (Elm.Syntax.Node.Node incorrectImportRange syntaxImport) 
                             in
                             Print.withIndentAtNextMultipleOf4
                                 (Print.spaceOrLinebreakIndented lineSpread
-                                    |> Print.followedBy (Print.exactly "exposing")
+                                    |> Print.followedBy printExactlyExposing
                                     |> Print.followedBy
                                         (Print.withIndentAtNextMultipleOf4
                                             (Print.spaceOrLinebreakIndented lineSpread
@@ -1219,7 +1225,7 @@ import_ syntaxComments (Elm.Syntax.Node.Node incorrectImportRange syntaxImport) 
                         exposingComment0 :: exposingComment1Up ->
                             Print.withIndentAtNextMultipleOf4
                                 (Print.linebreakIndented
-                                    |> Print.followedBy (Print.exactly "exposing")
+                                    |> Print.followedBy printExactlyExposing
                                     |> Print.followedBy
                                         (Print.withIndentAtNextMultipleOf4
                                             (Print.linebreakIndented
@@ -1242,14 +1248,15 @@ importExposing :
 importExposing syntaxComments (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
     case syntaxExposing of
         Elm.Syntax.Exposing.All _ ->
-            Print.exactly "("
-                |> Print.followedBy (Print.exactly "..")
-                |> Print.followedBy (Print.exactly ")")
+            printExactlyParensOpening
+                |> Print.followedBy printExactlyDotDot
+                |> Print.followedBy printExactlyParensClosing
 
         Elm.Syntax.Exposing.Explicit exposingSet ->
             case exposingSet of
                 [] ->
-                    Print.exactly "()"
+                    -- invalid syntax
+                    printExactlyParensOpeningClosing
 
                 expose0 :: expose1Up ->
                     exposingMulti syntaxComments
@@ -1350,7 +1357,7 @@ comment : String -> Print
 comment syntaxComment =
     case syntaxComment of
         "{--}" ->
-            Print.exactly "{--}"
+            printExactlyCurlyOpeningMinusMinusCurlyClosing
 
         nonDirectlyClosingMultiLineComment ->
             if nonDirectlyClosingMultiLineComment |> String.startsWith "--" then
@@ -1390,7 +1397,7 @@ comment syntaxComment =
                                        )
                                     |> List.map String.trimRight
                 in
-                Print.exactly "{-"
+                printExactlyCurlyOpeningMinus
                     |> Print.followedBy
                         -- if original commentContent contains >= 2 lines, keep but
                         (case commentContentNormal of
@@ -1428,7 +1435,7 @@ comment syntaxComment =
                                                 )
                                         )
                         )
-                    |> Print.followedBy (Print.exactly "-}")
+                    |> Print.followedBy printExactlyMinusCurlyClosing
 
 
 unindent : List String -> List String
@@ -1506,9 +1513,9 @@ expose : Elm.Syntax.Exposing.TopLevelExpose -> Print
 expose syntaxExpose =
     case syntaxExpose of
         Elm.Syntax.Exposing.InfixExpose operatorSymbol ->
-            Print.exactly "("
+            printExactlyParensOpening
                 |> Print.followedBy (Print.exactly operatorSymbol)
-                |> Print.followedBy (Print.exactly ")")
+                |> Print.followedBy printExactlyParensClosing
 
         Elm.Syntax.Exposing.FunctionExpose name ->
             Print.exactly name
@@ -1523,7 +1530,7 @@ expose syntaxExpose =
 
                 Just _ ->
                     Print.exactly syntaxExposeType.name
-                        |> Print.followedBy (Print.exactly "(..)")
+                        |> Print.followedBy printExactlyParensOpeningDotDotParensClosing
 
 
 patternParenthesizedIfSpaceSeparated :
@@ -1643,7 +1650,7 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
                    )
     in
     if wasProbablyTripleDoubleQuoteOriginally then
-        Print.exactly "\"\"\""
+        printExactlyDoubleQuoteDoubleQuoteDoubleQuote
             |> Print.followedBy
                 (stringContentEscaped
                     |> String.replace "\\n" "\n"
@@ -1656,13 +1663,13 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
                         Print.exactly
                         Print.linebreak
                 )
-            |> Print.followedBy (Print.exactly "\"\"\"")
+            |> Print.followedBy printExactlyDoubleQuoteDoubleQuoteDoubleQuote
 
     else
-        Print.exactly "\""
+        printExactlyDoubleQuote
             |> Print.followedBy
                 (Print.exactly stringContentEscaped)
-            |> Print.followedBy (Print.exactly "\"")
+            |> Print.followedBy printExactlyDoubleQuote
 
 
 stringAlterAfterFirstBeforeLastChar : (String -> String) -> (String -> String)
@@ -1870,12 +1877,12 @@ characterIsPrint character =
 
 charLiteral : Char -> Print
 charLiteral charContent =
-    Print.exactly "'"
+    printExactlySingleQuote
         |> Print.followedBy
             (Print.exactly
                 (quotedCharToEscaped charContent)
             )
-        |> Print.followedBy (Print.exactly "'")
+        |> Print.followedBy printExactlySingleQuote
 
 
 quotedCharToEscaped : Char -> String
@@ -1915,7 +1922,7 @@ hexLiteral int =
         maybeSignPrint : Print
         maybeSignPrint =
             if int < 0 then
-                Print.exactly "-"
+                printExactlyMinus
 
             else
                 Print.empty
@@ -1939,9 +1946,13 @@ hexLiteral int =
                 16
     in
     maybeSignPrint
-        |> Print.followedBy (Print.exactly "0x")
+        |> Print.followedBy printExactly0x
         |> Print.followedBy
-            (Print.exactly (intToHexString int |> stringResizePadLeftWith0s digitCountToPrint))
+            (Print.exactly
+                (intToHexString int
+                    |> stringResizePadLeftWith0s digitCountToPrint
+                )
+            )
 
 
 stringResizePadLeftWith0s : Int -> (String -> String)
@@ -2032,10 +2043,10 @@ patternNotParenthesized :
 patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPattern) =
     case syntaxPattern of
         Elm.Syntax.Pattern.AllPattern ->
-            Print.exactly "_"
+            printExactlyUnderscore
 
         Elm.Syntax.Pattern.UnitPattern ->
-            Print.exactly "()"
+            printExactlyParensOpeningClosing
 
         Elm.Syntax.Pattern.VarPattern name ->
             Print.exactly name
@@ -2089,7 +2100,7 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
 
                 [] ->
                     -- should be covered by UnitPattern
-                    Print.exactly "()"
+                    printExactlyParensOpeningClosing
 
                 [ inParens ] ->
                     -- should be covered by ParenthesizedPattern
@@ -2162,7 +2173,7 @@ patternList :
 patternList syntaxComments syntaxList =
     case syntaxList.elements of
         [] ->
-            Print.exactly "["
+            printExactlySquareOpening
                 |> Print.followedBy
                     (case commentsInRange syntaxList.fullRange syntaxComments of
                         [] ->
@@ -2181,7 +2192,7 @@ patternList syntaxComments syntaxList =
                                         commentsCollapsed.lineSpread
                                     )
                     )
-                |> Print.followedBy (Print.exactly "]")
+                |> Print.followedBy printExactlySquareClosing
 
         element0 :: element1Up ->
             let
@@ -2243,7 +2254,7 @@ patternList syntaxComments syntaxList =
                                         (\c -> c |> maybeLineSpread .lineSpread)
                             )
             in
-            Print.exactly "["
+            printExactlySquareOpening
                 |> Print.followedBy Print.space
                 |> Print.followedBy
                     (List.map2
@@ -2270,7 +2281,7 @@ patternList syntaxComments syntaxList =
                         (commentsBeforeElements.reverse |> List.reverse)
                         |> Print.listIntersperseAndFlatten
                             (Print.emptyOrLinebreakIndented lineSpread
-                                |> Print.followedBy (Print.exactly ",")
+                                |> Print.followedBy printExactlyComma
                                 |> Print.followedBy Print.space
                             )
                     )
@@ -2286,7 +2297,7 @@ patternList syntaxComments syntaxList =
                                 )
                     )
                 |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-                |> Print.followedBy (Print.exactly "]")
+                |> Print.followedBy printExactlySquareClosing
 
 
 maybeLineSpread : (a -> Print.LineSpread) -> Maybe a -> Print.LineSpread
@@ -2374,7 +2385,7 @@ patternCons syntaxComments syntaxCons =
                     |> Print.followedBy
                         (List.map2
                             (\tailPatternPrint maybeCommentsBefore ->
-                                Print.exactly "::"
+                                printExactlyColonColon
                                     |> Print.followedBy Print.space
                                     |> Print.followedBy
                                         (Print.withIndentIncreasedBy 3
@@ -2506,7 +2517,7 @@ patternAs syntaxComments syntaxAs =
     in
     aliasedPatternPrint
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-        |> Print.followedBy (Print.exactly "as")
+        |> Print.followedBy printExactlyAs
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented lineSpread
@@ -2540,7 +2551,7 @@ patternRecord :
 patternRecord syntaxComments syntaxRecord =
     case syntaxRecord.fields of
         [] ->
-            Print.exactly "{"
+            printExactlyCurlyOpening
                 |> Print.followedBy
                     (case commentsInRange syntaxRecord.fullRange syntaxComments of
                         [] ->
@@ -2559,7 +2570,7 @@ patternRecord syntaxComments syntaxRecord =
                                         commentsCollapsed.lineSpread
                                     )
                     )
-                |> Print.followedBy (Print.exactly "}")
+                |> Print.followedBy printExactlyCurlyClosing
 
         field0 :: field1Up ->
             let
@@ -2593,7 +2604,7 @@ patternRecord syntaxComments syntaxRecord =
                     else
                         Print.MultipleLines
             in
-            Print.exactly "{"
+            printExactlyCurlyOpening
                 |> Print.followedBy Print.space
                 |> Print.followedBy
                     (List.map2
@@ -2614,7 +2625,7 @@ patternRecord syntaxComments syntaxRecord =
                         (commentsBeforeFields.reverse |> List.reverse)
                         |> Print.listIntersperseAndFlatten
                             (Print.emptyOrLinebreakIndented lineSpread
-                                |> Print.followedBy (Print.exactly ",")
+                                |> Print.followedBy printExactlyComma
                                 |> Print.followedBy Print.space
                             )
                     )
@@ -2633,7 +2644,7 @@ patternRecord syntaxComments syntaxRecord =
                                 )
                     )
                 |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-                |> Print.followedBy (Print.exactly "}")
+                |> Print.followedBy printExactlyCurlyClosing
 
 
 typeRecordExtension :
@@ -2775,7 +2786,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                 Print.MultipleLines
                     )
     in
-    Print.exactly "{"
+    printExactlyCurlyOpening
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
@@ -2800,7 +2811,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented lineSpread
-                    |> Print.followedBy (Print.exactly "|")
+                    |> Print.followedBy printExactlyVerticalBar
                     |> Print.followedBy Print.space
                     |> Print.followedBy
                         (List.map3
@@ -2832,7 +2843,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                     |> Print.followedBy Print.space
                                     |> Print.followedBy
                                         (Print.withIndentIncreasedBy 2
-                                            (Print.exactly ":"
+                                            (printExactlyColon
                                                 |> Print.followedBy
                                                     (Print.withIndentAtNextMultipleOf4
                                                         ((case fieldComments.betweenNameAndValue of
@@ -2866,7 +2877,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                             (commentsBeforeFields.reverse |> List.reverse)
                             |> Print.listIntersperseAndFlatten
                                 (Print.emptyOrLinebreakIndented lineSpread
-                                    |> Print.followedBy (Print.exactly ",")
+                                    |> Print.followedBy printExactlyComma
                                     |> Print.followedBy Print.space
                                 )
                         )
@@ -2884,7 +2895,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                 )
             )
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-        |> Print.followedBy (Print.exactly "}")
+        |> Print.followedBy printExactlyCurlyClosing
 
 
 construct :
@@ -3057,7 +3068,7 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
         part1Print =
             printPartNotParenthesized syntaxComments syntaxTuple.part1
     in
-    Print.exactly "("
+    printExactlyParensOpening
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
@@ -3079,7 +3090,7 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                 )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
-        |> Print.followedBy (Print.exactly ",")
+        |> Print.followedBy printExactlyComma
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
@@ -3110,7 +3121,7 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                 )
             )
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-        |> Print.followedBy (Print.exactly ")")
+        |> Print.followedBy printExactlyParensClosing
 
 
 triple :
@@ -3200,7 +3211,7 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
         part2Print =
             printPartNotParenthesized syntaxComments syntaxTriple.part2
     in
-    Print.exactly "("
+    printExactlyParensOpening
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
@@ -3222,7 +3233,7 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                 )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
-        |> Print.followedBy (Print.exactly ",")
+        |> Print.followedBy printExactlyComma
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
@@ -3244,7 +3255,7 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                 )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
-        |> Print.followedBy (Print.exactly ",")
+        |> Print.followedBy printExactlyComma
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
@@ -3275,7 +3286,7 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                 )
             )
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-        |> Print.followedBy (Print.exactly ")")
+        |> Print.followedBy printExactlyParensClosing
 
 
 invalidNTuple :
@@ -3297,7 +3308,7 @@ invalidNTuple printPartNotParenthesized syntaxComments syntaxTuple =
         lineSpread =
             lineSpreadInRange syntaxTuple.fullRange
     in
-    Print.exactly "("
+    printExactlyParensOpening
         |> Print.followedBy Print.space
         |> Print.followedBy
             ((syntaxTuple.part0 :: syntaxTuple.part1 :: syntaxTuple.part2 :: syntaxTuple.part3 :: syntaxTuple.part4Up)
@@ -3307,12 +3318,12 @@ invalidNTuple printPartNotParenthesized syntaxComments syntaxTuple =
                             (printPartNotParenthesized syntaxComments part)
                     )
                     (Print.emptyOrLinebreakIndented lineSpread
-                        |> Print.followedBy (Print.exactly ",")
+                        |> Print.followedBy printExactlyComma
                         |> Print.followedBy Print.space
                     )
             )
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-        |> Print.followedBy (Print.exactly ")")
+        |> Print.followedBy printExactlyParensClosing
 
 
 recordLiteral :
@@ -3334,7 +3345,7 @@ recordLiteral :
 recordLiteral fieldSpecific syntaxComments syntaxRecord =
     case syntaxRecord.fields of
         [] ->
-            Print.exactly "{"
+            printExactlyCurlyOpening
                 |> Print.followedBy
                     (case commentsInRange syntaxRecord.fullRange syntaxComments of
                         [] ->
@@ -3353,7 +3364,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                         commentsCollapsed.lineSpread
                                     )
                     )
-                |> Print.followedBy (Print.exactly "}")
+                |> Print.followedBy printExactlyCurlyClosing
 
         field0 :: field1Up ->
             let
@@ -3463,7 +3474,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                         Print.MultipleLines
                             )
             in
-            Print.exactly "{"
+            printExactlyCurlyOpening
                 |> Print.followedBy Print.space
                 |> Print.followedBy
                     (List.map3
@@ -3529,7 +3540,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                         (commentsBeforeFields.reverse |> List.reverse)
                         |> Print.listIntersperseAndFlatten
                             (Print.emptyOrLinebreakIndented lineSpread
-                                |> Print.followedBy (Print.exactly ",")
+                                |> Print.followedBy printExactlyComma
                                 |> Print.followedBy Print.space
                             )
                     )
@@ -3544,7 +3555,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                 |> Print.followedBy (comments (comment0 :: comment1Up))
                     )
                 |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-                |> Print.followedBy (Print.exactly "}")
+                |> Print.followedBy printExactlyCurlyClosing
 
 
 {-| Print a name with its qualification (`[]` for no qualification)
@@ -3561,12 +3572,12 @@ qualifiedReference syntaxReference =
                     (modulePartTail
                         |> Print.listMapAndFlatten
                             (\modulePart ->
-                                Print.exactly "."
+                                printExactlyDot
                                     |> Print.followedBy
                                         (Print.exactly modulePart)
                             )
                     )
-                |> Print.followedBy (Print.exactly ".")
+                |> Print.followedBy printExactlyDot
                 |> Print.followedBy (Print.exactly syntaxReference.unqualified)
 
 
@@ -3678,7 +3689,7 @@ typeFunctionNotParenthesized syntaxComments function =
                                 afterArrowTypeNode
                     in
                     Print.spaceOrLinebreakIndented fullLineSpread
-                        |> Print.followedBy (Print.exactly "->")
+                        |> Print.followedBy printExactlyArrow
                         |> Print.followedBy
                             (Print.withIndentAtNextMultipleOf4
                                 ((case maybeCommentsBeforeAfterArrowType of
@@ -3712,7 +3723,7 @@ typeFunctionNotParenthesized syntaxComments function =
             )
         |> Print.followedBy
             (Print.spaceOrLinebreakIndented fullLineSpread
-                |> Print.followedBy (Print.exactly "->")
+                |> Print.followedBy printExactlyArrow
                 |> Print.followedBy
                     (Print.withIndentAtNextMultipleOf4
                         ((case commentsBeforeRightestAfterArrowType of
@@ -3943,7 +3954,7 @@ parenthesized printNotParenthesized syntax syntaxComments =
                 |> Print.lineSpreadMergeWithStrict
                     commentsAfterInnerCollapsible.lineSpread
     in
-    Print.exactly "("
+    printExactlyParensOpening
         |> Print.followedBy
             (Print.withIndentIncreasedBy 1
                 ((case commentsBeforeInner of
@@ -3970,7 +3981,7 @@ parenthesized printNotParenthesized syntax syntaxComments =
                 |> Print.followedBy
                     (Print.emptyOrLinebreakIndented lineSpread)
             )
-        |> Print.followedBy (Print.exactly ")")
+        |> Print.followedBy printExactlyParensClosing
 
 
 typeIsSpaceSeparated : Elm.Syntax.TypeAnnotation.TypeAnnotation -> Bool
@@ -4027,7 +4038,7 @@ typeNotParenthesized :
 typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) =
     case syntaxType of
         Elm.Syntax.TypeAnnotation.Unit ->
-            Print.exactly "()"
+            printExactlyParensOpeningClosing
 
         Elm.Syntax.TypeAnnotation.GenericType name ->
             Print.exactly name
@@ -4052,7 +4063,7 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
             case parts of
                 [] ->
                     -- should be handled by Unit
-                    Print.exactly "()"
+                    printExactlyParensOpeningClosing
 
                 [ inParens ] ->
                     let
@@ -4320,7 +4331,7 @@ declarationDestructuring syntaxComments destructuringPattern destructuringExpres
     -- invalid syntax
     patternParenthesizedIfSpaceSeparated syntaxComments destructuringPattern
         |> Print.followedBy Print.space
-        |> Print.followedBy (Print.exactly "=")
+        |> Print.followedBy printExactlyEquals
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.linebreakIndented
@@ -4384,7 +4395,7 @@ declarationSignature syntaxComments signature =
     in
     Print.exactly (signature.name |> Elm.Syntax.Node.value)
         |> Print.followedBy Print.space
-        |> Print.followedBy (Print.exactly ":")
+        |> Print.followedBy printExactlyColon
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 ((case commentsInRange rangeBetweenNameAndType syntaxComments of
@@ -4431,7 +4442,7 @@ declarationPort syntaxComments signature =
                         )
                     )
     )
-        |> Print.followedBy (Print.exactly "port")
+        |> Print.followedBy printExactlyPort
         |> Print.followedBy Print.space
         |> Print.followedBy (declarationSignature syntaxComments.comments signature)
 
@@ -4534,9 +4545,9 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                         )
                     )
     )
-        |> Print.followedBy (Print.exactly "type")
+        |> Print.followedBy printExactlyType
         |> Print.followedBy Print.space
-        |> Print.followedBy (Print.exactly "alias")
+        |> Print.followedBy printExactlyAlias
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented parametersLineSpread
@@ -4553,7 +4564,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                             )
                         )
                     |> Print.followedBy (Print.spaceOrLinebreakIndented parametersLineSpread)
-                    |> Print.followedBy (Print.exactly "=")
+                    |> Print.followedBy printExactlyEquals
                     |> Print.followedBy
                         (Print.linebreakIndented
                             |> Print.followedBy
@@ -4707,7 +4718,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                         )
                     )
     )
-        |> Print.followedBy (Print.exactly "type")
+        |> Print.followedBy printExactlyType
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented parametersLineSpread
@@ -4725,14 +4736,14 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                         )
                     |> Print.followedBy
                         Print.linebreakIndented
-                    |> Print.followedBy (Print.exactly "=")
+                    |> Print.followedBy printExactlyEquals
                     |> Print.followedBy Print.space
                     |> Print.followedBy
                         (variantPrints
                             |> Print.listMapAndIntersperseAndFlatten
                                 (\variantPrint -> Print.withIndentIncreasedBy 2 variantPrint)
                                 (Print.linebreakIndented
-                                    |> Print.followedBy (Print.exactly "|")
+                                    |> Print.followedBy printExactlyVerticalBar
                                     |> Print.followedBy Print.space
                                 )
                         )
@@ -4752,12 +4763,12 @@ declarationInfix syntaxInfixDeclaration =
         |> Print.followedBy
             (Print.exactly (String.fromInt (syntaxInfixDeclaration.precedence |> Elm.Syntax.Node.value)))
         |> Print.followedBy Print.space
-        |> Print.followedBy (Print.exactly "(")
+        |> Print.followedBy printExactlyParensOpening
         |> Print.followedBy
             (Print.exactly (syntaxInfixDeclaration.operator |> Elm.Syntax.Node.value))
-        |> Print.followedBy (Print.exactly ")")
+        |> Print.followedBy printExactlyParensClosing
         |> Print.followedBy Print.space
-        |> Print.followedBy (Print.exactly "=")
+        |> Print.followedBy printExactlyEquals
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.exactly (syntaxInfixDeclaration.function |> Elm.Syntax.Node.value))
@@ -4878,7 +4889,7 @@ declarationExpressionImplementation syntaxComments implementation =
                     |> Print.listFlatten
                  )
                     |> Print.followedBy (Print.spaceOrLinebreakIndented parametersLineSpread)
-                    |> Print.followedBy (Print.exactly "=")
+                    |> Print.followedBy printExactlyEquals
                     |> Print.followedBy
                         (Print.linebreakIndented
                             |> Print.followedBy
@@ -5124,7 +5135,7 @@ expressionNotParenthesized :
 expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxExpression) =
     case syntaxExpression of
         Elm.Syntax.Expression.UnitExpr ->
-            Print.exactly "()"
+            printExactlyParensOpeningClosing
 
         Elm.Syntax.Expression.Application application ->
             case application of
@@ -5165,9 +5176,9 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                 }
 
         Elm.Syntax.Expression.PrefixOperator operatorSymbol ->
-            Print.exactly "("
+            printExactlyParensOpening
                 |> Print.followedBy (Print.exactly operatorSymbol)
-                |> Print.followedBy (Print.exactly ")")
+                |> Print.followedBy printExactlyParensClosing
 
         Elm.Syntax.Expression.Operator operatorSymbol ->
             -- invalid syntax
@@ -5183,7 +5194,7 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
             floatLiteral float
 
         Elm.Syntax.Expression.Negation negated ->
-            Print.exactly "-"
+            printExactlyMinus
                 |> Print.followedBy
                     (expressionParenthesizedIfSpaceSeparated syntaxComments
                         negated
@@ -5199,7 +5210,7 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
             case parts of
                 [] ->
                     -- should be handled by Unit
-                    Print.exactly "()"
+                    printExactlyParensOpeningClosing
 
                 [ inParens ] ->
                     -- should be handled by ParenthesizedExpression
@@ -5301,11 +5312,11 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
 
         Elm.Syntax.Expression.RecordAccess syntaxRecord (Elm.Syntax.Node.Node _ accessedFieldName) ->
             expressionParenthesizedIfSpaceSeparated syntaxComments syntaxRecord
-                |> Print.followedBy (Print.exactly ".")
+                |> Print.followedBy printExactlyDot
                 |> Print.followedBy (Print.exactly accessedFieldName)
 
         Elm.Syntax.Expression.RecordAccessFunction dotFieldName ->
-            Print.exactly "."
+            printExactlyDot
                 |> Print.followedBy
                     (Print.exactly (dotFieldName |> String.replace "." ""))
 
@@ -5649,7 +5660,7 @@ expressionOperation syntaxComments syntaxOperation =
                                 operationExpanded.rightestExpression
                     in
                     Print.spaceOrLinebreakIndented beforeRightestOperatorExpressionChainWithPreviousLineSpread.previousLineSpread
-                        |> Print.followedBy (Print.exactly "<|")
+                        |> Print.followedBy printExactlyLessThanVerticalBar
                         |> Print.followedBy
                             (Print.withIndentAtNextMultipleOf4
                                 (Print.spaceOrLinebreakIndented lineSpread
@@ -5715,7 +5726,7 @@ expressionOperation syntaxComments syntaxOperation =
                         case operatorExpression.operator of
                             "<|" ->
                                 Print.spaceOrLinebreakIndented operatorExpression.previousLineSpread
-                                    |> Print.followedBy (Print.exactly "<|")
+                                    |> Print.followedBy printExactlyLessThanVerticalBar
                                     |> Print.followedBy
                                         (Print.withIndentAtNextMultipleOf4
                                             (Print.spaceOrLinebreakIndented lineSpread
@@ -5920,7 +5931,7 @@ expressionList :
 expressionList syntaxComments syntaxList =
     case syntaxList.elements of
         [] ->
-            Print.exactly "["
+            printExactlySquareOpening
                 |> Print.followedBy
                     (case commentsInRange syntaxList.fullRange syntaxComments of
                         [] ->
@@ -5939,7 +5950,7 @@ expressionList syntaxComments syntaxList =
                                         commentsCollapsed.lineSpread
                                     )
                     )
-                |> Print.followedBy (Print.exactly "]")
+                |> Print.followedBy printExactlySquareClosing
 
         element0 :: element1Up ->
             let
@@ -6001,7 +6012,7 @@ expressionList syntaxComments syntaxList =
                                         (\c -> c |> maybeLineSpread .lineSpread)
                             )
             in
-            Print.exactly "["
+            printExactlySquareOpening
                 |> Print.followedBy Print.space
                 |> Print.followedBy
                     (List.map2
@@ -6028,7 +6039,7 @@ expressionList syntaxComments syntaxList =
                         (commentsBeforeElements.reverse |> List.reverse)
                         |> Print.listIntersperseAndFlatten
                             (Print.emptyOrLinebreakIndented lineSpread
-                                |> Print.followedBy (Print.exactly ",")
+                                |> Print.followedBy printExactlyComma
                                 |> Print.followedBy Print.space
                             )
                     )
@@ -6043,7 +6054,7 @@ expressionList syntaxComments syntaxList =
                                 |> Print.followedBy (comments (comment0 :: comment1Up))
                     )
                 |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-                |> Print.followedBy (Print.exactly "]")
+                |> Print.followedBy printExactlySquareClosing
 
 
 expressionRecordUpdate :
@@ -6126,7 +6137,7 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
             else
                 Print.MultipleLines
     in
-    Print.exactly "{"
+    printExactlyCurlyOpening
         |> Print.followedBy Print.space
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
@@ -6148,7 +6159,7 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented lineSpread
-                    |> Print.followedBy (Print.exactly "|")
+                    |> Print.followedBy printExactlyVerticalBar
                     |> Print.followedBy Print.space
                     |> Print.followedBy
                         (List.map2
@@ -6164,7 +6175,7 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                                     )
                                     |> Print.followedBy (Print.exactly fieldName)
                                     |> Print.followedBy Print.space
-                                    |> Print.followedBy (Print.exactly "=")
+                                    |> Print.followedBy printExactlyEquals
                                     |> Print.followedBy
                                         (Print.withIndentAtNextMultipleOf4
                                             ((case fieldComments.betweenNameAndValue of
@@ -6190,7 +6201,7 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                             (commentsBeforeFields.reverse |> List.reverse)
                             |> Print.listIntersperseAndFlatten
                                 (Print.emptyOrLinebreakIndented lineSpread
-                                    |> Print.followedBy (Print.exactly ",")
+                                    |> Print.followedBy printExactlyComma
                                     |> Print.followedBy Print.space
                                 )
                         )
@@ -6208,7 +6219,7 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                 )
             )
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
-        |> Print.followedBy (Print.exactly "}")
+        |> Print.followedBy printExactlyCurlyClosing
 
 
 expressionLambda :
@@ -6279,7 +6290,7 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                             |> Print.lineSpreadListMapAndCombine Print.lineSpread
                     )
     in
-    Print.exactly "\\"
+    printExactlyBackSlash
         |> Print.followedBy
             (Print.withIndentIncreasedBy 1
                 (Print.emptyOrLinebreakIndented parametersLineSpread
@@ -6309,7 +6320,7 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                         )
                 )
                 |> Print.followedBy (Print.spaceOrLinebreakIndented parametersLineSpread)
-                |> Print.followedBy (Print.exactly "->")
+                |> Print.followedBy printExactlyArrow
                 |> Print.followedBy
                     (Print.withIndentAtNextMultipleOf4
                         ((case commentsBeforeResult of
@@ -6404,7 +6415,7 @@ expressionIfThenElse syntaxComments syntaxIfThenElse =
         onTruePrint =
             expressionNotParenthesized syntaxComments syntaxIfThenElse.onTrue
     in
-    Print.exactly "if"
+    printExactlyIf
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented conditionLineSpread
@@ -6421,7 +6432,7 @@ expressionIfThenElse syntaxComments syntaxIfThenElse =
                 )
             )
         |> Print.followedBy (Print.spaceOrLinebreakIndented conditionLineSpread)
-        |> Print.followedBy (Print.exactly "then")
+        |> Print.followedBy printExactlyThen
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.linebreakIndented
@@ -6439,7 +6450,7 @@ expressionIfThenElse syntaxComments syntaxIfThenElse =
                 )
             )
         |> Print.followedBy Print.linebreakIndented
-        |> Print.followedBy (Print.exactly "else")
+        |> Print.followedBy printExactlyElse
         |> Print.followedBy
             (case ( commentsBeforeOnFalseNotParenthesizedInParens, onFalseNotParenthesized ) of
                 ( [], Elm.Syntax.Node.Node onFalseNotParenthesizedRange (Elm.Syntax.Expression.IfBlock onFalseCondition onFalseOnTrue onFalseOnFalse) ) ->
@@ -6519,7 +6530,7 @@ expressionCaseOf syntaxComments syntaxCaseOf =
                 [] ->
                     lineSpreadInNode syntaxCaseOf.expression
     in
-    Print.exactly "case"
+    printExactlyCase
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented casedExpressionLineSpread
@@ -6540,7 +6551,7 @@ expressionCaseOf syntaxComments syntaxCaseOf =
             )
         |> Print.followedBy
             (Print.spaceOrLinebreakIndented casedExpressionLineSpread)
-        |> Print.followedBy (Print.exactly "of")
+        |> Print.followedBy printExactlyOf
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.linebreakIndented
@@ -6646,7 +6657,7 @@ expressionLetIn syntaxComments syntaxLetIn =
                 }
                 syntaxComments
     in
-    Print.exactly "let"
+    printExactlyLet
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.linebreakIndented
@@ -6660,7 +6671,7 @@ expressionLetIn syntaxComments syntaxLetIn =
                 )
             )
         |> Print.followedBy Print.linebreakIndented
-        |> Print.followedBy (Print.exactly "in")
+        |> Print.followedBy printExactlyIn
         |> Print.followedBy Print.linebreakIndented
         |> Print.followedBy
             (case commentsBeforeResult of
@@ -6729,7 +6740,7 @@ expressionLetDeclaration syntaxComments letDeclaration =
             in
             patternParenthesizedIfSpaceSeparated syntaxComments destructuringPattern
                 |> Print.followedBy Print.space
-                |> Print.followedBy (Print.exactly "=")
+                |> Print.followedBy printExactlyEquals
                 |> Print.followedBy
                     (Print.withIndentAtNextMultipleOf4
                         (Print.linebreakIndented
@@ -6805,7 +6816,7 @@ case_ syntaxComments ( casePattern, caseResult ) =
     patternPrint
         |> Print.followedBy
             (Print.spaceOrLinebreakIndented (patternPrint |> Print.lineSpread))
-        |> Print.followedBy (Print.exactly "->")
+        |> Print.followedBy printExactlyArrow
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.linebreakIndented
@@ -6822,3 +6833,228 @@ case_ syntaxComments ( casePattern, caseResult ) =
                         (expressionNotParenthesized syntaxComments caseResult)
                 )
             )
+
+
+printExactlyParensOpening : Print
+printExactlyParensOpening =
+    Print.exactly "("
+
+
+printExactlyParensClosing : Print
+printExactlyParensClosing =
+    Print.exactly ")"
+
+
+printExactlySquareOpening : Print
+printExactlySquareOpening =
+    Print.exactly "["
+
+
+printExactlySquareClosing : Print
+printExactlySquareClosing =
+    Print.exactly "]"
+
+
+printExactlyCurlyOpening : Print
+printExactlyCurlyOpening =
+    Print.exactly "{"
+
+
+printExactlyCurlyClosing : Print
+printExactlyCurlyClosing =
+    Print.exactly "}"
+
+
+printExactlySingleQuote : Print
+printExactlySingleQuote =
+    Print.exactly "'"
+
+
+printExactlyDoubleQuote : Print
+printExactlyDoubleQuote =
+    Print.exactly "\""
+
+
+printExactlyDoubleQuoteDoubleQuoteDoubleQuote : Print
+printExactlyDoubleQuoteDoubleQuoteDoubleQuote =
+    Print.exactly "\"\"\""
+
+
+printExactlyComma : Print
+printExactlyComma =
+    Print.exactly ","
+
+
+printExactlyArrow : Print
+printExactlyArrow =
+    Print.exactly "->"
+
+
+printExactlyEquals : Print
+printExactlyEquals =
+    Print.exactly "="
+
+
+printExactlyDotDot : Print
+printExactlyDotDot =
+    Print.exactly ".."
+
+
+printExactlyParensOpeningDotDotParensClosing : Print
+printExactlyParensOpeningDotDotParensClosing =
+    Print.exactly "(..)"
+
+
+printExactlyBackSlash : Print
+printExactlyBackSlash =
+    Print.exactly "\\"
+
+
+printExactlyVerticalBar : Print
+printExactlyVerticalBar =
+    Print.exactly "|"
+
+
+printExactlyLessThanVerticalBar : Print
+printExactlyLessThanVerticalBar =
+    Print.exactly "<|"
+
+
+printExactlyColon : Print
+printExactlyColon =
+    Print.exactly ":"
+
+
+printExactlyMinus : Print
+printExactlyMinus =
+    Print.exactly "-"
+
+
+printExactlyCurlyOpeningMinus : Print
+printExactlyCurlyOpeningMinus =
+    Print.exactly "{-"
+
+
+printExactlyMinusCurlyClosing : Print
+printExactlyMinusCurlyClosing =
+    Print.exactly "-}"
+
+
+printExactlyCurlyOpeningMinusMinusCurlyClosing : Print
+printExactlyCurlyOpeningMinusMinusCurlyClosing =
+    Print.exactly "{--}"
+
+
+printExactlyParensOpeningClosing : Print
+printExactlyParensOpeningClosing =
+    Print.exactly "()"
+
+
+printExactlyUnderscore : Print
+printExactlyUnderscore =
+    Print.exactly "_"
+
+
+printExactlyColonColon : Print
+printExactlyColonColon =
+    Print.exactly "::"
+
+
+printExactlyDot : Print
+printExactlyDot =
+    Print.exactly "."
+
+
+printExactly0x : Print
+printExactly0x =
+    Print.exactly "0x"
+
+
+printExactlyType : Print
+printExactlyType =
+    Print.exactly "type"
+
+
+printExactlyAlias : Print
+printExactlyAlias =
+    Print.exactly "alias"
+
+
+printExactlyAs : Print
+printExactlyAs =
+    Print.exactly "as"
+
+
+printExactlyExposing : Print
+printExactlyExposing =
+    Print.exactly "exposing"
+
+
+printExactlyLet : Print
+printExactlyLet =
+    Print.exactly "let"
+
+
+printExactlyIn : Print
+printExactlyIn =
+    Print.exactly "in"
+
+
+printExactlyCase : Print
+printExactlyCase =
+    Print.exactly "case"
+
+
+printExactlyOf : Print
+printExactlyOf =
+    Print.exactly "of"
+
+
+printExactlyIf : Print
+printExactlyIf =
+    Print.exactly "if"
+
+
+printExactlyThen : Print
+printExactlyThen =
+    Print.exactly "then"
+
+
+printExactlyElse : Print
+printExactlyElse =
+    Print.exactly "else"
+
+
+printExactlyPort : Print
+printExactlyPort =
+    Print.exactly "port"
+
+
+printExactlyModule : Print
+printExactlyModule =
+    Print.exactly "module"
+
+
+printExactEffect : Print
+printExactEffect =
+    Print.exactly "effect"
+
+
+printExactWhere : Print
+printExactWhere =
+    Print.exactly "where"
+
+
+printExactCommand : Print
+printExactCommand =
+    Print.exactly "command"
+
+
+printExactSubscription : Print
+printExactSubscription =
+    Print.exactly "subscription"
+
+
+printExactImport : Print
+printExactImport =
+    Print.exactly "import"
