@@ -8,6 +8,6 @@
   "bin": "./src/index.js",
   "scripts": {
     "build": "elm-esm make src/Main.elm --output=src/elmMain.js --optimize",
-    "start": "elm-esm make src/Main.elm --output=src/elmMain.js && node src/index.js"
+    "start": "elm-esm make src/Main.elm --output=src/elmMain.js --optimize && node src/index.js"
   }
 }
