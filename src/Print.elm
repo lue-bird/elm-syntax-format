@@ -3,7 +3,7 @@ module Print exposing
     , exactly, empty, space, linebreak
     , followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
-    , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, mapAndLineSpreadsCombine, lineSpread
+    , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
     )
 
 {-| simple pretty printing
@@ -24,7 +24,7 @@ module Print exposing
 ### indent
 
 @docs withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
-@docs LineSpread, lineSpreadMergeWith, lineSpreadMergeWithStrict, mapAndLineSpreadsCombine, lineSpread
+@docs LineSpread, lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
 
 -}
 
@@ -327,7 +327,7 @@ type LineSpread
 If both are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
 
 To merge 2 already known [`LineSpread`](#LineSpread)s, use [`Print.lineSpreadMergeWithStrict`](#lineSpreadMergeWithStrict)
-To merge a list, use [`Print.mapAndLineSpreadsCombine`](#mapAndLineSpreadsCombine)
+To merge a list, use [`Print.lineSpreadListMapAndCombine`](#lineSpreadListMapAndCombine)
 
 -}
 lineSpreadMergeWith : (() -> LineSpread) -> LineSpread -> LineSpread
@@ -343,7 +343,7 @@ lineSpreadMergeWith bLineSpreadLazy aLineSpread =
 {-| If either spans [`MultipleLines`](#LineSpread), gives [`MultipleLines`](#LineSpread).
 If both are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
 
-To merge more a list, use [`Print.mapAndLineSpreadsCombine`](#mapAndLineSpreadsCombine)
+To merge more a list, use [`Print.lineSpreadListMapAndCombine`](#lineSpreadListMapAndCombine)
 
 -}
 lineSpreadMergeWithStrict : LineSpread -> LineSpread -> LineSpread
@@ -362,8 +362,8 @@ If all are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
 To only combine 2, use [`Print.lineSpreadMergeWith`](#lineSpreadMergeWith)
 
 -}
-mapAndLineSpreadsCombine : (a -> LineSpread) -> (List a -> LineSpread)
-mapAndLineSpreadsCombine elementLineSpread lineSpreads =
+lineSpreadListMapAndCombine : (a -> LineSpread) -> (List a -> LineSpread)
+lineSpreadListMapAndCombine elementLineSpread lineSpreads =
     case lineSpreads of
         [] ->
             SingleLine
@@ -374,7 +374,7 @@ mapAndLineSpreadsCombine elementLineSpread lineSpreads =
                     MultipleLines
 
                 SingleLine ->
-                    mapAndLineSpreadsCombine elementLineSpread tail
+                    lineSpreadListMapAndCombine elementLineSpread tail
 
 
 {-| [`Print.space`](#space) when [`SingleLine`](#LineSpread),
