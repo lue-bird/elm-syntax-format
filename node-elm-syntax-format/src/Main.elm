@@ -230,8 +230,7 @@ singleRunRunningInterface running =
              {- TODO
                 |> Node.interfaceFutureMap (\() ->
                   Running
-                    { mode = running.mode
-                    , elmJsonSourceDirectories = running.elmJsonSourceDirectories
+                    { elmJsonSourceDirectories = running.elmJsonSourceDirectories
                     , sourceDirectoriesToRead = running.sourceDirectoriesToRead
                     , sourceFilesToRead = running.sourceFilesToRead
                     , formattedModulesToWrite =
@@ -298,45 +297,35 @@ singleRunRunningInterface running =
                                         )
 
                                 Ok sourceBytes ->
-                                    case sourceBytes |> Bytes.Decode.decode (Bytes.Decode.string (sourceBytes |> Bytes.width)) of
-                                        Nothing ->
+                                    case sourceBytes |> bytesToElmSyntax of
+                                        Err message ->
                                             SingleRun
                                                 (SingleRunSourceFileReadFailed
                                                     { path = sourceFilePath
-                                                    , message = "source bytes couldn't be decoded into UTF-8"
+                                                    , message = message
                                                     }
                                                 )
 
-                                        Just source ->
-                                            case source |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_ of
-                                                Nothing ->
-                                                    SingleRun
-                                                        (SingleRunSourceFileReadFailed
-                                                            { path = sourceFilePath
-                                                            , message = "source couldn't be parsed. Check for compiler errors and try again."
-                                                            }
-                                                        )
-
-                                                Just syntax ->
-                                                    SingleRun
-                                                        (SingleRunRunning
-                                                            { elmJsonSourceDirectories = running.elmJsonSourceDirectories
-                                                            , sourceDirectoriesToRead = running.sourceDirectoriesToRead
-                                                            , sourceFilesToRead =
-                                                                running.sourceFilesToRead
-                                                                    |> Set.remove sourceFilePath
-                                                            , formattedModulesToWrite =
-                                                                { path = sourceFilePath
-                                                                , content =
-                                                                    syntax
-                                                                        |> ElmSyntaxPrint.module_
-                                                                        |> ElmSyntaxPrint.toString
-                                                                        |> Bytes.Encode.string
-                                                                        |> Bytes.Encode.encode
-                                                                }
-                                                                    :: running.formattedModulesToWrite
-                                                            }
-                                                        )
+                                        Ok syntax ->
+                                            SingleRun
+                                                (SingleRunRunning
+                                                    { elmJsonSourceDirectories = running.elmJsonSourceDirectories
+                                                    , sourceDirectoriesToRead = running.sourceDirectoriesToRead
+                                                    , sourceFilesToRead =
+                                                        running.sourceFilesToRead
+                                                            |> Set.remove sourceFilePath
+                                                    , formattedModulesToWrite =
+                                                        { path = sourceFilePath
+                                                        , content =
+                                                            syntax
+                                                                |> ElmSyntaxPrint.module_
+                                                                |> ElmSyntaxPrint.toString
+                                                                |> Bytes.Encode.string
+                                                                |> Bytes.Encode.encode
+                                                        }
+                                                            :: running.formattedModulesToWrite
+                                                    }
+                                                )
                         )
             )
         |> Node.interfaceBatch
@@ -395,9 +384,7 @@ watchInterface watching =
              {- TODO
                 |> Node.interfaceFutureMap (\() ->
                   Running
-                    { mode = running.mode
-                    , elmJsonSourceDirectories = running.elmJsonSourceDirectories
-                    , sourceDirectoriesToRead = running.sourceDirectoriesToRead
+                    { elmJsonSourceDirectories = running.elmJsonSourceDirectories
                     , sourceFilesToRead = running.sourceFilesToRead
                     , formattedModulesToWrite =
                          running.formattedModulesToWrite |> Dict.remove moduleToFormat
@@ -419,34 +406,28 @@ watchInterface watching =
                                     Watching watching
 
                                 Ok sourceBytes ->
-                                    case sourceBytes |> Bytes.Decode.decode (Bytes.Decode.string (sourceBytes |> Bytes.width)) of
-                                        Nothing ->
+                                    case sourceBytes |> bytesToElmSyntax of
+                                        Err _ ->
                                             -- maybe add a note to display?
                                             Watching watching
 
-                                        Just source ->
-                                            case source |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_ of
-                                                Nothing ->
-                                                    -- maybe add a note to display?
-                                                    Watching watching
-
-                                                Just syntax ->
-                                                    Watching
-                                                        { elmJsonSourceDirectories = watching.elmJsonSourceDirectories
-                                                        , sourceFilesToRead =
-                                                            watching.sourceFilesToRead
-                                                                |> Set.remove sourceFilePath
-                                                        , formattedModulesToWrite =
-                                                            { path = sourceFilePath
-                                                            , content =
-                                                                syntax
-                                                                    |> ElmSyntaxPrint.module_
-                                                                    |> ElmSyntaxPrint.toString
-                                                                    |> Bytes.Encode.string
-                                                                    |> Bytes.Encode.encode
-                                                            }
-                                                                :: watching.formattedModulesToWrite
-                                                        }
+                                        Ok syntax ->
+                                            Watching
+                                                { elmJsonSourceDirectories = watching.elmJsonSourceDirectories
+                                                , sourceFilesToRead =
+                                                    watching.sourceFilesToRead
+                                                        |> Set.remove sourceFilePath
+                                                , formattedModulesToWrite =
+                                                    { path = sourceFilePath
+                                                    , content =
+                                                        syntax
+                                                            |> ElmSyntaxPrint.module_
+                                                            |> ElmSyntaxPrint.toString
+                                                            |> Bytes.Encode.string
+                                                            |> Bytes.Encode.encode
+                                                    }
+                                                        :: watching.formattedModulesToWrite
+                                                }
                         )
             )
         |> Node.interfaceBatch
