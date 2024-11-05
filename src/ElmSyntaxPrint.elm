@@ -678,7 +678,6 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                             )
                                             { remainingExposes =
                                                 (expose0 :: expose1 :: expose2Up)
-                                                    |> exposeListToNormal
                                                     |> List.map Elm.Syntax.Node.value
                                             , atDocsExposeLines = []
                                             }
