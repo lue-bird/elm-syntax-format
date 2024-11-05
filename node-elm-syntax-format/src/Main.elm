@@ -84,12 +84,6 @@ interface state =
                             [ "help" ] ->
                                 ShowingHelp
 
-                            [ "--help" ] ->
-                                ShowingHelp
-
-                            [ "-h" ] ->
-                                ShowingHelp
-
                             _ ->
                                 ShowingHelp
                     )
