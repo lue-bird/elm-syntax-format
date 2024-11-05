@@ -29,14 +29,13 @@ type State
     = WaitingForLaunchArguments
     | ShowingHelp
     | WaitingForElmJson { mode : Mode }
-    | SingleRun SingleRunRunningState
+    | SingleRun SingleRunState
     | Watching WatchState
     | ElmJsonReadFailed String
 
 
-type alias SingleRunRunningState =
-    { elmJsonSourceDirectories : List String
-    , sourceDirectoriesToRead : FastSet.Set String
+type alias SingleRunState =
+    { sourceDirectoriesToRead : FastSet.Set String
     , sourceFilesToRead : FastSet.Set String
     , formattedModulesToWrite : FastDict.Dict String Bytes
     , sourceDirectoryReadErrors : List { path : String, message : String }
@@ -149,8 +148,7 @@ interface state =
                                                 case waitingForElmJson.mode of
                                                     ModeSingleRun ->
                                                         SingleRun
-                                                            { elmJsonSourceDirectories = computedElmJsonSourceDirectories
-                                                            , sourceDirectoriesToRead =
+                                                            { sourceDirectoriesToRead =
                                                                 computedElmJsonSourceDirectories |> FastSet.fromList
                                                             , sourceFilesToRead = FastSet.empty
                                                             , formattedModulesToWrite = FastDict.empty
@@ -180,7 +178,7 @@ interface state =
                 |> Node.interfaceBatch
 
 
-singleRunInterface : SingleRunRunningState -> Node.Interface State
+singleRunInterface : SingleRunState -> Node.Interface State
 singleRunInterface state =
     [ state.formattedModulesToWrite
         |> fastDictToListAndMap
@@ -218,8 +216,7 @@ singleRunInterface state =
 
                                 Ok subPaths ->
                                     SingleRun
-                                        { elmJsonSourceDirectories = state.elmJsonSourceDirectories
-                                        , sourceDirectoriesToRead =
+                                        { sourceDirectoriesToRead =
                                             state.sourceDirectoriesToRead
                                                 |> FastSet.remove sourceDirectoryPath
                                         , sourceFilesToRead =
@@ -269,8 +266,7 @@ singleRunInterface state =
 
                                 Ok syntax ->
                                     SingleRun
-                                        { elmJsonSourceDirectories = state.elmJsonSourceDirectories
-                                        , sourceDirectoriesToRead = state.sourceDirectoriesToRead
+                                        { sourceDirectoriesToRead = state.sourceDirectoriesToRead
                                         , sourceFileReadErrors = state.sourceFileReadErrors
                                         , sourceDirectoryReadErrors = state.sourceDirectoryReadErrors
                                         , sourceFilesToRead =
