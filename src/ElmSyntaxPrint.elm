@@ -521,32 +521,42 @@ exposeListToNormal :
     -> List (Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose)
 exposeListToNormal syntaxExposeList =
     syntaxExposeList
-        |> List.map Elm.Syntax.Node.value
-        |> List.sortWith exposeCompare
+        |> List.sortWith
+            (\(Elm.Syntax.Node.Node _ a) (Elm.Syntax.Node.Node _ b) ->
+                exposeCompare a b
+            )
         |> exposesCombine
-        |> List.map Elm.Syntax.Node.empty
 
 
-exposesCombine : List Elm.Syntax.Exposing.TopLevelExpose -> List Elm.Syntax.Exposing.TopLevelExpose
+exposesCombine :
+    List (Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose)
+    -> List (Elm.Syntax.Node.Node Elm.Syntax.Exposing.TopLevelExpose)
 exposesCombine syntaxExposes =
     case syntaxExposes of
         [] ->
             []
 
-        [ onlyExpose ] ->
-            [ onlyExpose ]
+        [ _ ] as onlyExposeList ->
+            onlyExposeList
 
-        expose0 :: expose1 :: expose2Up ->
+        expose0Node :: (((Elm.Syntax.Node.Node _ expose1) :: expose2Up) as expose1Up) ->
+            let
+                (Elm.Syntax.Node.Node expose0Range expose0) =
+                    expose0Node
+            in
             case exposeCompare expose0 expose1 of
                 EQ ->
                     exposesCombine
-                        (exposeMerge expose0 expose1 :: expose2Up)
+                        (Elm.Syntax.Node.Node expose0Range
+                            (exposeMerge expose0 expose1)
+                            :: expose2Up
+                        )
 
                 LT ->
-                    expose0 :: exposesCombine (expose1 :: expose2Up)
+                    expose0Node :: exposesCombine expose1Up
 
                 GT ->
-                    expose0 :: exposesCombine (expose1 :: expose2Up)
+                    expose0Node :: exposesCombine expose1Up
 
 
 exposeMerge : Elm.Syntax.Exposing.TopLevelExpose -> Elm.Syntax.Exposing.TopLevelExpose -> Elm.Syntax.Exposing.TopLevelExpose
