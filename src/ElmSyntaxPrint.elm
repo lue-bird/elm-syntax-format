@@ -435,16 +435,13 @@ exposingMulti syntaxComments syntaxExposing =
                     Print.space
             )
         |> Print.followedBy
-            (Print.sequence
-                ((syntaxExposing.expose0 :: syntaxExposing.expose1Up)
-                    |> List.map
-                        (\(Elm.Syntax.Node.Node _ syntaxExpose) -> expose syntaxExpose)
-                    |> List.intersperse
-                        (Print.emptyOrLinebreakIndented lineSpread
-                            |> Print.followedBy (Print.exactly ",")
-                            |> Print.followedBy Print.space
-                        )
-                )
+            ((syntaxExposing.expose0 :: syntaxExposing.expose1Up)
+                |> Print.listMapAndIntersperseAndFlatten
+                    (\(Elm.Syntax.Node.Node _ syntaxExpose) -> expose syntaxExpose)
+                    (Print.emptyOrLinebreakIndented lineSpread
+                        |> Print.followedBy (Print.exactly ",")
+                        |> Print.followedBy Print.space
+                    )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
         |> Print.followedBy
@@ -699,25 +696,20 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                     Print.exactly "("
                                         |> Print.followedBy Print.space
                                         |> Print.followedBy
-                                            (Print.sequence
-                                                ((atDocsExposeLine0 :: atDocsExposeLine1Up)
-                                                    |> List.map
-                                                        (\atDocsLine ->
-                                                            Print.sequence
-                                                                (atDocsLine
-                                                                    |> List.map expose
-                                                                    |> List.intersperse
-                                                                        (Print.exactly ","
-                                                                            |> Print.followedBy Print.space
-                                                                        )
+                                            ((atDocsExposeLine0 :: atDocsExposeLine1Up)
+                                                |> Print.listMapAndIntersperseAndFlatten
+                                                    (\atDocsLine ->
+                                                        atDocsLine
+                                                            |> Print.listMapAndIntersperseAndFlatten
+                                                                expose
+                                                                (Print.exactly ","
+                                                                    |> Print.followedBy Print.space
                                                                 )
-                                                        )
-                                                    |> List.intersperse
-                                                        (Print.linebreakIndented
-                                                            |> Print.followedBy (Print.exactly ",")
-                                                            |> Print.followedBy Print.space
-                                                        )
-                                                )
+                                                    )
+                                                    (Print.linebreakIndented
+                                                        |> Print.followedBy (Print.exactly ",")
+                                                        |> Print.followedBy Print.space
+                                                    )
                                             )
                                         |> Print.followedBy Print.linebreakIndented
                                         |> Print.followedBy
@@ -729,14 +721,12 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                                     Print.exactly ","
                                                         |> Print.followedBy Print.space
                                                         |> Print.followedBy
-                                                            (Print.sequence
-                                                                ((remainingExpose0 :: remainingExpose1Up)
-                                                                    |> List.map expose
-                                                                    |> List.intersperse
-                                                                        (Print.exactly ","
-                                                                            |> Print.followedBy Print.space
-                                                                        )
-                                                                )
+                                                            ((remainingExpose0 :: remainingExpose1Up)
+                                                                |> Print.listMapAndIntersperseAndFlatten
+                                                                    expose
+                                                                    (Print.exactly ","
+                                                                        |> Print.followedBy Print.space
+                                                                    )
                                                             )
                                                         |> Print.followedBy Print.linebreakIndented
                                             )
@@ -896,38 +886,36 @@ moduleHeader context syntaxModuleHeader =
                 |> Print.followedBy (Print.exactly "{")
                 |> Print.followedBy Print.space
                 |> Print.followedBy
-                    (Print.sequence
-                        ([ case effectModuleData.command of
-                            Nothing ->
-                                Nothing
+                    ([ case effectModuleData.command of
+                        Nothing ->
+                            Nothing
 
-                            Just (Elm.Syntax.Node.Node _ name) ->
-                                Just
-                                    (Print.exactly "command"
-                                        |> Print.followedBy Print.space
-                                        |> Print.followedBy (Print.exactly "=")
-                                        |> Print.followedBy Print.space
-                                        |> Print.followedBy (Print.exactly name)
-                                    )
-                         , case effectModuleData.subscription of
-                            Nothing ->
-                                Nothing
-
-                            Just (Elm.Syntax.Node.Node _ name) ->
-                                Just
-                                    (Print.exactly "subscription"
-                                        |> Print.followedBy Print.space
-                                        |> Print.followedBy (Print.exactly "=")
-                                        |> Print.followedBy Print.space
-                                        |> Print.followedBy (Print.exactly name)
-                                    )
-                         ]
-                            |> List.filterMap identity
-                            |> List.intersperse
-                                (Print.exactly ","
+                        Just (Elm.Syntax.Node.Node _ name) ->
+                            Just
+                                (Print.exactly "command"
                                     |> Print.followedBy Print.space
+                                    |> Print.followedBy (Print.exactly "=")
+                                    |> Print.followedBy Print.space
+                                    |> Print.followedBy (Print.exactly name)
                                 )
-                        )
+                     , case effectModuleData.subscription of
+                        Nothing ->
+                            Nothing
+
+                        Just (Elm.Syntax.Node.Node _ name) ->
+                            Just
+                                (Print.exactly "subscription"
+                                    |> Print.followedBy Print.space
+                                    |> Print.followedBy (Print.exactly "=")
+                                    |> Print.followedBy Print.space
+                                    |> Print.followedBy (Print.exactly name)
+                                )
+                     ]
+                        |> List.filterMap identity
+                        |> Print.listIntersperseAndFlatten
+                            (Print.exactly ","
+                                |> Print.followedBy Print.space
+                            )
                     )
                 |> Print.followedBy Print.space
                 |> Print.followedBy (Print.exactly "}")
@@ -980,16 +968,15 @@ imports syntaxComments syntaxImports =
                         |> Print.followedBy Print.linebreak
             )
                 |> Print.followedBy
-                    (Print.sequence
-                        ((Elm.Syntax.Node.Node import0Range import0 :: imports1Up)
-                            |> List.sortWith
-                                (\(Elm.Syntax.Node.Node _ a) (Elm.Syntax.Node.Node _ b) ->
-                                    compare (a.moduleName |> Elm.Syntax.Node.value) (b.moduleName |> Elm.Syntax.Node.value)
-                                )
-                            |> importsCombine
-                            |> List.map (\syntaxImport -> import_ syntaxComments syntaxImport)
-                            |> List.intersperse Print.linebreak
-                        )
+                    ((Elm.Syntax.Node.Node import0Range import0 :: imports1Up)
+                        |> List.sortWith
+                            (\(Elm.Syntax.Node.Node _ a) (Elm.Syntax.Node.Node _ b) ->
+                                compare (a.moduleName |> Elm.Syntax.Node.value) (b.moduleName |> Elm.Syntax.Node.value)
+                            )
+                        |> importsCombine
+                        |> Print.listMapAndIntersperseAndFlatten
+                            (\syntaxImport -> import_ syntaxComments syntaxImport)
+                            Print.linebreak
                     )
 
 
@@ -1265,14 +1252,10 @@ For top-level comments: [`moduleLevelComments`](#moduleLevelComments)
 -}
 comments : List String -> Print
 comments syntaxComments =
-    Print.sequence
-        (syntaxComments
-            |> List.map
-                (\syntaxComment ->
-                    comment syntaxComment
-                )
-            |> List.intersperse Print.linebreakIndented
-        )
+    syntaxComments
+        |> Print.listMapAndIntersperseAndFlatten
+            comment
+            Print.linebreakIndented
 
 
 collapsibleComments : List String -> { print : Print, lineSpread : Print.LineSpread }
@@ -1295,10 +1278,8 @@ collapsibleComments commentsToPrint =
                         )
             then
                 { print =
-                    Print.sequence
-                        (commentPrints
-                            |> List.intersperse Print.space
-                        )
+                    commentPrints
+                        |> Print.listIntersperseAndFlatten Print.space
                 , lineSpread = Print.SingleLine
                 }
 
@@ -1332,22 +1313,20 @@ moduleLevelComments syntaxComments =
             comment comment0
                 |> Print.followedBy Print.linebreak
                 |> Print.followedBy
-                    (Print.sequence
-                        (comment1Up
-                            |> List.map
-                                (\syntaxComment ->
-                                    case syntaxComment of
-                                        "{--}" ->
-                                            Print.linebreak
-                                                |> Print.followedBy Print.linebreak
-                                                |> Print.followedBy (comment "{--}")
-                                                |> Print.followedBy Print.linebreak
+                    (comment1Up
+                        |> Print.listMapAndFlatten
+                            (\syntaxComment ->
+                                case syntaxComment of
+                                    "{--}" ->
+                                        Print.linebreak
+                                            |> Print.followedBy Print.linebreak
+                                            |> Print.followedBy (comment "{--}")
+                                            |> Print.followedBy Print.linebreak
 
-                                        notEmptyMultiLineComment ->
-                                            comment notEmptyMultiLineComment
-                                                |> Print.followedBy Print.linebreak
-                                )
-                        )
+                                    notEmptyMultiLineComment ->
+                                        comment notEmptyMultiLineComment
+                                            |> Print.followedBy Print.linebreak
+                            )
                     )
 
 
@@ -1421,20 +1400,18 @@ comment syntaxComment =
                                             |> Print.followedBy Print.linebreakIndented
                                 )
                                     |> Print.followedBy
-                                        (Print.sequence
-                                            ((secondLine :: thirdLineUp)
-                                                |> List.map
-                                                    (\line ->
-                                                        case line of
-                                                            "" ->
-                                                                Print.linebreakIndented
+                                        ((secondLine :: thirdLineUp)
+                                            |> Print.listMapAndFlatten
+                                                (\line ->
+                                                    case line of
+                                                        "" ->
+                                                            Print.linebreakIndented
 
-                                                            lineNotEmpty ->
-                                                                Print.exactly "   "
-                                                                    |> Print.followedBy (Print.exactly lineNotEmpty)
-                                                                    |> Print.followedBy Print.linebreakIndented
-                                                    )
-                                            )
+                                                        lineNotEmpty ->
+                                                            Print.exactly "   "
+                                                                |> Print.followedBy (Print.exactly lineNotEmpty)
+                                                                |> Print.followedBy Print.linebreakIndented
+                                                )
                                         )
                         )
                     |> Print.followedBy (Print.exactly "-}")
@@ -1654,17 +1631,16 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
     if wasProbablyTripleDoubleQuoteOriginally then
         Print.exactly "\"\"\""
             |> Print.followedBy
-                (Print.sequence
-                    (stringContentEscaped
-                        |> String.replace "\\n" "\n"
-                        |> String.replace "\\r" "\u{000D}"
-                        |> String.replace "\\u{000D}" "\u{000D}"
-                        |> stringAlterAfterFirstBeforeLastChar
-                            (String.replace "\\\"" "\"")
-                        |> String.lines
-                        |> List.map Print.exactly
-                        |> List.intersperse Print.linebreak
-                    )
+                (stringContentEscaped
+                    |> String.replace "\\n" "\n"
+                    |> String.replace "\\r" "\u{000D}"
+                    |> String.replace "\\u{000D}" "\u{000D}"
+                    |> stringAlterAfterFirstBeforeLastChar
+                        (String.replace "\\\"" "\"")
+                    |> String.lines
+                    |> Print.listMapAndIntersperseAndFlatten
+                        Print.exactly
+                        Print.linebreak
                 )
             |> Print.followedBy (Print.exactly "\"\"\"")
 
@@ -2256,35 +2232,33 @@ patternList syntaxComments syntaxList =
             Print.exactly "["
                 |> Print.followedBy Print.space
                 |> Print.followedBy
-                    (Print.sequence
-                        (List.map2
-                            (\elementPrint maybeCommentsBeforeElement ->
-                                Print.withIndentIncreasedBy 2
-                                    ((case maybeCommentsBeforeElement of
-                                        Nothing ->
-                                            Print.empty
+                    (List.map2
+                        (\elementPrint maybeCommentsBeforeElement ->
+                            Print.withIndentIncreasedBy 2
+                                ((case maybeCommentsBeforeElement of
+                                    Nothing ->
+                                        Print.empty
 
-                                        Just commentsBeforeElement ->
-                                            commentsBeforeElement.print
-                                                |> Print.followedBy
-                                                    (Print.spaceOrLinebreakIndented
-                                                        (commentsBeforeElement.lineSpread
-                                                            |> Print.lineSpreadMergeWith
-                                                                (\() -> elementPrint |> Print.lineSpread)
-                                                        )
+                                    Just commentsBeforeElement ->
+                                        commentsBeforeElement.print
+                                            |> Print.followedBy
+                                                (Print.spaceOrLinebreakIndented
+                                                    (commentsBeforeElement.lineSpread
+                                                        |> Print.lineSpreadMergeWith
+                                                            (\() -> elementPrint |> Print.lineSpread)
                                                     )
-                                     )
-                                        |> Print.followedBy elementPrint
-                                    )
-                            )
-                            elementPrints
-                            (commentsBeforeElements.reverse |> List.reverse)
-                            |> List.intersperse
-                                (Print.emptyOrLinebreakIndented lineSpread
-                                    |> Print.followedBy (Print.exactly ",")
-                                    |> Print.followedBy Print.space
+                                                )
+                                 )
+                                    |> Print.followedBy elementPrint
                                 )
                         )
+                        elementPrints
+                        (commentsBeforeElements.reverse |> List.reverse)
+                        |> Print.listIntersperseAndFlatten
+                            (Print.emptyOrLinebreakIndented lineSpread
+                                |> Print.followedBy (Print.exactly ",")
+                                |> Print.followedBy Print.space
+                            )
                     )
                 |> Print.followedBy
                     (case commentsAfterElements of
@@ -2384,36 +2358,34 @@ patternCons syntaxComments syntaxCons =
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented lineSpread
                     |> Print.followedBy
-                        (Print.sequence
-                            (List.map2
-                                (\tailPatternPrint maybeCommentsBefore ->
-                                    Print.exactly "::"
-                                        |> Print.followedBy Print.space
-                                        |> Print.followedBy
-                                            (Print.withIndentIncreasedBy 3
-                                                ((case maybeCommentsBefore of
-                                                    Nothing ->
-                                                        Print.empty
+                        (List.map2
+                            (\tailPatternPrint maybeCommentsBefore ->
+                                Print.exactly "::"
+                                    |> Print.followedBy Print.space
+                                    |> Print.followedBy
+                                        (Print.withIndentIncreasedBy 3
+                                            ((case maybeCommentsBefore of
+                                                Nothing ->
+                                                    Print.empty
 
-                                                    Just commentsBefore ->
-                                                        commentsBefore.print
-                                                            |> Print.followedBy
-                                                                (Print.spaceOrLinebreakIndented
-                                                                    (commentsBefore.lineSpread
-                                                                        |> Print.lineSpreadMergeWith
-                                                                            (\() -> tailPatternPrint |> Print.lineSpread)
-                                                                    )
+                                                Just commentsBefore ->
+                                                    commentsBefore.print
+                                                        |> Print.followedBy
+                                                            (Print.spaceOrLinebreakIndented
+                                                                (commentsBefore.lineSpread
+                                                                    |> Print.lineSpreadMergeWith
+                                                                        (\() -> tailPatternPrint |> Print.lineSpread)
                                                                 )
-                                                 )
-                                                    |> Print.followedBy tailPatternPrint
-                                                )
+                                                            )
+                                             )
+                                                |> Print.followedBy tailPatternPrint
                                             )
-                                )
-                                tailPatternPrints
-                                tailPatternsCommentsBefore
-                                |> List.intersperse
-                                    (Print.spaceOrLinebreakIndented lineSpread)
+                                        )
                             )
+                            tailPatternPrints
+                            tailPatternsCommentsBefore
+                            |> Print.listIntersperseAndFlatten
+                                (Print.spaceOrLinebreakIndented lineSpread)
                         )
                 )
             )
@@ -2610,29 +2582,27 @@ patternRecord syntaxComments syntaxRecord =
             Print.exactly "{"
                 |> Print.followedBy Print.space
                 |> Print.followedBy
-                    (Print.sequence
-                        (List.map2
-                            (\(Elm.Syntax.Node.Node _ fieldName) commentsBeforeField ->
-                                Print.withIndentIncreasedBy 2
-                                    ((case commentsBeforeField of
-                                        [] ->
-                                            Print.empty
+                    (List.map2
+                        (\(Elm.Syntax.Node.Node _ fieldName) commentsBeforeField ->
+                            Print.withIndentIncreasedBy 2
+                                ((case commentsBeforeField of
+                                    [] ->
+                                        Print.empty
 
-                                        comment0 :: comment1Up ->
-                                            comments (comment0 :: comment1Up)
-                                                |> Print.followedBy Print.linebreakIndented
-                                     )
-                                        |> Print.followedBy (Print.exactly fieldName)
-                                    )
-                            )
-                            (field0 :: field1Up)
-                            (commentsBeforeFields.reverse |> List.reverse)
-                            |> List.intersperse
-                                (Print.emptyOrLinebreakIndented lineSpread
-                                    |> Print.followedBy (Print.exactly ",")
-                                    |> Print.followedBy Print.space
+                                    comment0 :: comment1Up ->
+                                        comments (comment0 :: comment1Up)
+                                            |> Print.followedBy Print.linebreakIndented
+                                 )
+                                    |> Print.followedBy (Print.exactly fieldName)
                                 )
                         )
+                        (field0 :: field1Up)
+                        (commentsBeforeFields.reverse |> List.reverse)
+                        |> Print.listIntersperseAndFlatten
+                            (Print.emptyOrLinebreakIndented lineSpread
+                                |> Print.followedBy (Print.exactly ",")
+                                |> Print.followedBy Print.space
+                            )
                     )
                 |> Print.followedBy
                     (case commentsAfterFields of
@@ -2819,74 +2789,72 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                     |> Print.followedBy (Print.exactly "|")
                     |> Print.followedBy Print.space
                     |> Print.followedBy
-                        (Print.sequence
-                            (List.map3
-                                (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) valuePrint fieldComments ->
-                                    let
-                                        lineSpreadBetweenNameAndValueNotConsideringComments : () -> Print.LineSpread
-                                        lineSpreadBetweenNameAndValueNotConsideringComments () =
-                                            lineSpreadInRange
-                                                { start = fieldNameRange.start
-                                                , end = fieldValue |> Elm.Syntax.Node.range |> .end
-                                                }
-                                                |> Print.lineSpreadMergeWith
-                                                    (\() -> valuePrint |> Print.lineSpread)
-                                    in
-                                    Print.withIndentIncreasedBy 2
-                                        (case fieldComments.beforeName of
-                                            Nothing ->
-                                                Print.empty
+                        (List.map3
+                            (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) valuePrint fieldComments ->
+                                let
+                                    lineSpreadBetweenNameAndValueNotConsideringComments : () -> Print.LineSpread
+                                    lineSpreadBetweenNameAndValueNotConsideringComments () =
+                                        lineSpreadInRange
+                                            { start = fieldNameRange.start
+                                            , end = fieldValue |> Elm.Syntax.Node.range |> .end
+                                            }
+                                            |> Print.lineSpreadMergeWith
+                                                (\() -> valuePrint |> Print.lineSpread)
+                                in
+                                Print.withIndentIncreasedBy 2
+                                    (case fieldComments.beforeName of
+                                        Nothing ->
+                                            Print.empty
 
-                                            Just commentsBeforeName ->
-                                                commentsBeforeName.print
-                                                    |> Print.followedBy
-                                                        (Print.spaceOrLinebreakIndented
-                                                            commentsBeforeName.lineSpread
-                                                        )
-                                        )
-                                        |> Print.followedBy
-                                            (Print.exactly fieldName)
-                                        |> Print.followedBy Print.space
-                                        |> Print.followedBy
-                                            (Print.withIndentIncreasedBy 2
-                                                (Print.exactly ":"
-                                                    |> Print.followedBy
-                                                        (Print.withIndentAtNextMultipleOf4
-                                                            ((case fieldComments.betweenNameAndValue of
-                                                                Nothing ->
-                                                                    Print.spaceOrLinebreakIndented
-                                                                        (lineSpreadBetweenNameAndValueNotConsideringComments ())
-
-                                                                Just commentsBetweenNameAndValue ->
-                                                                    Print.spaceOrLinebreakIndented
-                                                                        (commentsBetweenNameAndValue.lineSpread
-                                                                            |> Print.lineSpreadMergeWith
-                                                                                lineSpreadBetweenNameAndValueNotConsideringComments
-                                                                        )
-                                                                        |> Print.followedBy commentsBetweenNameAndValue.print
-                                                                        |> Print.followedBy
-                                                                            (Print.spaceOrLinebreakIndented
-                                                                                (commentsBetweenNameAndValue.lineSpread
-                                                                                    |> Print.lineSpreadMergeWith
-                                                                                        (\() -> valuePrint |> Print.lineSpread)
-                                                                                )
-                                                                            )
-                                                             )
-                                                                |> Print.followedBy valuePrint
-                                                            )
-                                                        )
-                                                )
-                                            )
-                                )
-                                syntaxRecordExtension.fields
-                                fieldValuePrints
-                                (commentsBeforeFields.reverse |> List.reverse)
-                                |> List.intersperse
-                                    (Print.emptyOrLinebreakIndented lineSpread
-                                        |> Print.followedBy (Print.exactly ",")
-                                        |> Print.followedBy Print.space
+                                        Just commentsBeforeName ->
+                                            commentsBeforeName.print
+                                                |> Print.followedBy
+                                                    (Print.spaceOrLinebreakIndented
+                                                        commentsBeforeName.lineSpread
+                                                    )
                                     )
+                                    |> Print.followedBy
+                                        (Print.exactly fieldName)
+                                    |> Print.followedBy Print.space
+                                    |> Print.followedBy
+                                        (Print.withIndentIncreasedBy 2
+                                            (Print.exactly ":"
+                                                |> Print.followedBy
+                                                    (Print.withIndentAtNextMultipleOf4
+                                                        ((case fieldComments.betweenNameAndValue of
+                                                            Nothing ->
+                                                                Print.spaceOrLinebreakIndented
+                                                                    (lineSpreadBetweenNameAndValueNotConsideringComments ())
+
+                                                            Just commentsBetweenNameAndValue ->
+                                                                Print.spaceOrLinebreakIndented
+                                                                    (commentsBetweenNameAndValue.lineSpread
+                                                                        |> Print.lineSpreadMergeWith
+                                                                            lineSpreadBetweenNameAndValueNotConsideringComments
+                                                                    )
+                                                                    |> Print.followedBy commentsBetweenNameAndValue.print
+                                                                    |> Print.followedBy
+                                                                        (Print.spaceOrLinebreakIndented
+                                                                            (commentsBetweenNameAndValue.lineSpread
+                                                                                |> Print.lineSpreadMergeWith
+                                                                                    (\() -> valuePrint |> Print.lineSpread)
+                                                                            )
+                                                                        )
+                                                         )
+                                                            |> Print.followedBy valuePrint
+                                                        )
+                                                    )
+                                            )
+                                        )
                             )
+                            syntaxRecordExtension.fields
+                            fieldValuePrints
+                            (commentsBeforeFields.reverse |> List.reverse)
+                            |> Print.listIntersperseAndFlatten
+                                (Print.emptyOrLinebreakIndented lineSpread
+                                    |> Print.followedBy (Print.exactly ",")
+                                    |> Print.followedBy Print.space
+                                )
                         )
                     -- yes, elm-format indents trailing comments
                     |> Print.followedBy
@@ -2980,30 +2948,29 @@ construct specific syntaxComments syntaxConstruct =
     syntaxConstruct.start
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
-                (Print.sequence
-                    (List.map2
-                        (\argumentPrint maybeCommentsBeforeArgument ->
-                            Print.spaceOrLinebreakIndented lineSpread
-                                |> Print.followedBy
-                                    (case maybeCommentsBeforeArgument of
-                                        Nothing ->
-                                            Print.empty
+                (List.map2
+                    (\argumentPrint maybeCommentsBeforeArgument ->
+                        Print.spaceOrLinebreakIndented lineSpread
+                            |> Print.followedBy
+                                (case maybeCommentsBeforeArgument of
+                                    Nothing ->
+                                        Print.empty
 
-                                        Just commentsBeforeArgument ->
-                                            commentsBeforeArgument.print
-                                                |> Print.followedBy
-                                                    (Print.spaceOrLinebreakIndented
-                                                        (commentsBeforeArgument.lineSpread
-                                                            |> Print.lineSpreadMergeWith
-                                                                (\() -> argumentPrint |> Print.lineSpread)
-                                                        )
+                                    Just commentsBeforeArgument ->
+                                        commentsBeforeArgument.print
+                                            |> Print.followedBy
+                                                (Print.spaceOrLinebreakIndented
+                                                    (commentsBeforeArgument.lineSpread
+                                                        |> Print.lineSpreadMergeWith
+                                                            (\() -> argumentPrint |> Print.lineSpread)
                                                     )
-                                    )
-                                |> Print.followedBy argumentPrint
-                        )
-                        argumentPrints
-                        commentsBeforeArguments
+                                                )
+                                )
+                            |> Print.followedBy argumentPrint
                     )
+                    argumentPrints
+                    commentsBeforeArguments
+                    |> Print.listFlatten
                 )
             )
 
@@ -3319,19 +3286,16 @@ invalidNTuple printPartNotParenthesized syntaxComments syntaxTuple =
     Print.exactly "("
         |> Print.followedBy Print.space
         |> Print.followedBy
-            (Print.sequence
-                ((syntaxTuple.part0 :: syntaxTuple.part1 :: syntaxTuple.part2 :: syntaxTuple.part3 :: syntaxTuple.part4Up)
-                    |> List.map
-                        (\part ->
-                            Print.withIndentIncreasedBy 2
-                                (printPartNotParenthesized syntaxComments part)
-                        )
-                    |> List.intersperse
-                        (Print.emptyOrLinebreakIndented lineSpread
-                            |> Print.followedBy (Print.exactly ",")
-                            |> Print.followedBy Print.space
-                        )
-                )
+            ((syntaxTuple.part0 :: syntaxTuple.part1 :: syntaxTuple.part2 :: syntaxTuple.part3 :: syntaxTuple.part4Up)
+                |> Print.listMapAndIntersperseAndFlatten
+                    (\part ->
+                        Print.withIndentIncreasedBy 2
+                            (printPartNotParenthesized syntaxComments part)
+                    )
+                    (Print.emptyOrLinebreakIndented lineSpread
+                        |> Print.followedBy (Print.exactly ",")
+                        |> Print.followedBy Print.space
+                    )
             )
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
         |> Print.followedBy (Print.exactly ")")
@@ -3488,74 +3452,72 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
             Print.exactly "{"
                 |> Print.followedBy Print.space
                 |> Print.followedBy
-                    (Print.sequence
-                        (List.map3
-                            (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) valuePrint fieldComments ->
-                                let
-                                    lineSpreadBetweenNameAndValueNotConsideringComments : () -> Print.LineSpread
-                                    lineSpreadBetweenNameAndValueNotConsideringComments () =
-                                        lineSpreadInRange
-                                            { start = fieldNameRange.start
-                                            , end = fieldValue |> Elm.Syntax.Node.range |> .end
-                                            }
-                                            |> Print.lineSpreadMergeWith
-                                                (\() -> valuePrint |> Print.lineSpread)
-                                in
-                                Print.withIndentIncreasedBy 2
-                                    (case fieldComments.beforeName of
-                                        Nothing ->
-                                            Print.empty
+                    (List.map3
+                        (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) valuePrint fieldComments ->
+                            let
+                                lineSpreadBetweenNameAndValueNotConsideringComments : () -> Print.LineSpread
+                                lineSpreadBetweenNameAndValueNotConsideringComments () =
+                                    lineSpreadInRange
+                                        { start = fieldNameRange.start
+                                        , end = fieldValue |> Elm.Syntax.Node.range |> .end
+                                        }
+                                        |> Print.lineSpreadMergeWith
+                                            (\() -> valuePrint |> Print.lineSpread)
+                            in
+                            Print.withIndentIncreasedBy 2
+                                (case fieldComments.beforeName of
+                                    Nothing ->
+                                        Print.empty
 
-                                        Just commentsBeforeName ->
-                                            commentsBeforeName.print
-                                                |> Print.followedBy
-                                                    (Print.spaceOrLinebreakIndented
-                                                        commentsBeforeName.lineSpread
-                                                    )
-                                    )
-                                    |> Print.followedBy
-                                        (Print.exactly fieldName)
-                                    |> Print.followedBy Print.space
-                                    |> Print.followedBy
-                                        (Print.withIndentIncreasedBy 2
-                                            (Print.exactly fieldSpecific.nameValueSeparator
-                                                |> Print.followedBy
-                                                    (Print.withIndentAtNextMultipleOf4
-                                                        ((case fieldComments.betweenNameAndValue of
-                                                            Nothing ->
-                                                                Print.spaceOrLinebreakIndented
-                                                                    (lineSpreadBetweenNameAndValueNotConsideringComments ())
-
-                                                            Just commentsBetweenNameAndValue ->
-                                                                Print.spaceOrLinebreakIndented
-                                                                    (commentsBetweenNameAndValue.lineSpread
-                                                                        |> Print.lineSpreadMergeWith
-                                                                            lineSpreadBetweenNameAndValueNotConsideringComments
-                                                                    )
-                                                                    |> Print.followedBy commentsBetweenNameAndValue.print
-                                                                    |> Print.followedBy
-                                                                        (Print.spaceOrLinebreakIndented
-                                                                            (commentsBetweenNameAndValue.lineSpread
-                                                                                |> Print.lineSpreadMergeWith
-                                                                                    (\() -> valuePrint |> Print.lineSpread)
-                                                                            )
-                                                                        )
-                                                         )
-                                                            |> Print.followedBy valuePrint
-                                                        )
-                                                    )
-                                            )
-                                        )
-                            )
-                            (field0 :: field1Up)
-                            fieldValuePrints
-                            (commentsBeforeFields.reverse |> List.reverse)
-                            |> List.intersperse
-                                (Print.emptyOrLinebreakIndented lineSpread
-                                    |> Print.followedBy (Print.exactly ",")
-                                    |> Print.followedBy Print.space
+                                    Just commentsBeforeName ->
+                                        commentsBeforeName.print
+                                            |> Print.followedBy
+                                                (Print.spaceOrLinebreakIndented
+                                                    commentsBeforeName.lineSpread
+                                                )
                                 )
+                                |> Print.followedBy
+                                    (Print.exactly fieldName)
+                                |> Print.followedBy Print.space
+                                |> Print.followedBy
+                                    (Print.withIndentIncreasedBy 2
+                                        (Print.exactly fieldSpecific.nameValueSeparator
+                                            |> Print.followedBy
+                                                (Print.withIndentAtNextMultipleOf4
+                                                    ((case fieldComments.betweenNameAndValue of
+                                                        Nothing ->
+                                                            Print.spaceOrLinebreakIndented
+                                                                (lineSpreadBetweenNameAndValueNotConsideringComments ())
+
+                                                        Just commentsBetweenNameAndValue ->
+                                                            Print.spaceOrLinebreakIndented
+                                                                (commentsBetweenNameAndValue.lineSpread
+                                                                    |> Print.lineSpreadMergeWith
+                                                                        lineSpreadBetweenNameAndValueNotConsideringComments
+                                                                )
+                                                                |> Print.followedBy commentsBetweenNameAndValue.print
+                                                                |> Print.followedBy
+                                                                    (Print.spaceOrLinebreakIndented
+                                                                        (commentsBetweenNameAndValue.lineSpread
+                                                                            |> Print.lineSpreadMergeWith
+                                                                                (\() -> valuePrint |> Print.lineSpread)
+                                                                        )
+                                                                    )
+                                                     )
+                                                        |> Print.followedBy valuePrint
+                                                    )
+                                                )
+                                        )
+                                    )
                         )
+                        (field0 :: field1Up)
+                        fieldValuePrints
+                        (commentsBeforeFields.reverse |> List.reverse)
+                        |> Print.listIntersperseAndFlatten
+                            (Print.emptyOrLinebreakIndented lineSpread
+                                |> Print.followedBy (Print.exactly ",")
+                                |> Print.followedBy Print.space
+                            )
                     )
                 |> Print.followedBy
                     (case commentsAfterFields of
@@ -3582,15 +3544,13 @@ qualifiedReference syntaxReference =
         modulePartHead :: modulePartTail ->
             Print.exactly modulePartHead
                 |> Print.followedBy
-                    (Print.sequence
-                        (modulePartTail
-                            |> List.map
-                                (\modulePart ->
-                                    Print.exactly "."
-                                        |> Print.followedBy
-                                            (Print.exactly modulePart)
-                                )
-                        )
+                    (modulePartTail
+                        |> Print.listMapAndFlatten
+                            (\modulePart ->
+                                Print.exactly "."
+                                    |> Print.followedBy
+                                        (Print.exactly modulePart)
+                            )
                     )
                 |> Print.followedBy (Print.exactly ".")
                 |> Print.followedBy (Print.exactly syntaxReference.unqualified)
@@ -3695,47 +3655,46 @@ typeFunctionNotParenthesized syntaxComments function =
     in
     typeParenthesizedIfFunction syntaxComments function.inType
         |> Print.followedBy
-            (Print.sequence
-                (List.map2
-                    (\afterArrowTypeNode maybeCommentsBeforeAfterArrowType ->
-                        let
-                            afterArrowTypePrint : Print
-                            afterArrowTypePrint =
-                                typeParenthesizedIfFunction syntaxComments
-                                    afterArrowTypeNode
-                        in
-                        Print.spaceOrLinebreakIndented fullLineSpread
-                            |> Print.followedBy (Print.exactly "->")
-                            |> Print.followedBy
-                                (Print.withIndentAtNextMultipleOf4
-                                    ((case maybeCommentsBeforeAfterArrowType of
-                                        Nothing ->
-                                            Print.spaceOrLinebreakIndented (lineSpreadInNode afterArrowTypeNode)
+            (List.map2
+                (\afterArrowTypeNode maybeCommentsBeforeAfterArrowType ->
+                    let
+                        afterArrowTypePrint : Print
+                        afterArrowTypePrint =
+                            typeParenthesizedIfFunction syntaxComments
+                                afterArrowTypeNode
+                    in
+                    Print.spaceOrLinebreakIndented fullLineSpread
+                        |> Print.followedBy (Print.exactly "->")
+                        |> Print.followedBy
+                            (Print.withIndentAtNextMultipleOf4
+                                ((case maybeCommentsBeforeAfterArrowType of
+                                    Nothing ->
+                                        Print.spaceOrLinebreakIndented (lineSpreadInNode afterArrowTypeNode)
 
-                                        Just commentsBeforeAfterArrowType ->
-                                            let
-                                                lineSpread : Print.LineSpread
-                                                lineSpread =
-                                                    commentsBeforeAfterArrowType.lineSpread
-                                                        |> Print.lineSpreadMergeWith
-                                                            (\() -> afterArrowTypePrint |> Print.lineSpread)
-                                            in
-                                            Print.spaceOrLinebreakIndented lineSpread
-                                                |> Print.followedBy commentsBeforeAfterArrowType.print
-                                                |> Print.followedBy
-                                                    (Print.spaceOrLinebreakIndented
-                                                        lineSpread
-                                                    )
-                                     )
-                                        |> Print.followedBy afterArrowTypePrint
-                                    )
+                                    Just commentsBeforeAfterArrowType ->
+                                        let
+                                            lineSpread : Print.LineSpread
+                                            lineSpread =
+                                                commentsBeforeAfterArrowType.lineSpread
+                                                    |> Print.lineSpreadMergeWith
+                                                        (\() -> afterArrowTypePrint |> Print.lineSpread)
+                                        in
+                                        Print.spaceOrLinebreakIndented lineSpread
+                                            |> Print.followedBy commentsBeforeAfterArrowType.print
+                                            |> Print.followedBy
+                                                (Print.spaceOrLinebreakIndented
+                                                    lineSpread
+                                                )
+                                 )
+                                    |> Print.followedBy afterArrowTypePrint
                                 )
-                    )
-                    afterArrowTypes.beforeRightest
-                    (afterArrowTypesBeforeRightestCommentsBefore.reverse
-                        |> List.reverse
-                    )
+                            )
                 )
+                afterArrowTypes.beforeRightest
+                (afterArrowTypesBeforeRightestCommentsBefore.reverse
+                    |> List.reverse
+                )
+                |> Print.listFlatten
             )
         |> Print.followedBy
             (Print.spaceOrLinebreakIndented fullLineSpread
@@ -4571,14 +4530,12 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                         (Print.exactly (syntaxTypeAliasDeclaration.name |> Elm.Syntax.Node.value))
                     |> Print.followedBy
                         (Print.withIndentAtNextMultipleOf4
-                            (Print.sequence
-                                (parameterPrints
-                                    |> List.map
-                                        (\parameterPrint ->
-                                            Print.spaceOrLinebreakIndented parametersLineSpread
-                                                |> Print.followedBy parameterPrint
-                                        )
-                                )
+                            (parameterPrints
+                                |> Print.listMapAndFlatten
+                                    (\parameterPrint ->
+                                        Print.spaceOrLinebreakIndented parametersLineSpread
+                                            |> Print.followedBy parameterPrint
+                                    )
                             )
                         )
                     |> Print.followedBy (Print.spaceOrLinebreakIndented parametersLineSpread)
@@ -4744,15 +4701,12 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                         (Print.exactly (syntaxChoiceTypeDeclaration.name |> Elm.Syntax.Node.value))
                     |> Print.followedBy
                         (Print.withIndentAtNextMultipleOf4
-                            (Print.sequence
-                                (parameterPrints.reverse
-                                    |> List.reverse
-                                    |> List.map
-                                        (\parameterPrint ->
-                                            Print.spaceOrLinebreakIndented parametersLineSpread
-                                                |> Print.followedBy parameterPrint
-                                        )
-                                )
+                            (parameterPrints.reverse
+                                |> Print.listReverseAndMapAndFlatten
+                                    (\parameterPrint ->
+                                        Print.spaceOrLinebreakIndented parametersLineSpread
+                                            |> Print.followedBy parameterPrint
+                                    )
                             )
                         )
                     |> Print.followedBy
@@ -4760,15 +4714,13 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                     |> Print.followedBy (Print.exactly "=")
                     |> Print.followedBy Print.space
                     |> Print.followedBy
-                        (Print.sequence
-                            (variantPrints
-                                |> List.map (\variantPrint -> Print.withIndentIncreasedBy 2 variantPrint)
-                                |> List.intersperse
-                                    (Print.linebreakIndented
-                                        |> Print.followedBy (Print.exactly "|")
-                                        |> Print.followedBy Print.space
-                                    )
-                            )
+                        (variantPrints
+                            |> Print.listMapAndIntersperseAndFlatten
+                                (\variantPrint -> Print.withIndentIncreasedBy 2 variantPrint)
+                                (Print.linebreakIndented
+                                    |> Print.followedBy (Print.exactly "|")
+                                    |> Print.followedBy Print.space
+                                )
                         )
                 )
             )
@@ -4887,30 +4839,30 @@ declarationExpressionImplementation syntaxComments implementation =
     Print.exactly (implementation.name |> Elm.Syntax.Node.value)
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
-                (Print.sequence
-                    (List.map2
-                        (\parameterPrint maybeCommentsBefore ->
-                            Print.spaceOrLinebreakIndented parametersLineSpread
-                                |> Print.followedBy
-                                    (case maybeCommentsBefore of
-                                        Nothing ->
-                                            Print.empty
+                ((List.map2
+                    (\parameterPrint maybeCommentsBefore ->
+                        Print.spaceOrLinebreakIndented parametersLineSpread
+                            |> Print.followedBy
+                                (case maybeCommentsBefore of
+                                    Nothing ->
+                                        Print.empty
 
-                                        Just commentsBefore ->
-                                            commentsBefore.print
-                                                |> Print.followedBy
-                                                    (Print.spaceOrLinebreakIndented
-                                                        (commentsBefore.lineSpread
-                                                            |> Print.lineSpreadMergeWith
-                                                                (\() -> parameterPrint |> Print.lineSpread)
-                                                        )
+                                    Just commentsBefore ->
+                                        commentsBefore.print
+                                            |> Print.followedBy
+                                                (Print.spaceOrLinebreakIndented
+                                                    (commentsBefore.lineSpread
+                                                        |> Print.lineSpreadMergeWith
+                                                            (\() -> parameterPrint |> Print.lineSpread)
                                                     )
-                                    )
-                                |> Print.followedBy parameterPrint
-                        )
-                        parameterPrints
-                        (parameterCommentsBefore.reverse |> List.reverse)
+                                                )
+                                )
+                            |> Print.followedBy parameterPrint
                     )
+                    parameterPrints
+                    (parameterCommentsBefore.reverse |> List.reverse)
+                    |> Print.listFlatten
+                 )
                     |> Print.followedBy (Print.spaceOrLinebreakIndented parametersLineSpread)
                     |> Print.followedBy (Print.exactly "=")
                     |> Print.followedBy
@@ -5358,12 +5310,11 @@ expressionGlsl : String -> Print
 expressionGlsl glslContent =
     Print.exactly "[glsl|"
         |> Print.followedBy
-            (Print.sequence
-                (glslContent
-                    |> String.lines
-                    |> List.map Print.exactly
-                    |> List.intersperse Print.linebreak
-                )
+            (glslContent
+                |> String.lines
+                |> Print.listMapAndIntersperseAndFlatten
+                    Print.exactly
+                    Print.linebreak
             )
         |> Print.followedBy (Print.exactly "|]")
 
@@ -5507,30 +5458,29 @@ expressionCall syntaxComments syntaxCall =
                         )
                     |> Print.followedBy argument0Print
                     |> Print.followedBy
-                        (Print.sequence
-                            (List.map2
-                                (\argumentPrint maybeCommentsBeforeArgument ->
-                                    Print.spaceOrLinebreakIndented argument1UpLineSpread
-                                        |> Print.followedBy
-                                            (case maybeCommentsBeforeArgument of
-                                                Nothing ->
-                                                    Print.empty
+                        (List.map2
+                            (\argumentPrint maybeCommentsBeforeArgument ->
+                                Print.spaceOrLinebreakIndented argument1UpLineSpread
+                                    |> Print.followedBy
+                                        (case maybeCommentsBeforeArgument of
+                                            Nothing ->
+                                                Print.empty
 
-                                                Just commentsBeforeArgument ->
-                                                    commentsBeforeArgument.print
-                                                        |> Print.followedBy
-                                                            (Print.spaceOrLinebreakIndented
-                                                                (commentsBeforeArgument.lineSpread
-                                                                    |> Print.lineSpreadMergeWith
-                                                                        (\() -> argumentPrint |> Print.lineSpread)
-                                                                )
+                                            Just commentsBeforeArgument ->
+                                                commentsBeforeArgument.print
+                                                    |> Print.followedBy
+                                                        (Print.spaceOrLinebreakIndented
+                                                            (commentsBeforeArgument.lineSpread
+                                                                |> Print.lineSpreadMergeWith
+                                                                    (\() -> argumentPrint |> Print.lineSpread)
                                                             )
-                                            )
-                                        |> Print.followedBy argumentPrint
-                                )
-                                argument1UpPrints
-                                argument1UpCommentsBefore
+                                                        )
+                                        )
+                                    |> Print.followedBy argumentPrint
                             )
+                            argument1UpPrints
+                            argument1UpCommentsBefore
+                            |> Print.listFlatten
                         )
                 )
             )
@@ -6040,35 +5990,33 @@ expressionList syntaxComments syntaxList =
             Print.exactly "["
                 |> Print.followedBy Print.space
                 |> Print.followedBy
-                    (Print.sequence
-                        (List.map2
-                            (\elementPrint maybeCommentsBeforeElement ->
-                                Print.withIndentIncreasedBy 2
-                                    ((case maybeCommentsBeforeElement of
-                                        Nothing ->
-                                            Print.empty
+                    (List.map2
+                        (\elementPrint maybeCommentsBeforeElement ->
+                            Print.withIndentIncreasedBy 2
+                                ((case maybeCommentsBeforeElement of
+                                    Nothing ->
+                                        Print.empty
 
-                                        Just commentsBeforeElement ->
-                                            commentsBeforeElement.print
-                                                |> Print.followedBy
-                                                    (Print.spaceOrLinebreakIndented
-                                                        (commentsBeforeElement.lineSpread
-                                                            |> Print.lineSpreadMergeWith
-                                                                (\() -> elementPrint |> Print.lineSpread)
-                                                        )
+                                    Just commentsBeforeElement ->
+                                        commentsBeforeElement.print
+                                            |> Print.followedBy
+                                                (Print.spaceOrLinebreakIndented
+                                                    (commentsBeforeElement.lineSpread
+                                                        |> Print.lineSpreadMergeWith
+                                                            (\() -> elementPrint |> Print.lineSpread)
                                                     )
-                                     )
-                                        |> Print.followedBy elementPrint
-                                    )
-                            )
-                            elementPrints
-                            (commentsBeforeElements.reverse |> List.reverse)
-                            |> List.intersperse
-                                (Print.emptyOrLinebreakIndented lineSpread
-                                    |> Print.followedBy (Print.exactly ",")
-                                    |> Print.followedBy Print.space
+                                                )
+                                 )
+                                    |> Print.followedBy elementPrint
                                 )
                         )
+                        elementPrints
+                        (commentsBeforeElements.reverse |> List.reverse)
+                        |> Print.listIntersperseAndFlatten
+                            (Print.emptyOrLinebreakIndented lineSpread
+                                |> Print.followedBy (Print.exactly ",")
+                                |> Print.followedBy Print.space
+                            )
                     )
                 |> Print.followedBy
                     (case commentsAfterElements of
@@ -6189,50 +6137,48 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                     |> Print.followedBy (Print.exactly "|")
                     |> Print.followedBy Print.space
                     |> Print.followedBy
-                        (Print.sequence
-                            (List.map2
-                                (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) fieldComments ->
-                                    Print.withIndentIncreasedBy 2
-                                        (case fieldComments.beforeName of
-                                            [] ->
-                                                Print.empty
+                        (List.map2
+                            (\(Elm.Syntax.Node.Node _ ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValue )) fieldComments ->
+                                Print.withIndentIncreasedBy 2
+                                    (case fieldComments.beforeName of
+                                        [] ->
+                                            Print.empty
 
-                                            comment0 :: comment1Up ->
-                                                comments (comment0 :: comment1Up)
-                                                    |> Print.followedBy Print.linebreakIndented
-                                        )
-                                        |> Print.followedBy (Print.exactly fieldName)
-                                        |> Print.followedBy Print.space
-                                        |> Print.followedBy (Print.exactly "=")
-                                        |> Print.followedBy
-                                            (Print.withIndentAtNextMultipleOf4
-                                                ((case fieldComments.betweenNameAndValue of
-                                                    [] ->
-                                                        Print.spaceOrLinebreakIndented
-                                                            (lineSpreadInRange
-                                                                { start = fieldNameRange.start
-                                                                , end = fieldValue |> Elm.Syntax.Node.range |> .end
-                                                                }
-                                                            )
-
-                                                    comment0 :: comment1Up ->
-                                                        Print.linebreakIndented
-                                                            |> Print.followedBy (comments (comment0 :: comment1Up))
-                                                            |> Print.followedBy Print.linebreakIndented
-                                                 )
-                                                    |> Print.followedBy
-                                                        (expressionNotParenthesized syntaxComments fieldValue)
-                                                )
-                                            )
-                                )
-                                syntaxRecordUpdate.fields
-                                (commentsBeforeFields.reverse |> List.reverse)
-                                |> List.intersperse
-                                    (Print.emptyOrLinebreakIndented lineSpread
-                                        |> Print.followedBy (Print.exactly ",")
-                                        |> Print.followedBy Print.space
+                                        comment0 :: comment1Up ->
+                                            comments (comment0 :: comment1Up)
+                                                |> Print.followedBy Print.linebreakIndented
                                     )
+                                    |> Print.followedBy (Print.exactly fieldName)
+                                    |> Print.followedBy Print.space
+                                    |> Print.followedBy (Print.exactly "=")
+                                    |> Print.followedBy
+                                        (Print.withIndentAtNextMultipleOf4
+                                            ((case fieldComments.betweenNameAndValue of
+                                                [] ->
+                                                    Print.spaceOrLinebreakIndented
+                                                        (lineSpreadInRange
+                                                            { start = fieldNameRange.start
+                                                            , end = fieldValue |> Elm.Syntax.Node.range |> .end
+                                                            }
+                                                        )
+
+                                                comment0 :: comment1Up ->
+                                                    Print.linebreakIndented
+                                                        |> Print.followedBy (comments (comment0 :: comment1Up))
+                                                        |> Print.followedBy Print.linebreakIndented
+                                             )
+                                                |> Print.followedBy
+                                                    (expressionNotParenthesized syntaxComments fieldValue)
+                                            )
+                                        )
                             )
+                            syntaxRecordUpdate.fields
+                            (commentsBeforeFields.reverse |> List.reverse)
+                            |> Print.listIntersperseAndFlatten
+                                (Print.emptyOrLinebreakIndented lineSpread
+                                    |> Print.followedBy (Print.exactly ",")
+                                    |> Print.followedBy Print.space
+                                )
                         )
                     -- yes, elm-format indents trailing comments
                     |> Print.followedBy
@@ -6324,30 +6270,28 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
             (Print.withIndentIncreasedBy 1
                 (Print.emptyOrLinebreakIndented parametersLineSpread
                     |> Print.followedBy
-                        (Print.sequence
-                            (List.map2
-                                (\parameterPrint maybeCommentsBefore ->
-                                    (case maybeCommentsBefore of
-                                        Nothing ->
-                                            Print.empty
+                        (List.map2
+                            (\parameterPrint maybeCommentsBefore ->
+                                (case maybeCommentsBefore of
+                                    Nothing ->
+                                        Print.empty
 
-                                        Just commentsBefore ->
-                                            commentsBefore.print
-                                                |> Print.followedBy
-                                                    (Print.spaceOrLinebreakIndented
-                                                        (commentsBefore.lineSpread
-                                                            |> Print.lineSpreadMergeWith
-                                                                (\() -> parameterPrint |> Print.lineSpread)
-                                                        )
+                                    Just commentsBefore ->
+                                        commentsBefore.print
+                                            |> Print.followedBy
+                                                (Print.spaceOrLinebreakIndented
+                                                    (commentsBefore.lineSpread
+                                                        |> Print.lineSpreadMergeWith
+                                                            (\() -> parameterPrint |> Print.lineSpread)
                                                     )
-                                    )
-                                        |> Print.followedBy parameterPrint
+                                                )
                                 )
-                                parameterPrints
-                                (parameterCommentsBefore.reverse |> List.reverse)
-                                |> List.intersperse
-                                    (Print.spaceOrLinebreakIndented parametersLineSpread)
+                                    |> Print.followedBy parameterPrint
                             )
+                            parameterPrints
+                            (parameterCommentsBefore.reverse |> List.reverse)
+                            |> Print.listIntersperseAndFlatten
+                                (Print.spaceOrLinebreakIndented parametersLineSpread)
                         )
                 )
                 |> Print.followedBy (Print.spaceOrLinebreakIndented parametersLineSpread)
@@ -6587,47 +6531,44 @@ expressionCaseOf syntaxComments syntaxCaseOf =
             (Print.withIndentAtNextMultipleOf4
                 (Print.linebreakIndented
                     |> Print.followedBy
-                        (Print.sequence
-                            (syntaxCaseOf.cases
-                                |> List.foldl
-                                    (\( casePattern, caseResult ) soFar ->
-                                        let
-                                            commentsBeforeCasePattern : List String
-                                            commentsBeforeCasePattern =
-                                                commentsInRange
-                                                    { start = soFar.end
-                                                    , end = casePattern |> Elm.Syntax.Node.range |> .start
-                                                    }
-                                                    syntaxComments
+                        (syntaxCaseOf.cases
+                            |> List.foldl
+                                (\( casePattern, caseResult ) soFar ->
+                                    let
+                                        commentsBeforeCasePattern : List String
+                                        commentsBeforeCasePattern =
+                                            commentsInRange
+                                                { start = soFar.end
+                                                , end = casePattern |> Elm.Syntax.Node.range |> .start
+                                                }
+                                                syntaxComments
 
-                                            commentsAndCasePrint : Print
-                                            commentsAndCasePrint =
-                                                (case commentsBeforeCasePattern of
-                                                    [] ->
-                                                        Print.empty
+                                        commentsAndCasePrint : Print
+                                        commentsAndCasePrint =
+                                            (case commentsBeforeCasePattern of
+                                                [] ->
+                                                    Print.empty
 
-                                                    comment0 :: comment1Up ->
-                                                        comments (comment0 :: comment1Up)
-                                                            |> Print.followedBy
-                                                                Print.linebreakIndented
-                                                )
-                                                    |> Print.followedBy
-                                                        (case_ syntaxComments ( casePattern, caseResult ))
-                                        in
-                                        { end = caseResult |> Elm.Syntax.Node.range |> .end
-                                        , reverse = commentsAndCasePrint :: soFar.reverse
-                                        }
-                                    )
-                                    { end = syntaxCaseOf.expression |> Elm.Syntax.Node.range |> .end
-                                    , reverse = []
+                                                comment0 :: comment1Up ->
+                                                    comments (comment0 :: comment1Up)
+                                                        |> Print.followedBy
+                                                            Print.linebreakIndented
+                                            )
+                                                |> Print.followedBy
+                                                    (case_ syntaxComments ( casePattern, caseResult ))
+                                    in
+                                    { end = caseResult |> Elm.Syntax.Node.range |> .end
+                                    , reverse = commentsAndCasePrint :: soFar.reverse
                                     }
-                                |> .reverse
-                                |> List.reverse
-                                |> List.intersperse
-                                    (Print.linebreak
-                                        |> Print.followedBy Print.linebreakIndented
-                                    )
-                            )
+                                )
+                                { end = syntaxCaseOf.expression |> Elm.Syntax.Node.range |> .end
+                                , reverse = []
+                                }
+                            |> .reverse
+                            |> Print.listReverseAndIntersperseAndFlatten
+                                (Print.linebreak
+                                    |> Print.followedBy Print.linebreakIndented
+                                )
                         )
                 )
             )
@@ -6696,14 +6637,11 @@ expressionLetIn syntaxComments syntaxLetIn =
             (Print.withIndentAtNextMultipleOf4
                 (Print.linebreakIndented
                     |> Print.followedBy
-                        (Print.sequence
-                            (letDeclarationPrints.printsReverse
-                                |> List.reverse
-                                |> List.intersperse
-                                    (Print.linebreak
-                                        |> Print.followedBy Print.linebreakIndented
-                                    )
-                            )
+                        (letDeclarationPrints.printsReverse
+                            |> Print.listReverseAndIntersperseAndFlatten
+                                (Print.linebreak
+                                    |> Print.followedBy Print.linebreakIndented
+                                )
                         )
                 )
             )
