@@ -1271,7 +1271,7 @@ collapsibleComments : List String -> { print : Print, lineSpread : Print.LineSpr
 collapsibleComments commentsToPrint =
     case commentsToPrint of
         [] ->
-            { print = Print.empty, lineSpread = Print.SingleLine }
+            printEmptyLineSpreadSingleLine
 
         comment0 :: comment1Up ->
             let
@@ -1296,6 +1296,11 @@ collapsibleComments commentsToPrint =
                 { print = comments (comment0 :: comment1Up)
                 , lineSpread = Print.MultipleLines
                 }
+
+
+printEmptyLineSpreadSingleLine : { print : Print.Print, lineSpread : Print.LineSpread }
+printEmptyLineSpreadSingleLine =
+    { print = Print.empty, lineSpread = Print.SingleLine }
 
 
 commentCanBePartOfCollapsible : String -> Bool
