@@ -84,9 +84,7 @@ interface state =
 
         ShowingHelp ->
             Node.standardOutWrite
-                ("""Format elm 0.19 """
-                    ++ ("source directory" |> Ansi.Font.bold)
-                    ++ """ modules like elm-format (https://github.com/avh4/elm-format).
+                ("""Format elm 0.19 source directory and tests/ modules in the current project like elm-format (https://github.com/avh4/elm-format).
 
 """
                     ++ ([ { command = "elm-syntax-format"
@@ -204,12 +202,12 @@ singleRunInterface state =
                     |> Node.interfaceFutureMap
                         (\subPathsOrError ->
                             case subPathsOrError of
-                                Err directorySourcePathSubPathRequestError ->
+                                Err sourceDirectoryReadError ->
                                     SingleRun
                                         { state
                                             | sourceDirectoryReadErrors =
                                                 { path = sourceDirectoryPath
-                                                , message = directorySourcePathSubPathRequestError.message
+                                                , message = sourceDirectoryReadError.message
                                                 }
                                                     :: state.sourceDirectoryReadErrors
                                         }
@@ -237,6 +235,30 @@ singleRunInterface state =
                         )
             )
         |> Node.interfaceBatch
+    , Node.directorySubPathsRequest "tests"
+        |> Node.interfaceFutureMap
+            (\testSubPathsOrError ->
+                case testSubPathsOrError of
+                    Err _ ->
+                        -- tests/ is optional. So all's fine
+                        SingleRun state
+
+                    Ok subPaths ->
+                        SingleRun
+                            { state
+                                | sourceFilesToRead =
+                                    subPaths
+                                        |> List.foldl
+                                            (\subPath soFar ->
+                                                if subPath |> String.endsWith ".elm" then
+                                                    soFar |> FastSet.insert ("tests/" ++ subPath)
+
+                                                else
+                                                    soFar
+                                            )
+                                            state.sourceFilesToRead
+                            }
+            )
     , state.sourceFilesToRead
         |> fastSetToListAndMap
             (\sourceFilePath ->
@@ -341,7 +363,7 @@ watchInterface state =
                     |> Node.interfaceFutureMap
                         (\fileChange ->
                             case fileChange of
-                                Node.FileRemoved removedSubPath ->
+                                Node.FileRemoved _ ->
                                     Watching state
 
                                 Node.FileAddedOrChanged addedOrChangedPath ->
@@ -359,6 +381,26 @@ watchInterface state =
                         )
             )
         |> Node.interfaceBatch
+    , Node.fileChangeListen "tests"
+        |> Node.interfaceFutureMap
+            (\fileChange ->
+                case fileChange of
+                    Node.FileRemoved _ ->
+                        Watching state
+
+                    Node.FileAddedOrChanged addedOrChangedPath ->
+                        if addedOrChangedPath |> String.endsWith ".elm" then
+                            Watching
+                                { elmJsonSourceDirectories = state.elmJsonSourceDirectories
+                                , sourceFilesToRead =
+                                    state.sourceFilesToRead |> FastSet.insert addedOrChangedPath
+                                , formattedModulesToWrite = state.formattedModulesToWrite
+                                , sourceFileReadErrors = state.sourceFileReadErrors
+                                }
+
+                        else
+                            Watching state
+            )
     , state.formattedModulesToWrite
         |> fastDictToListAndMap
             (\moduleToFormatPath moduleToFormatContent ->
