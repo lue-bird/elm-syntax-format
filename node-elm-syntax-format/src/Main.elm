@@ -9,7 +9,6 @@ import Ansi.Font
 import Bytes exposing (Bytes)
 import Bytes.Decode
 import Bytes.Encode
-import Dict exposing (Dict)
 import Elm.Project
 import Elm.Syntax.Declaration
 import Elm.Syntax.File
@@ -19,10 +18,11 @@ import Elm.Syntax.TypeAnnotation
 import Elm.Type
 import ElmSyntaxParserLenient
 import ElmSyntaxPrint
+import FastDict
+import FastSet
 import Json.Decode
 import Json.Encode
 import Node
-import Set exposing (Set)
 
 
 type State
@@ -36,9 +36,9 @@ type State
 
 type alias SingleRunRunningState =
     { elmJsonSourceDirectories : List String
-    , sourceDirectoriesToRead : Set String
-    , sourceFilesToRead : Set String
-    , formattedModulesToWrite : Dict String Bytes
+    , sourceDirectoriesToRead : FastSet.Set String
+    , sourceFilesToRead : FastSet.Set String
+    , formattedModulesToWrite : FastDict.Dict String Bytes
     , sourceDirectoryReadErrors : List { path : String, message : String }
     , sourceFileReadErrors : List { path : String, message : String }
     }
@@ -46,9 +46,9 @@ type alias SingleRunRunningState =
 
 type alias WatchState =
     { elmJsonSourceDirectories : List String
-    , sourceFilesToRead : Set String
-    , formattedModulesToWrite : Dict String Bytes
-    , sourceFileReadErrors : Dict String String
+    , sourceFilesToRead : FastSet.Set String
+    , formattedModulesToWrite : FastDict.Dict String Bytes
+    , sourceFileReadErrors : FastDict.Dict String String
     }
 
 
@@ -151,9 +151,9 @@ interface state =
                                                         SingleRun
                                                             { elmJsonSourceDirectories = computedElmJsonSourceDirectories
                                                             , sourceDirectoriesToRead =
-                                                                computedElmJsonSourceDirectories |> Set.fromList
-                                                            , sourceFilesToRead = Set.empty
-                                                            , formattedModulesToWrite = Dict.empty
+                                                                computedElmJsonSourceDirectories |> FastSet.fromList
+                                                            , sourceFilesToRead = FastSet.empty
+                                                            , formattedModulesToWrite = FastDict.empty
                                                             , sourceFileReadErrors = []
                                                             , sourceDirectoryReadErrors = []
                                                             }
@@ -161,9 +161,9 @@ interface state =
                                                     ModeWatch ->
                                                         Watching
                                                             { elmJsonSourceDirectories = computedElmJsonSourceDirectories
-                                                            , sourceFilesToRead = Set.empty
-                                                            , formattedModulesToWrite = Dict.empty
-                                                            , sourceFileReadErrors = Dict.empty
+                                                            , sourceFilesToRead = FastSet.empty
+                                                            , formattedModulesToWrite = FastDict.empty
+                                                            , sourceFileReadErrors = FastDict.empty
                                                             }
                     )
 
@@ -183,9 +183,8 @@ interface state =
 singleRunInterface : SingleRunRunningState -> Node.Interface State
 singleRunInterface state =
     [ state.formattedModulesToWrite
-        |> Dict.toList
-        |> List.map
-            (\( moduleToFormatPath, moduleToFormatContent ) ->
+        |> fastDictToListAndMap
+            (\moduleToFormatPath moduleToFormatContent ->
                 Node.fileWrite
                     { path = moduleToFormatPath
                     , content = moduleToFormatContent
@@ -195,14 +194,13 @@ singleRunInterface state =
                             SingleRun
                                 { state
                                     | formattedModulesToWrite =
-                                        state.formattedModulesToWrite |> Dict.remove moduleToFormatPath
+                                        state.formattedModulesToWrite |> FastDict.remove moduleToFormatPath
                                 }
                         )
             )
         |> Node.interfaceBatch
     , state.sourceDirectoriesToRead
-        |> Set.toList
-        |> List.map
+        |> fastSetToListAndMap
             (\sourceDirectoryPath ->
                 Node.directorySubPathsRequest sourceDirectoryPath
                     |> Node.interfaceFutureMap
@@ -223,13 +221,13 @@ singleRunInterface state =
                                         { elmJsonSourceDirectories = state.elmJsonSourceDirectories
                                         , sourceDirectoriesToRead =
                                             state.sourceDirectoriesToRead
-                                                |> Set.remove sourceDirectoryPath
+                                                |> FastSet.remove sourceDirectoryPath
                                         , sourceFilesToRead =
                                             subPaths
                                                 |> List.foldl
                                                     (\subPath soFar ->
                                                         if subPath |> String.endsWith ".elm" then
-                                                            soFar |> Set.insert (sourceDirectoryPath ++ "/" ++ subPath)
+                                                            soFar |> FastSet.insert (sourceDirectoryPath ++ "/" ++ subPath)
 
                                                         else
                                                             soFar
@@ -243,8 +241,7 @@ singleRunInterface state =
             )
         |> Node.interfaceBatch
     , state.sourceFilesToRead
-        |> Set.toList
-        |> List.map
+        |> fastSetToListAndMap
             (\sourceFilePath ->
                 Node.fileRequest sourceFilePath
                     |> Node.interfaceFutureMap
@@ -278,10 +275,10 @@ singleRunInterface state =
                                         , sourceDirectoryReadErrors = state.sourceDirectoryReadErrors
                                         , sourceFilesToRead =
                                             state.sourceFilesToRead
-                                                |> Set.remove sourceFilePath
+                                                |> FastSet.remove sourceFilePath
                                         , formattedModulesToWrite =
                                             state.formattedModulesToWrite
-                                                |> Dict.insert sourceFilePath
+                                                |> FastDict.insert sourceFilePath
                                                     (syntax |> elmSyntaxModuleToBytes)
                                         }
                         )
@@ -356,7 +353,7 @@ watchInterface state =
                                         Watching
                                             { elmJsonSourceDirectories = state.elmJsonSourceDirectories
                                             , sourceFilesToRead =
-                                                state.sourceFilesToRead |> Set.insert addedOrChangedPath
+                                                state.sourceFilesToRead |> FastSet.insert addedOrChangedPath
                                             , formattedModulesToWrite = state.formattedModulesToWrite
                                             , sourceFileReadErrors = state.sourceFileReadErrors
                                             }
@@ -367,9 +364,8 @@ watchInterface state =
             )
         |> Node.interfaceBatch
     , state.formattedModulesToWrite
-        |> Dict.toList
-        |> List.map
-            (\( moduleToFormatPath, moduleToFormatContent ) ->
+        |> fastDictToListAndMap
+            (\moduleToFormatPath moduleToFormatContent ->
                 Node.fileWrite
                     { path = moduleToFormatPath
                     , content = moduleToFormatContent
@@ -380,15 +376,14 @@ watchInterface state =
                                 { elmJsonSourceDirectories = state.elmJsonSourceDirectories
                                 , sourceFilesToRead = state.sourceFilesToRead
                                 , formattedModulesToWrite =
-                                    state.formattedModulesToWrite |> Dict.remove moduleToFormatPath
+                                    state.formattedModulesToWrite |> FastDict.remove moduleToFormatPath
                                 , sourceFileReadErrors = state.sourceFileReadErrors
                                 }
                         )
             )
         |> Node.interfaceBatch
     , state.sourceFilesToRead
-        |> Set.toList
-        |> List.map
+        |> fastSetToListAndMap
             (\sourceFilePath ->
                 Node.fileRequest sourceFilePath
                     |> Node.interfaceFutureMap
@@ -409,10 +404,10 @@ watchInterface state =
                                         { state
                                             | sourceFileReadErrors =
                                                 state.sourceFileReadErrors
-                                                    |> Dict.insert sourceFilePath readError
+                                                    |> FastDict.insert sourceFilePath readError
                                             , sourceFilesToRead =
                                                 state.sourceFilesToRead
-                                                    |> Set.remove sourceFilePath
+                                                    |> FastSet.remove sourceFilePath
                                         }
 
                                 Ok syntax ->
@@ -420,22 +415,21 @@ watchInterface state =
                                         { elmJsonSourceDirectories = state.elmJsonSourceDirectories
                                         , sourceFilesToRead =
                                             state.sourceFilesToRead
-                                                |> Set.remove sourceFilePath
+                                                |> FastSet.remove sourceFilePath
                                         , formattedModulesToWrite =
                                             state.formattedModulesToWrite
-                                                |> Dict.insert sourceFilePath
+                                                |> FastDict.insert sourceFilePath
                                                     (syntax |> elmSyntaxModuleToBytes)
                                         , sourceFileReadErrors =
                                             state.sourceFileReadErrors
-                                                |> Dict.remove sourceFilePath
+                                                |> FastDict.remove sourceFilePath
                                         }
                         )
             )
         |> Node.interfaceBatch
     , state.sourceFileReadErrors
-        |> Dict.toList
-        |> List.map
-            (\( fileReadErrorPath, fileReadError ) ->
+        |> fastDictToListAndMap
+            (\fileReadErrorPath fileReadError ->
                 Node.standardOutWrite
                     (Ansi.Cursor.hide
                         ++ "failed to read the source file "
@@ -459,6 +453,26 @@ elmJsonSourceDirectories elmJson =
 
         Elm.Project.Package _ ->
             [ "src" ]
+
+
+fastDictToListAndMap : (a -> b -> c) -> FastDict.Dict a b -> List c
+fastDictToListAndMap keyValueToElement fastDict =
+    fastDict
+        |> FastDict.foldr
+            (\key value soFar ->
+                keyValueToElement key value :: soFar
+            )
+            []
+
+
+fastSetToListAndMap : (a -> b) -> FastSet.Set a -> List b
+fastSetToListAndMap keyToElement fastDict =
+    fastDict
+        |> FastSet.foldr
+            (\key soFar ->
+                keyToElement key :: soFar
+            )
+            []
 
 
 main : Node.Program State
