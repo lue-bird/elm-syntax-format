@@ -4,6 +4,7 @@ port module Main exposing (main)
 -}
 
 import Ansi.Color
+import Ansi.Cursor
 import Ansi.Font
 import Bytes exposing (Bytes)
 import Bytes.Decode
@@ -28,15 +29,9 @@ type State
     = WaitingForLaunchArguments
     | ShowingHelp
     | WaitingForElmJson { mode : Mode }
-    | SingleRun StateSingleRun
+    | SingleRun SingleRunRunningState
     | Watching WatchState
     | ElmJsonReadFailed String
-
-
-type StateSingleRun
-    = SingleRunRunning SingleRunRunningState
-    | SingleRunSourceDirectoryReadFailed { path : String, message : String }
-    | SingleRunSourceFileReadFailed { path : String, message : String }
 
 
 type alias SingleRunRunningState =
@@ -44,6 +39,8 @@ type alias SingleRunRunningState =
     , sourceDirectoriesToRead : Set String
     , sourceFilesToRead : Set String
     , formattedModulesToWrite : Dict String Bytes
+    , sourceDirectoryReadErrors : List { path : String, message : String }
+    , sourceFileReadErrors : List { path : String, message : String }
     }
 
 
@@ -51,6 +48,7 @@ type alias WatchState =
     { elmJsonSourceDirectories : List String
     , sourceFilesToRead : Set String
     , formattedModulesToWrite : Dict String Bytes
+    , sourceFileReadErrors : Dict String String
     }
 
 
@@ -151,20 +149,21 @@ interface state =
                                                 case waitingForElmJson.mode of
                                                     ModeSingleRun ->
                                                         SingleRun
-                                                            (SingleRunRunning
-                                                                { elmJsonSourceDirectories = computedElmJsonSourceDirectories
-                                                                , sourceDirectoriesToRead =
-                                                                    computedElmJsonSourceDirectories |> Set.fromList
-                                                                , sourceFilesToRead = Set.empty
-                                                                , formattedModulesToWrite = Dict.empty
-                                                                }
-                                                            )
+                                                            { elmJsonSourceDirectories = computedElmJsonSourceDirectories
+                                                            , sourceDirectoriesToRead =
+                                                                computedElmJsonSourceDirectories |> Set.fromList
+                                                            , sourceFilesToRead = Set.empty
+                                                            , formattedModulesToWrite = Dict.empty
+                                                            , sourceFileReadErrors = []
+                                                            , sourceDirectoryReadErrors = []
+                                                            }
 
                                                     ModeWatch ->
                                                         Watching
                                                             { elmJsonSourceDirectories = computedElmJsonSourceDirectories
                                                             , sourceFilesToRead = Set.empty
                                                             , formattedModulesToWrite = Dict.empty
+                                                            , sourceFileReadErrors = Dict.empty
                                                             }
                     )
 
@@ -175,43 +174,15 @@ interface state =
             watchInterface watchState
 
         ElmJsonReadFailed elmJsonDecodeError ->
-            badExitWith elmJsonDecodeError
+            [ Node.standardErrWrite (elmJsonDecodeError ++ "\n")
+            , Node.exit 1
+            ]
+                |> Node.interfaceBatch
 
 
-singleRunInterface : StateSingleRun -> Node.Interface State
-singleRunInterface singleRunState =
-    case singleRunState of
-        SingleRunRunning running ->
-            singleRunRunningInterface running
-
-        SingleRunSourceDirectoryReadFailed directoryReadError ->
-            badExitWith
-                ("failed to check the source directory "
-                    ++ directoryReadError.path
-                    ++ " because "
-                    ++ directoryReadError.message
-                )
-
-        SingleRunSourceFileReadFailed fileReadError ->
-            badExitWith
-                ("failed to read the source file "
-                    ++ fileReadError.path
-                    ++ " because "
-                    ++ fileReadError.message
-                )
-
-
-badExitWith : String -> Node.Interface future_
-badExitWith errorMessage =
-    [ Node.standardErrWrite (errorMessage ++ "\n")
-    , Node.exit 1
-    ]
-        |> Node.interfaceBatch
-
-
-singleRunRunningInterface : SingleRunRunningState -> Node.Interface State
-singleRunRunningInterface running =
-    [ running.formattedModulesToWrite
+singleRunInterface : SingleRunRunningState -> Node.Interface State
+singleRunInterface state =
+    [ state.formattedModulesToWrite
         |> Dict.toList
         |> List.map
             (\( moduleToFormatPath, moduleToFormatContent ) ->
@@ -222,18 +193,14 @@ singleRunRunningInterface running =
                     |> Node.interfaceFutureMap
                         (\result ->
                             SingleRun
-                                (SingleRunRunning
-                                    { elmJsonSourceDirectories = running.elmJsonSourceDirectories
-                                    , sourceDirectoriesToRead = running.sourceDirectoriesToRead
-                                    , sourceFilesToRead = running.sourceFilesToRead
-                                    , formattedModulesToWrite =
-                                        running.formattedModulesToWrite |> Dict.remove moduleToFormatPath
-                                    }
-                                )
+                                { state
+                                    | formattedModulesToWrite =
+                                        state.formattedModulesToWrite |> Dict.remove moduleToFormatPath
+                                }
                         )
             )
         |> Node.interfaceBatch
-    , running.sourceDirectoriesToRead
+    , state.sourceDirectoriesToRead
         |> Set.toList
         |> List.map
             (\sourceDirectoryPath ->
@@ -243,77 +210,105 @@ singleRunRunningInterface running =
                             case subPathsOrError of
                                 Err directorySourcePathSubPathRequestError ->
                                     SingleRun
-                                        (SingleRunSourceDirectoryReadFailed
-                                            { path = sourceDirectoryPath
-                                            , message = directorySourcePathSubPathRequestError.message
-                                            }
-                                        )
+                                        { state
+                                            | sourceDirectoryReadErrors =
+                                                { path = sourceDirectoryPath
+                                                , message = directorySourcePathSubPathRequestError.message
+                                                }
+                                                    :: state.sourceDirectoryReadErrors
+                                        }
 
                                 Ok subPaths ->
                                     SingleRun
-                                        (SingleRunRunning
-                                            { elmJsonSourceDirectories = running.elmJsonSourceDirectories
-                                            , sourceDirectoriesToRead =
-                                                running.sourceDirectoriesToRead
-                                                    |> Set.remove sourceDirectoryPath
-                                            , sourceFilesToRead =
-                                                subPaths
-                                                    |> List.foldl
-                                                        (\subPath soFar ->
-                                                            if subPath |> String.endsWith ".elm" then
-                                                                soFar |> Set.insert (sourceDirectoryPath ++ "/" ++ subPath)
+                                        { elmJsonSourceDirectories = state.elmJsonSourceDirectories
+                                        , sourceDirectoriesToRead =
+                                            state.sourceDirectoriesToRead
+                                                |> Set.remove sourceDirectoryPath
+                                        , sourceFilesToRead =
+                                            subPaths
+                                                |> List.foldl
+                                                    (\subPath soFar ->
+                                                        if subPath |> String.endsWith ".elm" then
+                                                            soFar |> Set.insert (sourceDirectoryPath ++ "/" ++ subPath)
 
-                                                            else
-                                                                soFar
-                                                        )
-                                                        running.sourceFilesToRead
-                                            , formattedModulesToWrite = running.formattedModulesToWrite
-                                            }
-                                        )
+                                                        else
+                                                            soFar
+                                                    )
+                                                    state.sourceFilesToRead
+                                        , formattedModulesToWrite = state.formattedModulesToWrite
+                                        , sourceDirectoryReadErrors = state.sourceDirectoryReadErrors
+                                        , sourceFileReadErrors = state.sourceFileReadErrors
+                                        }
                         )
             )
         |> Node.interfaceBatch
-    , running.sourceFilesToRead
+    , state.sourceFilesToRead
         |> Set.toList
         |> List.map
             (\sourceFilePath ->
                 Node.fileRequest sourceFilePath
                     |> Node.interfaceFutureMap
                         (\sourceBytesOrError ->
-                            case sourceBytesOrError of
-                                Err sourceFileReadError ->
+                            let
+                                sourceBytesOrReadError : Result String Elm.Syntax.File.File
+                                sourceBytesOrReadError =
+                                    case sourceBytesOrError of
+                                        Err sourceFileReadError ->
+                                            Err sourceFileReadError.message
+
+                                        Ok sourceBytes ->
+                                            sourceBytes |> bytesToElmSyntaxModule
+                            in
+                            case sourceBytesOrReadError of
+                                Err readError ->
                                     SingleRun
-                                        (SingleRunSourceFileReadFailed
-                                            { path = sourceFilePath
-                                            , message = sourceFileReadError.message
-                                            }
-                                        )
+                                        { state
+                                            | sourceFileReadErrors =
+                                                { path = sourceFilePath
+                                                , message = readError
+                                                }
+                                                    :: state.sourceFileReadErrors
+                                        }
 
-                                Ok sourceBytes ->
-                                    case sourceBytes |> bytesToElmSyntaxModule of
-                                        Err message ->
-                                            SingleRun
-                                                (SingleRunSourceFileReadFailed
-                                                    { path = sourceFilePath
-                                                    , message = message
-                                                    }
-                                                )
-
-                                        Ok syntax ->
-                                            SingleRun
-                                                (SingleRunRunning
-                                                    { elmJsonSourceDirectories = running.elmJsonSourceDirectories
-                                                    , sourceDirectoriesToRead = running.sourceDirectoriesToRead
-                                                    , sourceFilesToRead =
-                                                        running.sourceFilesToRead
-                                                            |> Set.remove sourceFilePath
-                                                    , formattedModulesToWrite =
-                                                        running.formattedModulesToWrite
-                                                            |> Dict.insert sourceFilePath
-                                                                (syntax |> elmSyntaxModuleToBytes)
-                                                    }
-                                                )
+                                Ok syntax ->
+                                    SingleRun
+                                        { elmJsonSourceDirectories = state.elmJsonSourceDirectories
+                                        , sourceDirectoriesToRead = state.sourceDirectoriesToRead
+                                        , sourceFileReadErrors = state.sourceFileReadErrors
+                                        , sourceDirectoryReadErrors = state.sourceDirectoryReadErrors
+                                        , sourceFilesToRead =
+                                            state.sourceFilesToRead
+                                                |> Set.remove sourceFilePath
+                                        , formattedModulesToWrite =
+                                            state.formattedModulesToWrite
+                                                |> Dict.insert sourceFilePath
+                                                    (syntax |> elmSyntaxModuleToBytes)
+                                        }
                         )
+            )
+        |> Node.interfaceBatch
+    , state.sourceDirectoryReadErrors
+        |> List.map
+            (\directoryReadError ->
+                Node.standardOutWrite
+                    ("failed to read the source directory "
+                        ++ directoryReadError.path
+                        ++ ": "
+                        ++ directoryReadError.message
+                        ++ "\n"
+                    )
+            )
+        |> Node.interfaceBatch
+    , state.sourceFileReadErrors
+        |> List.map
+            (\fileReadError ->
+                Node.standardOutWrite
+                    ("failed to read the source file "
+                        ++ fileReadError.path
+                        ++ ": "
+                        ++ fileReadError.message
+                        ++ "\n"
+                    )
             )
         |> Node.interfaceBatch
     ]
@@ -329,7 +324,7 @@ bytesToElmSyntaxModule sourceBytes =
         Just source ->
             case source |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_ of
                 Nothing ->
-                    Err "source couldn't be parsed. Check for compiler errors and try again."
+                    Err "source couldn't be parsed. Check for compiler errors."
 
                 Just syntax ->
                     Ok syntax
@@ -345,8 +340,8 @@ elmSyntaxModuleToBytes elmSyntaxModule =
 
 
 watchInterface : WatchState -> Node.Interface State
-watchInterface watching =
-    [ watching.elmJsonSourceDirectories
+watchInterface state =
+    [ state.elmJsonSourceDirectories
         |> List.map
             (\elmJsonSourceDirectory ->
                 Node.fileChangeListen elmJsonSourceDirectory
@@ -354,23 +349,24 @@ watchInterface watching =
                         (\fileChange ->
                             case fileChange of
                                 Node.FileRemoved removedSubPath ->
-                                    Watching watching
+                                    Watching state
 
                                 Node.FileAddedOrChanged addedOrChangedPath ->
                                     if addedOrChangedPath |> String.endsWith ".elm" then
                                         Watching
-                                            { elmJsonSourceDirectories = watching.elmJsonSourceDirectories
+                                            { elmJsonSourceDirectories = state.elmJsonSourceDirectories
                                             , sourceFilesToRead =
-                                                watching.sourceFilesToRead |> Set.insert addedOrChangedPath
-                                            , formattedModulesToWrite = watching.formattedModulesToWrite
+                                                state.sourceFilesToRead |> Set.insert addedOrChangedPath
+                                            , formattedModulesToWrite = state.formattedModulesToWrite
+                                            , sourceFileReadErrors = state.sourceFileReadErrors
                                             }
 
                                     else
-                                        Watching watching
+                                        Watching state
                         )
             )
         |> Node.interfaceBatch
-    , watching.formattedModulesToWrite
+    , state.formattedModulesToWrite
         |> Dict.toList
         |> List.map
             (\( moduleToFormatPath, moduleToFormatContent ) ->
@@ -381,44 +377,74 @@ watchInterface watching =
                     |> Node.interfaceFutureMap
                         (\result ->
                             Watching
-                                { elmJsonSourceDirectories = watching.elmJsonSourceDirectories
-                                , sourceFilesToRead = watching.sourceFilesToRead
+                                { elmJsonSourceDirectories = state.elmJsonSourceDirectories
+                                , sourceFilesToRead = state.sourceFilesToRead
                                 , formattedModulesToWrite =
-                                    watching.formattedModulesToWrite |> Dict.remove moduleToFormatPath
+                                    state.formattedModulesToWrite |> Dict.remove moduleToFormatPath
+                                , sourceFileReadErrors = state.sourceFileReadErrors
                                 }
                         )
             )
         |> Node.interfaceBatch
-    , watching.sourceFilesToRead
+    , state.sourceFilesToRead
         |> Set.toList
         |> List.map
             (\sourceFilePath ->
                 Node.fileRequest sourceFilePath
                     |> Node.interfaceFutureMap
                         (\sourceBytesOrError ->
-                            case sourceBytesOrError of
-                                Err sourceFileReadError ->
-                                    -- maybe add a note to display?
-                                    Watching watching
+                            let
+                                sourceBytesOrReadError : Result String Elm.Syntax.File.File
+                                sourceBytesOrReadError =
+                                    case sourceBytesOrError of
+                                        Err sourceFileReadError ->
+                                            Err sourceFileReadError.message
 
-                                Ok sourceBytes ->
-                                    case sourceBytes |> bytesToElmSyntaxModule of
-                                        Err _ ->
-                                            -- maybe add a note to display?
-                                            Watching watching
+                                        Ok sourceBytes ->
+                                            sourceBytes |> bytesToElmSyntaxModule
+                            in
+                            case sourceBytesOrReadError of
+                                Err readError ->
+                                    Watching
+                                        { state
+                                            | sourceFileReadErrors =
+                                                state.sourceFileReadErrors
+                                                    |> Dict.insert sourceFilePath readError
+                                            , sourceFilesToRead =
+                                                state.sourceFilesToRead
+                                                    |> Set.remove sourceFilePath
+                                        }
 
-                                        Ok syntax ->
-                                            Watching
-                                                { elmJsonSourceDirectories = watching.elmJsonSourceDirectories
-                                                , sourceFilesToRead =
-                                                    watching.sourceFilesToRead
-                                                        |> Set.remove sourceFilePath
-                                                , formattedModulesToWrite =
-                                                    watching.formattedModulesToWrite
-                                                        |> Dict.insert sourceFilePath
-                                                            (syntax |> elmSyntaxModuleToBytes)
-                                                }
+                                Ok syntax ->
+                                    Watching
+                                        { elmJsonSourceDirectories = state.elmJsonSourceDirectories
+                                        , sourceFilesToRead =
+                                            state.sourceFilesToRead
+                                                |> Set.remove sourceFilePath
+                                        , formattedModulesToWrite =
+                                            state.formattedModulesToWrite
+                                                |> Dict.insert sourceFilePath
+                                                    (syntax |> elmSyntaxModuleToBytes)
+                                        , sourceFileReadErrors =
+                                            state.sourceFileReadErrors
+                                                |> Dict.remove sourceFilePath
+                                        }
                         )
+            )
+        |> Node.interfaceBatch
+    , state.sourceFileReadErrors
+        |> Dict.toList
+        |> List.map
+            (\( fileReadErrorPath, fileReadError ) ->
+                Node.standardOutWrite
+                    (Ansi.Cursor.hide
+                        ++ "failed to read the source file "
+                        ++ fileReadErrorPath
+                        ++ ": "
+                        ++ fileReadError
+                        ++ "\n"
+                        |> Ansi.Color.fontColor Ansi.Color.yellow
+                    )
             )
         |> Node.interfaceBatch
     ]
