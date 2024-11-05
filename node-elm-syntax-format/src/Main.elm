@@ -5,7 +5,7 @@ port module Main exposing (main)
 
 import Ansi.Color
 import Ansi.Font
-import Bytes
+import Bytes exposing (Bytes)
 import Bytes.Decode
 import Bytes.Encode
 import Elm.Project
@@ -38,10 +38,10 @@ type alias RunningState =
     , elmJsonSourceDirectories : List String
     , sourceDirectoriesToRead : Set String
     , sourceFilesToRead : Set String
-    , modulesToFormat :
+    , formattedModulesToWrite :
         List
             { path : String
-            , syntax : Elm.Syntax.File.File
+            , content : Bytes
             }
     }
 
@@ -152,7 +152,7 @@ interface state =
                                                     , sourceDirectoriesToRead =
                                                         computedElmJsonSourceDirectories |> Set.fromList
                                                     , sourceFilesToRead = Set.empty
-                                                    , modulesToFormat = []
+                                                    , formattedModulesToWrite = []
                                                     }
                     )
 
@@ -212,7 +212,7 @@ runningInterface running =
                                                     , sourceDirectoriesToRead = running.sourceDirectoriesToRead
                                                     , sourceFilesToRead =
                                                         running.sourceFilesToRead |> Set.insert addedOrChangedPath
-                                                    , modulesToFormat = running.modulesToFormat
+                                                    , formattedModulesToWrite = running.formattedModulesToWrite
                                                     }
 
                                             else
@@ -220,24 +220,27 @@ runningInterface running =
                                 )
                     )
                 |> Node.interfaceBatch
-    , if (running.sourceDirectoriesToRead |> Set.isEmpty) && (running.sourceFilesToRead |> Set.isEmpty) then
-        running.modulesToFormat
-            |> List.map
-                (\moduleToFormat ->
-                    Node.fileWrite
-                        { path = moduleToFormat.path
-                        , content =
-                            moduleToFormat.syntax
-                                |> ElmSyntaxPrint.module_
-                                |> ElmSyntaxPrint.toString
-                                |> Bytes.Encode.string
-                                |> Bytes.Encode.encode
-                        }
+    , running.formattedModulesToWrite
+        |> List.map
+            (\moduleToFormat ->
+                Node.fileWrite
+                    { path = moduleToFormat.path
+                    , content = moduleToFormat.content
+                    }
+             {- TODO
+                |> Node.interfaceFutureMap (\() ->
+                  Running
+                    { mode = running.mode
+                    , elmJsonSourceDirectories = running.elmJsonSourceDirectories
+                    , sourceDirectoriesToRead = running.sourceDirectoriesToRead
+                    , sourceFilesToRead = running.sourceFilesToRead
+                    , formattedModulesToWrite =
+                         running.formattedModulesToWrite |> Dict.remove moduleToFormat
+                    }
                 )
-            |> Node.interfaceBatch
-
-      else
-        Node.interfaceNone
+             -}
+            )
+        |> Node.interfaceBatch
     , running.sourceDirectoriesToRead
         |> Set.toList
         |> List.map
@@ -270,7 +273,7 @@ runningInterface running =
                                                             soFar
                                                     )
                                                     running.sourceFilesToRead
-                                        , modulesToFormat = running.modulesToFormat
+                                        , formattedModulesToWrite = running.formattedModulesToWrite
                                         }
                         )
             )
@@ -302,7 +305,7 @@ runningInterface running =
                                                 Nothing ->
                                                     SourceFileReadFailed
                                                         { path = sourceFilePath
-                                                        , message = "source couldn't be parsed (by elm-syntax). Check for compiler errors and try again."
+                                                        , message = "source couldn't be parsed. Check for compiler errors and try again."
                                                         }
 
                                                 Just syntax ->
@@ -313,9 +316,16 @@ runningInterface running =
                                                         , sourceFilesToRead =
                                                             running.sourceFilesToRead
                                                                 |> Set.remove sourceFilePath
-                                                        , modulesToFormat =
-                                                            { path = sourceFilePath, syntax = syntax }
-                                                                :: running.modulesToFormat
+                                                        , formattedModulesToWrite =
+                                                            { path = sourceFilePath
+                                                            , content =
+                                                                syntax
+                                                                    |> ElmSyntaxPrint.module_
+                                                                    |> ElmSyntaxPrint.toString
+                                                                    |> Bytes.Encode.string
+                                                                    |> Bytes.Encode.encode
+                                                            }
+                                                                :: running.formattedModulesToWrite
                                                         }
                         )
             )
