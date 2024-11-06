@@ -465,12 +465,12 @@ watchInterface state =
                         )
             )
         |> Node.interfaceBatch
+    , Node.standardOutWrite Ansi.Cursor.hide
     , state.sourceFileReadErrors
         |> fastDictToListAndMap
             (\fileReadErrorPath fileReadError ->
                 Node.standardOutWrite
-                    (Ansi.Cursor.hide
-                        ++ "failed to read the source file "
+                    ("failed to read the source file "
                         ++ fileReadErrorPath
                         ++ ": "
                         ++ fileReadError
