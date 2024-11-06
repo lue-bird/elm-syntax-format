@@ -2,7 +2,7 @@
   "type": "module",
   "name": "elm-syntax-format",
   "devDependencies": {
-    "@lue-bird/elm-state-interface-experimental": "^3.0.3",
+    "@lue-bird/elm-state-interface-experimental": "^3.0.4",
     "elm-esm": "^1.1.4"
   },
   "bin": "./src/index.js",
