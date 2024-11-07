@@ -39,7 +39,7 @@ they are.
 
 -}
 type alias Print =
-    { indent : Int } -> String
+    Int -> String
 
 
 {-| Convert to a String with no extra indentation
@@ -47,7 +47,7 @@ and no restrictions on line width
 -}
 toString : Print -> String
 toString print =
-    print { indent = 0 }
+    print 0
 
 
 {-| [How many lines](#LineSpread) the given [`Print`](#Print)
@@ -303,7 +303,7 @@ to the current indent + a given number.
 -}
 withIndentIncreasedBy : Int -> (Print -> Print)
 withIndentIncreasedBy indentationIncrease print =
-    \soFarState -> print { indent = soFarState.indent + indentationIncrease }
+    \soFarIndent -> print (soFarIndent + indentationIncrease)
 
 
 {-| Set the indentation used by [`Print.linebreakIndented`](#linebreakIndented),
@@ -313,7 +313,7 @@ to the current indent minus its remainder by 4 + 4.
 -}
 withIndentAtNextMultipleOf4 : Print -> Print
 withIndentAtNextMultipleOf4 print =
-    \soFarState -> print { indent = soFarState.indent // 4 * 4 + 4 }
+    \soFarIndent -> print (soFarIndent // 4 * 4 + 4)
 
 
 {-| All on the same line or split across multiple?
@@ -422,4 +422,4 @@ and [`withIndentAtNextMultipleOf4`](#withIndentAtNextMultipleOf4)
 -}
 linebreakIndented : Print
 linebreakIndented =
-    \state -> "\n" ++ String.repeat state.indent " "
+    \indent -> "\n" ++ String.repeat indent " "

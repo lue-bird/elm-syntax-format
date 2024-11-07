@@ -52,7 +52,7 @@ import Unicode
 See [`toString`](#toString)
 -}
 type alias Print =
-    { indent : Int } -> String
+    Int -> String
 
 
 {-| All other helpers in this module produce a [`Print`](#Print)
