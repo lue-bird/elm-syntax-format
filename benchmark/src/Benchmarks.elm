@@ -8,6 +8,8 @@ import Elm.Syntax.File
 import ElmSyntaxParserLenient
 import ElmSyntaxPrint
 import ElmSyntaxPrintWithDefunctionalized
+import ElmSyntaxPrintWithDefunctionalizedAppendExact
+import ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape
 
 
 benchmarks : Benchmark.Benchmark
@@ -18,24 +20,31 @@ benchmarks =
             [ {- ( "defunctionalized naive"
                    , \() ->
                          sample
-                             |> Maybe.map ElmSyntaxPrintWithDefunctionalizedNaive.module_
-                             |> Maybe.map ElmSyntaxPrintWithDefunctionalizedNaive.toString
+                             |> Maybe.map ElmSyntaxPrintWithDefunctionalized.module_
+                             |> Maybe.map ElmSyntaxPrintWithDefunctionalized.toString
                    )
                  ,
               -}
-              ( "defunctionalized naive"
+              ( "defunctionalized, append exact"
               , \() ->
                     sample
-                        |> Maybe.map ElmSyntaxPrintWithDefunctionalized.module_
-                        |> Maybe.map ElmSyntaxPrintWithDefunctionalized.toString
+                        |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExact.module_
+                        |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExact.toString
               )
-            , ( "Int -> String, composition"
+            , ( "defunctionalized, append exact, shortcut escape"
               , \() ->
                     sample
-                        |> Maybe.map ElmSyntaxPrint.module_
-                        |> Maybe.map ElmSyntaxPrint.toString
+                        |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape.module_
+                        |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape.toString
               )
 
+            {- , ( "Int -> String, composition"
+               , \() ->
+                     sample
+                         |> Maybe.map ElmSyntaxPrint.module_
+                         |> Maybe.map ElmSyntaxPrint.toString
+               )
+            -}
             {- , ( "Int -> String, less composition"
                , \() ->
                      sample
