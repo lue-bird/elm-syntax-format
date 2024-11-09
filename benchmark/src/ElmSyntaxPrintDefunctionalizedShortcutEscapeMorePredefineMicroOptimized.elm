@@ -1,4 +1,4 @@
-module ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscapeMorePredefine exposing
+module ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefineMicroOptimized exposing
     ( toString, Print
     , module_
     , moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
@@ -47,6 +47,16 @@ import Elm.Syntax.TypeAlias
 import Elm.Syntax.TypeAnnotation
 import PrintWithDefunctionalizedAppendExact as Print
 import Unicode
+
+
+
+-- TODO use ++ ""
+-- TODO convert int == int to int - int == 0
+-- TODO faster String.startsWith
+-- TODO -NotParenthesized re-use node argument
+-- TODO listFilledLast separate arguments
+-- TODO use reversing combinators for parameterPrints etc instead of List.reverse
+-- TODO swap order of lineSpread e.g. with List.all e.g. swap with (commentsAfterFields |> List.isEmpty)
 
 
 {-| Pretty printable intermediate representation.
@@ -463,7 +473,7 @@ listMapAndFlattenToString : (a -> String) -> List a -> String
 listMapAndFlattenToString elementToString elements =
     elements
         |> List.foldl
-            (\next soFar -> soFar ++ elementToString next)
+            (\next soFar -> soFar ++ elementToString next ++ "")
             ""
 
 
@@ -476,7 +486,7 @@ listMapAndIntersperseAndFlattenToString elementToString betweenElements elements
         head :: tail ->
             tail
                 |> List.foldl
-                    (\next soFar -> soFar ++ betweenElements ++ elementToString next)
+                    (\next soFar -> soFar ++ betweenElements ++ elementToString next ++ "")
                     (elementToString head)
 
 
@@ -660,6 +670,7 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                 "( "
                          )
                             ++ expose onlySyntaxExpose
+                            ++ ""
                         )
                         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
                         |> Print.followedBy
@@ -1394,10 +1405,7 @@ comment syntaxComment =
 
                             [ singleLine ] ->
                                 Print.exactly
-                                    (" "
-                                        ++ singleLine
-                                        ++ " "
-                                    )
+                                    (" " ++ singleLine ++ " ")
 
                             firstLine :: secondLine :: thirdLineUp ->
                                 (case firstLine of
@@ -1627,7 +1635,7 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
             stringContent
                 |> String.foldl
                     (\contentChar soFar ->
-                        soFar ++ quotedStringCharToEscaped contentChar
+                        soFar ++ quotedStringCharToEscaped contentChar ++ ""
                     )
                     ""
 
@@ -1667,6 +1675,7 @@ stringAlterAfterFirstBeforeLastChar alterAfterFirstBeforeLastChar string =
                 |> alterAfterFirstBeforeLastChar
            )
         ++ (string |> String.slice ((string |> String.length) - 1) (string |> String.length))
+        ++ ""
 
 
 quotedStringCharToEscaped : Char -> String
@@ -1703,6 +1712,7 @@ intToHexString int =
     else
         intToHexString (int // 16)
             ++ unsafeHexDigitIntToString (int |> Basics.remainderBy 16)
+            ++ ""
 
 
 unsafeHexDigitIntToString : Int -> String
@@ -1957,6 +1967,7 @@ stringResizePadLeftWith0s length unpaddedString =
     else
         String.repeat (length - (unpaddedString |> String.length)) "0"
             ++ unpaddedString
+            ++ ""
 
 
 patternToNotParenthesized :

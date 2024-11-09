@@ -7,6 +7,7 @@ import Elm.Parser
 import Elm.Syntax.File
 import ElmSyntaxParserLenient
 import ElmSyntaxPrint
+import ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefineMicroOptimized
 import ElmSyntaxPrintWithDefunctionalized
 import ElmSyntaxPrintWithDefunctionalizedAppendExact
 import ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape
@@ -20,26 +21,31 @@ benchmarks =
         [ Benchmark.Alternative.rank "indent representation"
             (\f -> f ())
             [ {- ( "defunctionalized naive"
-                      , \() ->
-                            sample
-                                |> Maybe.map ElmSyntaxPrintWithDefunctionalized.module_
-                                |> Maybe.map ElmSyntaxPrintWithDefunctionalized.toString
-                      )
-                    ,
-                 ( "defunctionalized, append exact"
+                         , \() ->
+                               sample
+                                   |> Maybe.map ElmSyntaxPrintWithDefunctionalized.module_
+                                   |> Maybe.map ElmSyntaxPrintWithDefunctionalized.toString
+                         )
+                       ,
+                    ( "defunctionalized, append exact"
+                    , \() ->
+                          sample
+                              |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExact.module_
+                              |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExact.toString
+                    ),
+                 ( "defunctionalized, append exact, shortcut escape"
                  , \() ->
                        sample
-                           |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExact.module_
-                           |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExact.toString
-                 )
+                           |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape.module_
+
               -}
-              ( "defunctionalized, append exact, shortcut escape"
+              ( "defunctionalized, shortcut escape, more predefine, micro-optimize"
               , \() ->
                     sample
-                        |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape.module_
-                        |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape.toString
+                        |> Maybe.map ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefineMicroOptimized.module_
+                        |> Maybe.map ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefineMicroOptimized.toString
               )
-            , ( "defunctionalized, append exact, shortcut escape, more predefine"
+            , ( "defunctionalized, shortcut escape, more predefine"
               , \() ->
                     sample
                         |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscapeMorePredefine.module_
