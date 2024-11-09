@@ -50,8 +50,6 @@ import Unicode
 
 
 
--- TODO use ++ ""
--- TODO convert int == int to int - int == 0
 -- TODO faster String.startsWith
 -- TODO -NotParenthesized re-use node argument
 -- TODO listFilledLast separate arguments
@@ -409,7 +407,7 @@ commentsInRange range sortedComments =
 
 lineSpreadInRange : Elm.Syntax.Range.Range -> Print.LineSpread
 lineSpreadInRange range =
-    if range.start.row == range.end.row then
+    if range.end.row - range.start.row == 0 then
         Print.SingleLine
 
     else
@@ -3552,7 +3550,7 @@ qualifiedReference syntaxReference =
 
 lineSpreadBetweenNodes : Elm.Syntax.Node.Node a_ -> Elm.Syntax.Node.Node b_ -> Print.LineSpread
 lineSpreadBetweenNodes (Elm.Syntax.Node.Node earlierRange _) (Elm.Syntax.Node.Node laterRange _) =
-    if earlierRange.start.row == laterRange.end.row then
+    if laterRange.end.row - earlierRange.start.row == 0 then
         Print.SingleLine
 
     else
