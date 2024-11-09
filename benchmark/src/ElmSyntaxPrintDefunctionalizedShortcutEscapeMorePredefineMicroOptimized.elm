@@ -1971,13 +1971,13 @@ patternToNotParenthesized :
 patternToNotParenthesized (Elm.Syntax.Node.Node fullRange syntaxPattern) =
     case syntaxPattern of
         Elm.Syntax.Pattern.ParenthesizedPattern inParens ->
-            inParens
+            inParens |> patternToNotParenthesized
 
         Elm.Syntax.Pattern.TuplePattern parts ->
             case parts of
                 [ inParens ] ->
                     -- should be covered by ParenthesizedPattern
-                    inParens
+                    inParens |> patternToNotParenthesized
 
                 [ part0, part1 ] ->
                     Elm.Syntax.Node.Node fullRange (Elm.Syntax.Pattern.TuplePattern [ part0, part1 ])
