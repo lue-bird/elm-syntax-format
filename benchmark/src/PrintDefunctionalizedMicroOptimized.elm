@@ -4,7 +4,6 @@ module PrintDefunctionalizedMicroOptimized exposing
     , followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
     , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
-    , exactFollowedBy, followedByExact, listIntersperseExactAndFlatten, listMapToExactAndIntersperseAndFlatten
     )
 
 {-| simple pretty printing
@@ -169,16 +168,6 @@ followedBy =
     FollowedBy
 
 
-exactFollowedBy : Print -> (String -> Print)
-exactFollowedBy b aString =
-    Exact aString () |> FollowedBy b
-
-
-followedByExact : String -> (Print -> Print)
-followedByExact bString a =
-    a |> FollowedBy (Exact bString ())
-
-
 {-| Concatenate a given list of [`Print`](#Print)s
 one after the other after mapping each element
 
@@ -246,23 +235,6 @@ listIntersperseAndFlatten inBetweenPrint elements =
                     head
 
 
-listIntersperseExactAndFlatten : String -> List Print -> Print
-listIntersperseExactAndFlatten inBetweenString elements =
-    case elements of
-        [] ->
-            empty
-
-        head :: tail ->
-            tail
-                |> List.foldl
-                    (\next soFar ->
-                        soFar
-                            |> followedByExact inBetweenString
-                            |> followedBy next
-                    )
-                    head
-
-
 {-| Concatenate a given list of [`Print`](#Print)s
 one after the other
 
@@ -291,23 +263,6 @@ listMapAndIntersperseAndFlatten elementToPrint inBetweenPrint prints =
                             |> followedBy (elementToPrint next)
                     )
                     (elementToPrint head)
-
-
-listMapToExactAndIntersperseAndFlatten : (a -> String) -> Print -> List a -> Print
-listMapToExactAndIntersperseAndFlatten elementToPrint inBetweenPrint prints =
-    case prints of
-        [] ->
-            empty
-
-        head :: tail ->
-            tail
-                |> List.foldl
-                    (\next soFar ->
-                        soFar
-                            |> followedBy inBetweenPrint
-                            |> followedByExact (elementToPrint next)
-                    )
-                    (exactly (elementToPrint head))
 
 
 {-| Concatenate a given list of [`Print`](#Print)s

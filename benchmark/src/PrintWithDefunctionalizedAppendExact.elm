@@ -4,7 +4,7 @@ module PrintWithDefunctionalizedAppendExact exposing
     , followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
     , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
-    , exactFollowedBy, followedByExact, listIntersperseExactAndFlatten, listMapToExactAndIntersperseAndFlatten
+    , exactFollowedBy, followedByExact, listIntersperseExactAndFlatten, listMapToExactAndIntersperseAndFlatten, listReverseAndMapAndIntersperseAndFlatten
     )
 
 {-| simple pretty printing
@@ -337,6 +337,23 @@ listReverseAndIntersperseAndFlatten inBetweenPrint prints =
                             |> followedBy soFar
                     )
                     head
+
+
+listReverseAndMapAndIntersperseAndFlatten : (a -> Print) -> Print -> List a -> Print
+listReverseAndMapAndIntersperseAndFlatten elementToPrint inBetweenPrint elements =
+    case elements of
+        [] ->
+            empty
+
+        head :: tail ->
+            tail
+                |> List.foldl
+                    (\next soFar ->
+                        elementToPrint next
+                            |> followedBy inBetweenPrint
+                            |> followedBy soFar
+                    )
+                    (elementToPrint head)
 
 
 {-| Concatenate a given list of [`Print`](#Print)s

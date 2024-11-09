@@ -7,18 +7,18 @@ import Elm.Parser
 import Elm.Syntax.File
 import ElmSyntaxParserLenient
 import ElmSyntaxPrint
+import ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefine
 import ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefineMicroOptimized
 import ElmSyntaxPrintWithDefunctionalized
 import ElmSyntaxPrintWithDefunctionalizedAppendExact
 import ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape
 import ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscapeCachedLineSpread
-import ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscapeMorePredefine
 
 
 benchmarks : Benchmark.Benchmark
 benchmarks =
     Benchmark.describe "elm-syntax-format"
-        [ Benchmark.Alternative.rank "indent representation"
+        [ Benchmark.Alternative.rank "printing"
             (\f -> f ())
             [ {- ( "defunctionalized naive"
                          , \() ->
@@ -48,8 +48,8 @@ benchmarks =
             , ( "defunctionalized, shortcut escape, more predefine"
               , \() ->
                     sample
-                        |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscapeMorePredefine.module_
-                        |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscapeMorePredefine.toString
+                        |> Maybe.map ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefine.module_
+                        |> Maybe.map ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefine.toString
               )
 
             {- , ( "Int -> String, composition"
