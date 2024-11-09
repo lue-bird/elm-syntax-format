@@ -51,9 +51,7 @@ import Unicode
 
 
 -- TODO -NotParenthesized re-use node argument
--- TODO listFilledLast separate arguments
 -- TODO use reversing combinators for parameterPrints etc instead of List.reverse
--- TODO swap order of lineSpread e.g. with List.all e.g. swap with (commentsAfterFields |> List.isEmpty)
 
 
 {-| Pretty printable intermediate representation.
@@ -2593,8 +2591,8 @@ patternRecord syntaxComments syntaxRecord =
                 lineSpread : Print.LineSpread
                 lineSpread =
                     if
-                        (commentsBeforeFields.reverse |> List.all List.isEmpty)
-                            && (commentsAfterFields |> List.isEmpty)
+                        (commentsAfterFields |> List.isEmpty)
+                            && (commentsBeforeFields.reverse |> List.all List.isEmpty)
                     then
                         Print.SingleLine
 
@@ -2745,6 +2743,20 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                     commentsCollapsibleBeforeRecordVariable.lineSpread
                 |> Print.lineSpreadMergeWith
                     (\() ->
+                        fieldValuePrints
+                            |> Print.lineSpreadListMapAndCombine Print.lineSpread
+                    )
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        case commentsAfterFields of
+                            [] ->
+                                Print.SingleLine
+
+                            _ :: _ ->
+                                Print.MultipleLines
+                    )
+                |> Print.lineSpreadMergeWith
+                    (\() ->
                         commentsBeforeFields.reverse
                             |> Print.lineSpreadListMapAndCombine
                                 (\fieldComments ->
@@ -2765,20 +2777,6 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                                         commentsBetweenNameAndValue.lineSpread
                                             )
                                 )
-                    )
-                |> Print.lineSpreadMergeWith
-                    (\() ->
-                        fieldValuePrints
-                            |> Print.lineSpreadListMapAndCombine Print.lineSpread
-                    )
-                |> Print.lineSpreadMergeWith
-                    (\() ->
-                        case commentsAfterFields of
-                            [] ->
-                                Print.SingleLine
-
-                            _ :: _ ->
-                                Print.MultipleLines
                     )
     in
     printExactlyCurlyOpeningSpace
@@ -2812,10 +2810,9 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                 let
                                     lineSpreadBetweenNameAndValueNotConsideringComments : () -> Print.LineSpread
                                     lineSpreadBetweenNameAndValueNotConsideringComments () =
-                                        lineSpreadInRange
-                                            { start = fieldNameRange.start
-                                            , end = fieldValue |> Elm.Syntax.Node.range |> .end
-                                            }
+                                        lineSpreadBetweenRanges
+                                            fieldNameRange
+                                            (fieldValue |> Elm.Syntax.Node.range)
                                             |> Print.lineSpreadMergeWith
                                                 (\() -> valuePrint |> Print.lineSpread)
                                 in
@@ -2945,14 +2942,14 @@ construct specific syntaxComments syntaxConstruct =
             specific.lineSpreadMinimum
                 |> Print.lineSpreadMergeWith
                     (\() ->
-                        commentsBeforeArguments
-                            |> Print.lineSpreadListMapAndCombine
-                                (\c -> c |> maybeLineSpread .lineSpread)
+                        argumentPrints
+                            |> Print.lineSpreadListMapAndCombine Print.lineSpread
                     )
                 |> Print.lineSpreadMergeWith
                     (\() ->
-                        argumentPrints
-                            |> Print.lineSpreadListMapAndCombine Print.lineSpread
+                        commentsBeforeArguments
+                            |> Print.lineSpreadListMapAndCombine
+                                (\c -> c |> maybeLineSpread .lineSpread)
                     )
     in
     Print.exactly syntaxConstruct.start
@@ -3416,6 +3413,20 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                     lineSpreadInRange syntaxRecord.fullRange
                         |> Print.lineSpreadMergeWith
                             (\() ->
+                                fieldValuePrints
+                                    |> Print.lineSpreadListMapAndCombine Print.lineSpread
+                            )
+                        |> Print.lineSpreadMergeWith
+                            (\() ->
+                                case commentsAfterFields of
+                                    [] ->
+                                        Print.SingleLine
+
+                                    _ :: _ ->
+                                        Print.MultipleLines
+                            )
+                        |> Print.lineSpreadMergeWith
+                            (\() ->
                                 commentsBeforeFields.reverse
                                     |> Print.lineSpreadListMapAndCombine
                                         (\fieldComments ->
@@ -3437,20 +3448,6 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                                     )
                                         )
                             )
-                        |> Print.lineSpreadMergeWith
-                            (\() ->
-                                fieldValuePrints
-                                    |> Print.lineSpreadListMapAndCombine Print.lineSpread
-                            )
-                        |> Print.lineSpreadMergeWith
-                            (\() ->
-                                case commentsAfterFields of
-                                    [] ->
-                                        Print.SingleLine
-
-                                    _ :: _ ->
-                                        Print.MultipleLines
-                            )
             in
             printExactlyCurlyOpeningSpace
                 |> Print.followedBy
@@ -3459,10 +3456,9 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                             let
                                 lineSpreadBetweenNameAndValueNotConsideringComments : () -> Print.LineSpread
                                 lineSpreadBetweenNameAndValueNotConsideringComments () =
-                                    lineSpreadInRange
-                                        { start = fieldNameRange.start
-                                        , end = fieldValue |> Elm.Syntax.Node.range |> .end
-                                        }
+                                    lineSpreadBetweenRanges
+                                        fieldNameRange
+                                        (fieldValue |> Elm.Syntax.Node.range)
                                         |> Print.lineSpreadMergeWith
                                             (\() -> valuePrint |> Print.lineSpread)
                             in
@@ -3545,6 +3541,15 @@ qualifiedReference syntaxReference =
                    )
                 ++ "."
                 ++ syntaxReference.unqualified
+
+
+lineSpreadBetweenRanges : Elm.Syntax.Range.Range -> Elm.Syntax.Range.Range -> Print.LineSpread
+lineSpreadBetweenRanges earlierRange laterRange =
+    if laterRange.end.row - earlierRange.start.row == 0 then
+        Print.SingleLine
+
+    else
+        Print.MultipleLines
 
 
 lineSpreadBetweenNodes : Elm.Syntax.Node.Node a_ -> Elm.Syntax.Node.Node b_ -> Print.LineSpread
@@ -3632,17 +3637,17 @@ typeFunctionNotParenthesized syntaxComments function =
                 |> Print.lineSpreadMergeWith
                     (\() -> function.inType |> lineSpreadInNode)
                 |> Print.lineSpreadMergeWith
-                    (\() -> afterArrowTypes.beforeRightest |> Print.lineSpreadListMapAndCombine lineSpreadInNode)
-                |> Print.lineSpreadMergeWith
                     (\() -> afterArrowTypes.rightest |> lineSpreadInNode)
+                |> Print.lineSpreadMergeWith
+                    (\() -> commentsCollapsibleBeforeRightestAfterArrowType.lineSpread)
+                |> Print.lineSpreadMergeWith
+                    (\() -> afterArrowTypes.beforeRightest |> Print.lineSpreadListMapAndCombine lineSpreadInNode)
                 |> Print.lineSpreadMergeWith
                     (\() ->
                         afterArrowTypesBeforeRightestCommentsBefore.reverse
                             |> Print.lineSpreadListMapAndCombine
                                 (\c -> c |> maybeLineSpread .lineSpread)
                     )
-                |> Print.lineSpreadMergeWith
-                    (\() -> commentsCollapsibleBeforeRightestAfterArrowType.lineSpread)
     in
     typeParenthesizedIfFunction syntaxComments function.inType
         |> Print.followedBy
@@ -4782,13 +4787,13 @@ declarationExpressionImplementation syntaxComments implementation =
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
-            parameterCommentsBefore.reverse
-                |> Print.lineSpreadListMapAndCombine
-                    (\c -> c |> maybeLineSpread .lineSpread)
+            parameterPrints
+                |> Print.lineSpreadListMapAndCombine Print.lineSpread
                 |> Print.lineSpreadMergeWith
                     (\() ->
-                        parameterPrints
-                            |> Print.lineSpreadListMapAndCombine Print.lineSpread
+                        parameterCommentsBefore.reverse
+                            |> Print.lineSpreadListMapAndCombine
+                                (\c -> c |> maybeLineSpread .lineSpread)
                     )
 
         commentsBetweenParametersAndResult : List String
@@ -5376,14 +5381,14 @@ expressionCall syntaxComments syntaxCall =
                 |> Print.lineSpreadMergeWithStrict argument0LineSpread
                 |> Print.lineSpreadMergeWith
                     (\() ->
-                        argument1UpCommentsBefore
-                            |> Print.lineSpreadListMapAndCombine
-                                (\c -> c |> maybeLineSpread .lineSpread)
+                        argument1UpPrints
+                            |> Print.lineSpreadListMapAndCombine Print.lineSpread
                     )
                 |> Print.lineSpreadMergeWith
                     (\() ->
-                        argument1UpPrints
-                            |> Print.lineSpreadListMapAndCombine Print.lineSpread
+                        argument1UpCommentsBefore
+                            |> Print.lineSpreadListMapAndCombine
+                                (\c -> c |> maybeLineSpread .lineSpread)
                     )
 
         argument1UpPrints : List Print
@@ -5526,14 +5531,14 @@ expressionOperation syntaxComments syntaxOperation =
         lineSpread : Print.LineSpread
         lineSpread =
             lineSpreadInRange syntaxOperation.fullRange
+                |> Print.lineSpreadMergeWithStrict
+                    commentsCollapsibleBeforeRightestExpression.lineSpread
                 |> Print.lineSpreadMergeWith
                     (\() ->
                         beforeRightestComments.commentsReverse
                             |> Print.lineSpreadListMapAndCombine
                                 (\c -> c |> maybeLineSpread .lineSpread)
                     )
-                |> Print.lineSpreadMergeWithStrict
-                    commentsCollapsibleBeforeRightestExpression.lineSpread
 
         beforeRightestOperatorExpressionChainWithPreviousLineSpread :
             { previousLineSpread : Print.LineSpread
@@ -6047,21 +6052,25 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            if
-                (commentsBeforeRecordVariable |> List.isEmpty)
-                    && (commentsBeforeFields.reverse
-                            |> List.all
-                                (\fieldComments ->
-                                    (fieldComments.beforeName |> List.isEmpty)
-                                        && (fieldComments.betweenNameAndValue |> List.isEmpty)
-                                )
-                       )
-                    && (commentsAfterFields |> List.isEmpty)
-            then
-                lineSpreadInRange syntaxRecordUpdate.fullRange
+            lineSpreadInRange syntaxRecordUpdate.fullRange
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        if
+                            (commentsBeforeRecordVariable |> List.isEmpty)
+                                && (commentsAfterFields |> List.isEmpty)
+                                && (commentsBeforeFields.reverse
+                                        |> List.all
+                                            (\fieldComments ->
+                                                (fieldComments.beforeName |> List.isEmpty)
+                                                    && (fieldComments.betweenNameAndValue |> List.isEmpty)
+                                            )
+                                   )
+                        then
+                            Print.SingleLine
 
-            else
-                Print.MultipleLines
+                        else
+                            Print.MultipleLines
+                    )
     in
     printExactlyCurlyOpeningSpace
         |> Print.followedBy
@@ -6103,10 +6112,9 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                                             ((case fieldComments.betweenNameAndValue of
                                                 [] ->
                                                     Print.spaceOrLinebreakIndented
-                                                        (lineSpreadInRange
-                                                            { start = fieldNameRange.start
-                                                            , end = fieldValue |> Elm.Syntax.Node.range |> .end
-                                                            }
+                                                        (lineSpreadBetweenRanges
+                                                            fieldNameRange
+                                                            (fieldValue |> Elm.Syntax.Node.range)
                                                         )
 
                                                 comment0 :: comment1Up ->
@@ -6202,13 +6210,13 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
-            parameterCommentsBefore.reverse
-                |> Print.lineSpreadListMapAndCombine
-                    (\c -> c |> maybeLineSpread .lineSpread)
+            parameterPrints
+                |> Print.lineSpreadListMapAndCombine Print.lineSpread
                 |> Print.lineSpreadMergeWith
                     (\() ->
-                        parameterPrints
-                            |> Print.lineSpreadListMapAndCombine Print.lineSpread
+                        parameterCommentsBefore.reverse
+                            |> Print.lineSpreadListMapAndCombine
+                                (\c -> c |> maybeLineSpread .lineSpread)
                     )
     in
     printExactlyBackSlash
@@ -6320,17 +6328,18 @@ expressionIfThenElse syntaxComments syntaxIfThenElse =
 
         conditionLineSpread : Print.LineSpread
         conditionLineSpread =
-            (case commentsBeforeCondition of
-                _ :: _ ->
-                    Print.MultipleLines
-
-                [] ->
-                    Print.SingleLine
-            )
-                |> Print.lineSpreadMergeWithStrict
-                    syntaxIfThenElse.conditionLineSpreadMinimum
+            syntaxIfThenElse.conditionLineSpreadMinimum
                 |> Print.lineSpreadMergeWith
                     (\() -> Print.lineSpread conditionPrint)
+                |> Print.lineSpreadMergeWith
+                    (\() ->
+                        case commentsBeforeCondition of
+                            _ :: _ ->
+                                Print.MultipleLines
+
+                            [] ->
+                                Print.SingleLine
+                    )
 
         onTruePrint : Print
         onTruePrint =
