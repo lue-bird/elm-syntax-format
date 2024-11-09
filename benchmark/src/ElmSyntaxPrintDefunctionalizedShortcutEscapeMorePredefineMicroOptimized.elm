@@ -50,7 +50,6 @@ import Unicode
 
 
 
--- TODO faster String.startsWith
 -- TODO -NotParenthesized re-use node argument
 -- TODO listFilledLast separate arguments
 -- TODO use reversing combinators for parameterPrints etc instead of List.reverse
@@ -211,7 +210,7 @@ module_ syntaxModule =
                 declaration0 :: declaration1Up ->
                     case
                         commentsAfter
-                            (listFilledLast ( declaration0, declaration1Up )
+                            (listFilledLast declaration0 declaration1Up
                                 |> Elm.Syntax.Node.range
                                 |> .end
                             )
@@ -369,7 +368,7 @@ moduleLevelCommentsBeforeDeclaration syntaxComments =
         |> Print.followedBy
             (moduleLevelComments (syntaxComments.comment0 :: syntaxComments.comment1Up))
         |> Print.followedBy
-            (case listFilledLast ( syntaxComments.comment0, syntaxComments.comment1Up ) of
+            (case listFilledLast syntaxComments.comment0 syntaxComments.comment1Up of
                 "{--}" ->
                     -- don't ask me why elm-format formats it that way
                     Print.empty
@@ -4267,14 +4266,14 @@ linebreaksFollowedByDeclaration syntaxComments syntaxDeclaration =
                     (declarationDestructuring syntaxComments.comments destructuringPattern destructuringExpression)
 
 
-listFilledLast : ( a, List a ) -> a
-listFilledLast ( head, tail ) =
+listFilledLast : a -> List a -> a
+listFilledLast head tail =
     case tail of
         [] ->
             head
 
         tailHead :: tailTail ->
-            listFilledLast ( tailHead, tailTail )
+            listFilledLast tailHead tailTail
 
 
 declarationDestructuring :
@@ -4473,7 +4472,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
 
                 parameter0 :: parameter1Up ->
                     { start =
-                        listFilledLast ( parameter0, parameter1Up )
+                        listFilledLast parameter0 parameter1Up
                             |> Elm.Syntax.Node.range
                             |> .end
                     , end = syntaxTypeAliasDeclaration.typeAnnotation |> Elm.Syntax.Node.range |> .start
