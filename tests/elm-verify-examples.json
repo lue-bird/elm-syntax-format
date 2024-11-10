@@ -1,8 +1,8 @@
 {
-  "root": "../src",
   "tests": [
     "Print",
     "ElmSyntaxPrint",
+    "ElmSyntaxPrintDefunctionalized",
     "ParserFast",
     "Char.Extra",
     "ElmSyntaxParserLenient",

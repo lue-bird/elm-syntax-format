@@ -1,24 +1,24 @@
 module Print exposing
-    ( Print, toString
-    , exactly, empty, space, linebreak
-    , followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten
+    ( Print(..), toString, toStringWithIndent
+    , exactly, empty, linebreak
+    , followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten, listReverseAndMapAndIntersperseAndFlatten
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
     , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
     )
 
 {-| simple pretty printing
 
-@docs Print, toString
+@docs Print, toString, toStringWithIndent
 
 
 ### primitive
 
-@docs exactly, empty, space, linebreak
+@docs exactly, empty, linebreak
 
 
 ### combine
 
-@docs followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten
+@docs followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten, listReverseAndMapAndIntersperseAndFlatten
 
 
 ### indent
@@ -38,8 +38,13 @@ These should never have spaces on them no matter how many levels of indentation 
 they are.
 
 -}
-type alias Print =
-    Int -> String
+type Print
+    = Exact String ()
+    | FollowedBy Print Print
+    | Linebreak () ()
+    | LinebreakIndented () ()
+    | WithIndentIncreasedBy Int Print
+    | WithIndentAtNextMultipleOf4 Print ()
 
 
 {-| Convert to a String with no extra indentation
@@ -47,7 +52,34 @@ and no restrictions on line width
 -}
 toString : Print -> String
 toString print =
-    print 0
+    toStringWithIndent 0 print
+
+
+{-| Convert to a String with given base indentation
+-}
+toStringWithIndent : Int -> Print -> String
+toStringWithIndent indent print =
+    -- IGNORE TCO
+    case print of
+        Exact string () ->
+            string
+
+        FollowedBy b a ->
+            toStringWithIndent indent a ++ toStringWithIndent indent b ++ ""
+
+        Linebreak () () ->
+            "\n"
+
+        LinebreakIndented () () ->
+            "\n" ++ String.repeat indent " "
+
+        WithIndentIncreasedBy increase innerPrint ->
+            toStringWithIndent (indent + increase)
+                innerPrint
+
+        WithIndentAtNextMultipleOf4 innerPrint () ->
+            toStringWithIndent (indent // 4 * 4 + 4)
+                innerPrint
 
 
 {-| [How many lines](#LineSpread) the given [`Print`](#Print)
@@ -55,11 +87,25 @@ take up if turned into a string?
 -}
 lineSpread : Print -> LineSpread
 lineSpread print =
-    if toString print |> String.contains "\n" then
-        MultipleLines
+    -- IGNORE TCO
+    case print of
+        Exact _ () ->
+            SingleLine
 
-    else
-        SingleLine
+        FollowedBy b a ->
+            lineSpread a |> lineSpreadMergeWith (\() -> lineSpread b)
+
+        Linebreak () () ->
+            MultipleLines
+
+        LinebreakIndented () () ->
+            MultipleLines
+
+        WithIndentIncreasedBy _ innerPrint ->
+            lineSpread innerPrint
+
+        WithIndentAtNextMultipleOf4 innerPrint () ->
+            lineSpread innerPrint
 
 
 {-| A given string. Mostly used for keywords, symbols and literal text.
@@ -73,7 +119,7 @@ Do not include linebreaks here and instead use [`linebreak`](#linebreak)
 -}
 exactly : String -> Print
 exactly exactNextString =
-    \_ -> exactNextString
+    Exact exactNextString ()
 
 
 {-| `exactly ""`.
@@ -108,7 +154,7 @@ Usually followed by [`Print.linebreakIndented`](#linebreakIndented)
 -}
 linebreak : Print
 linebreak =
-    exactly "\n"
+    Linebreak () ()
 
 
 {-| Prepend a given [`Print`](#Print)
@@ -122,8 +168,8 @@ To append more than 2, use [`Print.listFlatten`](#listFlatten)
 
 -}
 followedBy : Print -> (Print -> Print)
-followedBy nextPrint soFarPrint =
-    \indent -> soFarPrint indent ++ nextPrint indent
+followedBy =
+    FollowedBy
 
 
 {-| Concatenate a given list of [`Print`](#Print)s
@@ -139,11 +185,10 @@ To only concatenate 2, use [`Print.followedBy`](#followedBy)
 -}
 listMapAndFlatten : (a -> Print) -> List a -> Print
 listMapAndFlatten elementToPrint elements =
-    \indent ->
-        elements
-            |> List.foldl
-                (\next soFar -> soFar ++ elementToPrint next indent)
-                ""
+    elements
+        |> List.foldl
+            (\next soFar -> soFar |> followedBy (next |> elementToPrint))
+            empty
 
 
 {-| Concatenate a given list of [`Print`](#Print)s
@@ -159,11 +204,10 @@ To only concatenate 2, use [`Print.followedBy`](#followedBy)
 -}
 listReverseAndMapAndFlatten : (a -> Print) -> List a -> Print
 listReverseAndMapAndFlatten elementToPrint elements =
-    \indent ->
-        elements
-            |> List.foldr
-                (\next soFar -> soFar ++ elementToPrint next indent)
-                ""
+    elements
+        |> List.foldr
+            (\next soFar -> soFar |> followedBy (elementToPrint next))
+            empty
 
 
 {-| Concatenate a given list of [`Print`](#Print)s
@@ -179,26 +223,20 @@ To only concatenate 2, use [`Print.followedBy`](#followedBy)
 
 -}
 listIntersperseAndFlatten : Print -> List Print -> Print
-listIntersperseAndFlatten inBetweenPrint prints =
-    case prints of
+listIntersperseAndFlatten inBetweenPrint elements =
+    case elements of
         [] ->
             empty
 
         head :: tail ->
-            \indent ->
-                let
-                    inBetweenAsString : String
-                    inBetweenAsString =
-                        inBetweenPrint indent
-                in
-                tail
-                    |> List.foldl
-                        (\next soFar ->
-                            soFar
-                                ++ inBetweenAsString
-                                ++ next indent
-                        )
-                        (head indent)
+            tail
+                |> List.foldl
+                    (\next soFar ->
+                        soFar
+                            |> followedBy inBetweenPrint
+                            |> followedBy next
+                    )
+                    head
 
 
 {-| Concatenate a given list of [`Print`](#Print)s
@@ -221,20 +259,44 @@ listMapAndIntersperseAndFlatten elementToPrint inBetweenPrint prints =
             empty
 
         head :: tail ->
-            \indent ->
-                let
-                    inBetweenAsString : String
-                    inBetweenAsString =
-                        inBetweenPrint indent
-                in
-                tail
-                    |> List.foldl
-                        (\next soFar ->
-                            soFar
-                                ++ inBetweenAsString
-                                ++ elementToPrint next indent
-                        )
-                        (elementToPrint head indent)
+            tail
+                |> List.foldl
+                    (\next soFar ->
+                        soFar
+                            |> followedBy inBetweenPrint
+                            |> followedBy (elementToPrint next)
+                    )
+                    (elementToPrint head)
+
+
+{-| Concatenate a given list of [`Print`](#Print)s
+one after the other
+
+    [ "a", "b" ]
+        |> List.map Print.exactly
+        |> Print.listReverseAndIntersperseAndFlatten
+            (Print.exactly ",")
+        |> Print.toString
+    --> "b,a"
+
+To only concatenate 2, use [`Print.followedBy`](#followedBy)
+
+-}
+listReverseAndIntersperseAndFlatten : Print -> List Print -> Print
+listReverseAndIntersperseAndFlatten inBetweenPrint prints =
+    case prints of
+        [] ->
+            empty
+
+        head :: tail ->
+            tail
+                |> List.foldl
+                    (\next soFar ->
+                        next
+                            |> followedBy inBetweenPrint
+                            |> followedBy soFar
+                    )
+                    head
 
 
 {-| Concatenate a given list of [`Print`](#Print)s
@@ -249,27 +311,21 @@ one after the other
 To only concatenate 2, use [`Print.followedBy`](#followedBy)
 
 -}
-listReverseAndIntersperseAndFlatten : Print -> List Print -> Print
-listReverseAndIntersperseAndFlatten inBetweenPrint prints =
-    case prints of
+listReverseAndMapAndIntersperseAndFlatten : (a -> Print) -> Print -> List a -> Print
+listReverseAndMapAndIntersperseAndFlatten elementToPrint inBetweenPrint elements =
+    case elements of
         [] ->
             empty
 
         head :: tail ->
-            \indent ->
-                let
-                    inBetweenAsString : String
-                    inBetweenAsString =
-                        inBetweenPrint indent
-                in
-                tail
-                    |> List.foldl
-                        (\next soFar ->
-                            next indent
-                                ++ inBetweenAsString
-                                ++ soFar
-                        )
-                        (head indent)
+            tail
+                |> List.foldl
+                    (\next soFar ->
+                        elementToPrint next
+                            |> followedBy inBetweenPrint
+                            |> followedBy soFar
+                    )
+                    (elementToPrint head)
 
 
 {-| Concatenate a given list of [`Print`](#Print)s
@@ -292,7 +348,7 @@ listFlatten prints =
 
         head :: tail ->
             tail
-                |> List.foldl (\next soFar -> soFar |> followedBy next)
+                |> List.foldl followedBy
                     head
 
 
@@ -303,7 +359,7 @@ to the current indent + a given number.
 -}
 withIndentIncreasedBy : Int -> (Print -> Print)
 withIndentIncreasedBy indentationIncrease print =
-    \soFarIndent -> print (soFarIndent + indentationIncrease)
+    WithIndentIncreasedBy indentationIncrease print
 
 
 {-| Set the indentation used by [`Print.linebreakIndented`](#linebreakIndented),
@@ -313,7 +369,7 @@ to the current indent minus its remainder by 4 + 4.
 -}
 withIndentAtNextMultipleOf4 : Print -> Print
 withIndentAtNextMultipleOf4 print =
-    \soFarIndent -> print (soFarIndent // 4 * 4 + 4)
+    WithIndentAtNextMultipleOf4 print ()
 
 
 {-| All on the same line or split across multiple?
@@ -377,7 +433,7 @@ lineSpreadListMapAndCombine elementLineSpread lineSpreads =
                     lineSpreadListMapAndCombine elementLineSpread tail
 
 
-{-| [`Print.space`](#space) when [`SingleLine`](#LineSpread),
+{-| `Print.exactly " "` when [`SingleLine`](#LineSpread),
 [`Print.linebreakIndented`](#linebreakIndented) when [`MultipleLines`](#LineSpread),
 
 Specify the indentation with
@@ -422,4 +478,4 @@ and [`withIndentAtNextMultipleOf4`](#withIndentAtNextMultipleOf4)
 -}
 linebreakIndented : Print
 linebreakIndented =
-    \indent -> "\n" ++ String.repeat indent " "
+    LinebreakIndented () ()

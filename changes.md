@@ -1,3 +1,10 @@
+#### 1.1.3
+  - in module `ElmSyntaxPrint`
+      - correctly collapse comments in pattern list, in records, type record extensions, record update
+      - correct patterns parenthesized multiple times sometimes not unwrapped fully
+      - TODO correct linebreak count in module without imports and module documentation and imports
+      - faster
+
 #### 1.1.2
   - in module `ElmSyntaxParserLenient`
       - corrects `port module` to `module` if no ports exist and the other way round

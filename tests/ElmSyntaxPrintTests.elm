@@ -1365,6 +1365,20 @@ type alias A =
     }
 """
                 )
+            , Test.test "consecutive collapsible comments before first record field"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { {- 0 -}
+    {- 1 -}
+    zero : Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { {- 0 -} {- 1 -} zero : Int
+    }
+"""
+                )
             , Test.test "comments between record field name and value"
                 (\() ->
                     """module A exposing (..)
@@ -1377,6 +1391,36 @@ type alias A =
     { zero :
         -- zero
         Int
+    }
+"""
+                )
+            , Test.test "consecutive collapsible comments between record field name and single-line value on next line"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { zero : {- 0 -} {- 1 -}
+    Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { zero :
+        {- 0 -} {- 1 -} Int
+    }
+"""
+                )
+            , Test.test "consecutive collapsible comments between record field name and multi-line value on same line"
+                (\() ->
+                    """module A exposing (..)
+type alias A = { zero : {- 0 -} {- 1 -} List
+    Int }"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+type alias A =
+    { zero :
+        {- 0 -} {- 1 -}
+        List
+            Int
     }
 """
                 )
@@ -3835,6 +3879,20 @@ a
     0
 """
                 )
+            , Test.test "empty record with consecutive collapsible comments"
+                (\() ->
+                    """module A exposing (..)
+a { {- 0 -}
+  {- 1 -}
+  } =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a {{- 0 -} {- 1 -}} =
+    0
+"""
+                )
             , Test.test "record with comments before first field"
                 (\() ->
                     """module A exposing (..)
@@ -3851,6 +3909,20 @@ a
       zero
     }
     =
+    0
+"""
+                )
+            , Test.test "record with consecutive collapsible comments before first field"
+                (\() ->
+                    """module A exposing (..)
+a { {- 0 -}
+  {- 1 -}
+  zero } =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a { {- 0 -} {- 1 -} zero } =
     0
 """
                 )
@@ -3871,6 +3943,20 @@ a
       one
     }
     =
+    0
+"""
+                )
+            , Test.test "record with collapsible comments between fields"
+                (\() ->
+                    """module A exposing (..)
+a { zero, {- 0 -}
+  {- 1 -}
+  one } =
+    0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a { zero, {- 0 -} {- 1 -} one } =
     0
 """
                 )
@@ -4029,7 +4115,29 @@ a =
 
 a =
     case [] of
-        [ 0
+        [ 0, {- 0 -} {- 1 -} 0 ] ->
+            0
+
+        _ ->
+            1
+"""
+                )
+            , Test.test "consecutive comments collapsible before single-line list element among multi-line list elements"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case [] of
+        [ {--} 0, {- 0 -}
+         {- 1 -}
+         0 ] -> 0
+        _ -> 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+a =
+    case [] of
+        [ {--}
+          0
         , {- 0 -} {- 1 -} 0
         ]
         ->
@@ -8798,7 +8906,7 @@ expectPrintedAs expected source =
                 printed =
                     parsed
                         |> ElmSyntaxPrint.module_
-                        |> Print.toString
+                        |> ElmSyntaxPrint.toString
             in
             if printed == expected then
                 Expect.pass
