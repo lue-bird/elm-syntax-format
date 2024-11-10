@@ -2,6 +2,7 @@
   - in module `ElmSyntaxPrint`
       - correctly collapse comments in pattern list, in records, type record extensions, record update
       - correct patterns parenthesized multiple times sometimes not unwrapped fully
+      - now merges consecutive `|`s in choice type declaration
       - TODO correct linebreak count in module without imports and module documentation and imports
       - faster
 

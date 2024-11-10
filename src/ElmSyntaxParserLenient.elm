@@ -40,6 +40,8 @@ Some additional lenient parsing:
 
   - removes extra `,` before first record field, list element or expose
 
+  - merges consecutive `|` in choice type declaration
+
   - removes remove extra `|` before first variant declaration
 
   - corrects `port module` to `module` if no ports exist and the other way round
@@ -1495,17 +1497,22 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
         )
         variantDeclarationFollowedByOptimisticLayout
         (manyWithCommentsReverse
-            (ParserFast.symbolFollowedBy "|"
-                (positivelyIndentedPlusFollowedBy 1
-                    (ParserFast.map2
-                        (\commentsBeforePipe variantResult ->
+            (positivelyIndentedFollowedBy
+                (ParserFast.symbolFollowedBy "|"
+                    (ParserFast.map3
+                        (\commentsBeforePipe commentsWithExtraPipe variantResult ->
                             { comments =
                                 commentsBeforePipe
+                                    |> ropePrependTo commentsWithExtraPipe
                                     |> ropePrependTo variantResult.comments
                             , syntax = variantResult.syntax
                             }
                         )
                         whitespaceAndCommentsEndsPositivelyIndented
+                        (ParserFast.orSucceed
+                            (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
+                            ropeEmpty
+                        )
                         variantDeclarationFollowedByOptimisticLayout
                     )
                 )
@@ -1634,17 +1641,22 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
         )
         variantDeclarationFollowedByOptimisticLayout
         (manyWithCommentsReverse
-            (ParserFast.symbolFollowedBy "|"
-                (positivelyIndentedPlusFollowedBy 1
-                    (ParserFast.map2
-                        (\commentsBeforePipe variantResult ->
+            (positivelyIndentedFollowedBy
+                (ParserFast.symbolFollowedBy "|"
+                    (ParserFast.map3
+                        (\commentsBeforePipe commentsWithExtraPipe variantResult ->
                             { comments =
                                 commentsBeforePipe
+                                    |> ropePrependTo commentsWithExtraPipe
                                     |> ropePrependTo variantResult.comments
                             , syntax = variantResult.syntax
                             }
                         )
                         whitespaceAndCommentsEndsPositivelyIndented
+                        (ParserFast.orSucceed
+                            (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
+                            ropeEmpty
+                        )
                         variantDeclarationFollowedByOptimisticLayout
                     )
                 )
