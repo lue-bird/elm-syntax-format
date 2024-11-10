@@ -3,7 +3,6 @@ module ElmSyntaxPrintTests exposing (suite)
 import Elm.Parser
 import ElmSyntaxPrint
 import Expect
-import Print
 import Test exposing (Test)
 
 
