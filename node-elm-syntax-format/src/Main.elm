@@ -1,7 +1,6 @@
 port module Main exposing (main)
 
-{-| Format all elm modules in the source directories your project
--}
+ 
 
 import Ansi.Color
 import Ansi.Cursor
