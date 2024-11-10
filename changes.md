@@ -1,8 +1,10 @@
 #### 1.1.3
+  - in module `ElmSyntaxParserLenient`
+      - now merges consecutive `|`s in choice type declaration
+      - now after import removes empty `exposing ()`
   - in module `ElmSyntaxPrint`
       - correctly collapse comments in pattern list, in records, type record extensions, record update
       - correct patterns parenthesized multiple times sometimes not unwrapped fully
-      - now merges consecutive `|`s in choice type declaration
       - correct linebreak count in module without imports and module documentation and comments
       - faster
 

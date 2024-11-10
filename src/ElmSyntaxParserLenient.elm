@@ -48,6 +48,8 @@ Some additional lenient parsing:
 
   - corrects exposing `(...)` → `(..)`
 
+  - removes empty `exposing ()` after import
+
   - corrects expression record field name-value separators
 
     `{ name : value }` or `{ name value }`
@@ -322,13 +324,13 @@ moduleName =
 
 exposeDefinition : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Exposing.Exposing))
 exposeDefinition =
-    -- TODO inline
     ParserFast.map2WithRange
         (\range commentsAfterExposing exposingListInnerResult ->
             { comments =
                 commentsAfterExposing
                     |> ropePrependTo exposingListInnerResult.comments
-            , syntax = Elm.Syntax.Node.Node range exposingListInnerResult.syntax
+            , syntax =
+                Elm.Syntax.Node.Node range exposingListInnerResult.syntax
             }
         )
         (ParserFast.symbolFollowedBy "exposing" whitespaceAndCommentsEndsPositivelyIndented)
@@ -350,67 +352,70 @@ exposing_ =
             whitespaceAndComments
             (ParserFast.oneOf3
                 (ParserFast.mapWithRange
-                    (\range commentsAfterDotDot ->
-                        { comments = commentsAfterDotDot
+                    (\range comments ->
+                        { comments = comments
                         , syntax = Elm.Syntax.Exposing.All range
                         }
                     )
                     (ParserFast.symbolFollowedBy ".." whitespaceAndCommentsEndsPositivelyIndented)
                 )
                 (ParserFast.mapWithRange
-                    (\range commentsAfterDotDot ->
-                        { comments = commentsAfterDotDot
+                    (\range comments ->
+                        { comments = comments
                         , syntax = Elm.Syntax.Exposing.All range
                         }
                     )
                     (ParserFast.symbolFollowedBy "..." whitespaceAndCommentsEndsPositivelyIndented)
                 )
+                (exposingWithinParensExplicitMap identity)
+            )
+        )
+        |> ParserFast.followedBySymbol ")"
+
+
+exposingWithinParensExplicitMap : (Elm.Syntax.Exposing.Exposing -> syntax) -> ParserFast.Parser (WithComments syntax)
+exposingWithinParensExplicitMap exposingToSyntax =
+    ParserFast.map4
+        (\commentsBeforeHeadElement headElement commentsAfterHeadElement tailElements ->
+            { comments =
+                commentsBeforeHeadElement
+                    |> ropePrependTo headElement.comments
+                    |> ropePrependTo commentsAfterHeadElement
+                    |> ropePrependTo tailElements.comments
+            , syntax =
+                Elm.Syntax.Exposing.Explicit
+                    (headElement.syntax :: tailElements.syntax)
+                    |> exposingToSyntax
+            }
+        )
+        (ParserFast.orSucceed
+            (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+            ropeEmpty
+        )
+        expose
+        whitespaceAndCommentsEndsPositivelyIndented
+        (manyWithComments
+            (ParserFast.symbolFollowedBy ","
                 (ParserFast.map4
-                    (\commentsBeforeHeadElement headElement commentsAfterHeadElement tailElements ->
+                    (\commentsBefore commentsWithExtraComma result commentsAfter ->
                         { comments =
-                            commentsBeforeHeadElement
-                                |> ropePrependTo headElement.comments
-                                |> ropePrependTo commentsAfterHeadElement
-                                |> ropePrependTo tailElements.comments
-                        , syntax =
-                            Elm.Syntax.Exposing.Explicit
-                                (headElement.syntax
-                                    :: tailElements.syntax
-                                )
+                            commentsBefore
+                                |> ropePrependTo commentsWithExtraComma
+                                |> ropePrependTo result.comments
+                                |> ropePrependTo commentsAfter
+                        , syntax = result.syntax
                         }
                     )
+                    whitespaceAndCommentsEndsPositivelyIndented
                     (ParserFast.orSucceed
                         (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
                         ropeEmpty
                     )
                     expose
                     whitespaceAndCommentsEndsPositivelyIndented
-                    (manyWithComments
-                        (ParserFast.symbolFollowedBy ","
-                            (ParserFast.map4
-                                (\commentsBefore commentsWithExtraComma result commentsAfter ->
-                                    { comments =
-                                        commentsBefore
-                                            |> ropePrependTo commentsWithExtraComma
-                                            |> ropePrependTo result.comments
-                                            |> ropePrependTo commentsAfter
-                                    , syntax = result.syntax
-                                    }
-                                )
-                                whitespaceAndCommentsEndsPositivelyIndented
-                                (ParserFast.orSucceed
-                                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                                    ropeEmpty
-                                )
-                                expose
-                                whitespaceAndCommentsEndsPositivelyIndented
-                            )
-                        )
-                    )
                 )
             )
         )
-        |> ParserFast.followedBySymbol ")"
 
 
 {-| [`Parser`](#Parser) for a single [`Elm.Syntax.Exposing.TopLevelExpose`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-Exposing#TopLevelExpose)
@@ -670,7 +675,7 @@ portModuleDefinition =
 import_ : Parser { comments : Comments, syntax : Elm.Syntax.Node.Node Elm.Syntax.Import.Import }
 import_ =
     ParserFast.map5WithStartLocation
-        (\start commentsAfterImport mod commentsAfterModuleName maybeModuleAlias maybeExposingList ->
+        (\start commentsAfterImport mod commentsAfterModuleName maybeModuleAlias maybeExposingResult ->
             let
                 commentsBeforeAlias : Comments
                 commentsBeforeAlias =
@@ -679,13 +684,15 @@ import_ =
             in
             case maybeModuleAlias of
                 Nothing ->
-                    case maybeExposingList of
+                    case maybeExposingResult.syntax of
                         Nothing ->
                             let
                                 (Elm.Syntax.Node.Node modRange _) =
                                     mod
                             in
-                            { comments = commentsBeforeAlias
+                            { comments =
+                                commentsBeforeAlias
+                                    |> ropePrependTo maybeExposingResult.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = modRange.end }
                                     { moduleName = mod
@@ -697,27 +704,30 @@ import_ =
                         Just exposingListValue ->
                             let
                                 (Elm.Syntax.Node.Node exposingRange _) =
-                                    exposingListValue.syntax
+                                    exposingListValue
                             in
                             { comments =
-                                commentsBeforeAlias |> ropePrependTo exposingListValue.comments
+                                commentsBeforeAlias
+                                    |> ropePrependTo maybeExposingResult.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = exposingRange.end }
                                     { moduleName = mod
                                     , moduleAlias = Nothing
-                                    , exposingList = Just exposingListValue.syntax
+                                    , exposingList = Just exposingListValue
                                     }
                             }
 
                 Just moduleAliasResult ->
-                    case maybeExposingList of
+                    case maybeExposingResult.syntax of
                         Nothing ->
                             let
                                 (Elm.Syntax.Node.Node aliasRange _) =
                                     moduleAliasResult.syntax
                             in
                             { comments =
-                                commentsBeforeAlias |> ropePrependTo moduleAliasResult.comments
+                                commentsBeforeAlias
+                                    |> ropePrependTo moduleAliasResult.comments
+                                    |> ropePrependTo maybeExposingResult.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = aliasRange.end }
                                     { moduleName = mod
@@ -729,17 +739,17 @@ import_ =
                         Just exposingListValue ->
                             let
                                 (Elm.Syntax.Node.Node exposingRange _) =
-                                    exposingListValue.syntax
+                                    exposingListValue
                             in
                             { comments =
                                 commentsBeforeAlias
                                     |> ropePrependTo moduleAliasResult.comments
-                                    |> ropePrependTo exposingListValue.comments
+                                    |> ropePrependTo maybeExposingResult.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = exposingRange.end }
                                     { moduleName = mod
                                     , moduleAlias = Just moduleAliasResult.syntax
-                                    , exposingList = Just exposingListValue.syntax
+                                    , exposingList = Just exposingListValue
                                     }
                             }
         )
@@ -764,14 +774,62 @@ import_ =
         )
         (ParserFast.map2OrSucceed
             (\exposingResult commentsAfter ->
-                Just
-                    { comments = exposingResult.comments |> ropePrependTo commentsAfter
-                    , syntax = exposingResult.syntax
-                    }
+                { comments = exposingResult.comments |> ropePrependTo commentsAfter
+                , syntax = exposingResult.syntax
+                }
             )
-            exposeDefinition
+            (ParserFast.map2WithRange
+                (\range commentsAfterExposing exposingListInnerResult ->
+                    { comments =
+                        commentsAfterExposing
+                            |> ropePrependTo exposingListInnerResult.comments
+                    , syntax =
+                        case exposingListInnerResult.syntax of
+                            Nothing ->
+                                Nothing
+
+                            Just exposingListInner ->
+                                Just (Elm.Syntax.Node.Node range exposingListInner)
+                    }
+                )
+                (ParserFast.symbolFollowedBy "exposing" whitespaceAndCommentsEndsPositivelyIndented)
+                (ParserFast.symbolFollowedBy "("
+                    (ParserFast.map2
+                        (\commentsBefore inner ->
+                            { comments = commentsBefore |> ropePrependTo inner.comments
+                            , syntax = inner.syntax
+                            }
+                        )
+                        whitespaceAndComments
+                        (ParserFast.oneOf4
+                            (ParserFast.mapWithRange
+                                (\range comments ->
+                                    { comments = comments
+                                    , syntax = Just (Elm.Syntax.Exposing.All range)
+                                    }
+                                )
+                                (ParserFast.symbolFollowedBy ".." whitespaceAndCommentsEndsPositivelyIndented)
+                                |> ParserFast.followedBySymbol ")"
+                            )
+                            (ParserFast.mapWithRange
+                                (\range comments ->
+                                    { comments = comments
+                                    , syntax = Just (Elm.Syntax.Exposing.All range)
+                                    }
+                                )
+                                (ParserFast.symbolFollowedBy "..." whitespaceAndCommentsEndsPositivelyIndented)
+                                |> ParserFast.followedBySymbol ")"
+                            )
+                            (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
+                            (exposingWithinParensExplicitMap Just
+                                |> ParserFast.followedBySymbol ")"
+                            )
+                        )
+                    )
+                )
+            )
             whitespaceAndComments
-            Nothing
+            { comments = ropeEmpty, syntax = Nothing }
         )
 
 

@@ -1145,6 +1145,28 @@ fun2 n =
                                 }
                             )
                 )
+            , Test.test "import with exposing ()"
+                (\() ->
+                    "import Html exposing ()"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.import_
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
+                                { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 12 } } [ "Html" ]
+                                , moduleAlias = Nothing
+                                , exposingList = Nothing
+                                }
+                            )
+                )
+            , Test.test "import with alias and exposing ()"
+                (\() ->
+                    "import Html as H exposing ()"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.import_
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 17 } }
+                                { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 12 } } [ "Html" ]
+                                , moduleAlias = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 17 } } [ "H" ])
+                                , exposingList = Nothing
+                                }
+                            )
+                )
             , Test.test "import minimal"
                 (\() ->
                     "import Foo"
