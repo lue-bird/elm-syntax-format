@@ -167,6 +167,8 @@ config =
     , NoDebug.TodoOrToString.rule
         |> Review.Rule.ignoreErrorsForDirectories [ "tests/" ]
     , VariablesBetweenCaseOf.AccessInCases.forbid
+        |> Review.Rule.ignoreErrorsForFiles 
+            [ "src/ParserFast.elm", "src/ElmSyntaxParserLenient.elm", "src/Print.elm", "src/Rope.elm", "src/ElmSyntaxPrintDefunctionalized.elm" ]
     , EqualsCaseable.forbid EqualsCaseable.Everywhere
     , NoDeprecated.rule NoDeprecated.defaults
     , NoPrematureLetComputation.rule
@@ -176,7 +178,6 @@ config =
     , NoUnoptimizedRecursion.optOutWithComment "IGNORE TCO"
         |> NoUnoptimizedRecursion.rule
         |> Review.Rule.ignoreErrorsForDirectories [ "tests/" ]
-        |> Review.Rule.ignoreErrorsForFiles [ "src/ElmSyntaxPrint.elm" ]
     , NoSimpleLetBody.rule
     , NoUnnecessaryTrailingUnderscore.rule
     , NoUnsafeDivision.rule
