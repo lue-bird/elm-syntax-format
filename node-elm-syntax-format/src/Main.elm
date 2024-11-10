@@ -13,9 +13,6 @@ import Elm.Project
 import Elm.Syntax.Declaration
 import Elm.Syntax.File
 import Elm.Syntax.Node
-import Elm.Syntax.Range
-import Elm.Syntax.TypeAnnotation
-import Elm.Type
 import ElmSyntaxParserLenient
 import ElmSyntaxPrint
 import FastDict
@@ -186,7 +183,7 @@ singleRunInterface state =
                     , content = moduleToFormatContent
                     }
                     |> Node.interfaceFutureMap
-                        (\result ->
+                        (\_ ->
                             SingleRun
                                 { state
                                     | formattedModulesToWrite =
@@ -409,7 +406,7 @@ watchInterface state =
                     , content = moduleToFormatContent
                     }
                     |> Node.interfaceFutureMap
-                        (\result ->
+                        (\_ ->
                             Watching
                                 { elmJsonSourceDirectories = state.elmJsonSourceDirectories
                                 , sourceFilesToRead = state.sourceFilesToRead
