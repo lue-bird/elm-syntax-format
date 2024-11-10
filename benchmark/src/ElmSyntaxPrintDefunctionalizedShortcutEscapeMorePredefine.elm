@@ -4814,7 +4814,7 @@ declarationExpressionImplementation syntaxComments implementation =
     Print.exactly (implementation.name |> Elm.Syntax.Node.value)
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
-                ((parameterCommentsBefore.reverse
+                (parameterCommentsBefore.reverse
                     |> Print.listReverseAndMapAndFlatten
                         (\parameter ->
                             Print.spaceOrLinebreakIndented parametersLineSpread
@@ -4835,7 +4835,6 @@ declarationExpressionImplementation syntaxComments implementation =
                                     )
                                 |> Print.followedBy parameter.print
                         )
-                 )
                     |> Print.followedBy (Print.spaceOrLinebreakIndented parametersLineSpread)
                     |> Print.followedBy printExactlyEquals
                     |> Print.followedBy
@@ -6230,8 +6229,8 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                     |> Print.followedBy
                         (parameterCommentsBefore.reverse
                             |> Print.listReverseAndMapAndIntersperseAndFlatten
-                                (\maybeCommentsBefore ->
-                                    (case maybeCommentsBefore.maybeCommentsBefore of
+                                (\parameter ->
+                                    (case parameter.maybeCommentsBefore of
                                         Nothing ->
                                             Print.empty
 
@@ -6241,11 +6240,11 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                                                     (Print.spaceOrLinebreakIndented
                                                         (commentsBefore.lineSpread
                                                             |> Print.lineSpreadMergeWith
-                                                                (\() -> maybeCommentsBefore.print |> Print.lineSpread)
+                                                                (\() -> parameter.print |> Print.lineSpread)
                                                         )
                                                     )
                                     )
-                                        |> Print.followedBy maybeCommentsBefore.print
+                                        |> Print.followedBy parameter.print
                                 )
                                 (Print.spaceOrLinebreakIndented parametersLineSpread)
                         )

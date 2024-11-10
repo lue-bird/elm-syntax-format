@@ -4,6 +4,7 @@ module PrintDefunctionalizedMicroOptimized exposing
     , followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
     , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
+    , listReverseAndMapAndIntersperseAndFlatten
     )
 
 {-| simple pretty printing
@@ -269,8 +270,9 @@ listMapAndIntersperseAndFlatten elementToPrint inBetweenPrint prints =
 one after the other
 
     [ "a", "b" ]
-        |> List.map Print.exactly
-        |> Print.listReverseAndIntersperseAndFlatten (Print.exactly ",")
+        |> Print.listReverseAndIntersperseAndFlatten
+            Print.exactly
+            (Print.exactly ",")
         |> Print.toString
     --> "b,a"
 
@@ -292,6 +294,35 @@ listReverseAndIntersperseAndFlatten inBetweenPrint prints =
                             |> followedBy soFar
                     )
                     head
+
+
+{-| Concatenate a given list of [`Print`](#Print)s
+one after the other
+
+    [ "a", "b" ]
+        |> List.map Print.exactly
+        |> Print.listReverseAndIntersperseAndFlatten (Print.exactly ",")
+        |> Print.toString
+    --> "b,a"
+
+To only concatenate 2, use [`Print.followedBy`](#followedBy)
+
+-}
+listReverseAndMapAndIntersperseAndFlatten : (a -> Print) -> Print -> List a -> Print
+listReverseAndMapAndIntersperseAndFlatten elementToPrint inBetweenPrint elements =
+    case elements of
+        [] ->
+            empty
+
+        head :: tail ->
+            tail
+                |> List.foldl
+                    (\next soFar ->
+                        elementToPrint next
+                            |> followedBy inBetweenPrint
+                            |> followedBy soFar
+                    )
+                    (elementToPrint head)
 
 
 {-| Concatenate a given list of [`Print`](#Print)s
