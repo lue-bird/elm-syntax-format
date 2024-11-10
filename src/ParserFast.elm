@@ -10,7 +10,7 @@ module ParserFast exposing
     , loopWhileSucceeds, loopWhileSucceedsOntoResultFromParser, loopWhileSucceedsOntoResultFromParserRightToLeftStackUnsafe, loopWhileSucceedsRightToLeftStackUnsafe, loopUntil
     , orSucceed, mapOrSucceed, map2OrSucceed, map2WithRangeOrSucceed, map3OrSucceed, map4OrSucceed, oneOf2, oneOf2Map, oneOf2MapWithStartRowColumnAndEndRowColumn, oneOf2OrSucceed, oneOf3, oneOf4, oneOf5, oneOf7, oneOf9
     , withIndentSetToColumn, columnIndentAndThen, validateEndColumnIndentation
-    , mapWithRange, columnAndThen, offsetSourceAndThen, offsetSourceAndThenOrSucceed
+    , mapWithRange, offsetSourceAndThen, offsetSourceAndThenOrSucceed
     , problem
     )
 
@@ -115,7 +115,7 @@ Once a path is chosen, it does not come back and try the others.
 # Indentation, Locations and source
 
 @docs withIndentSetToColumn, columnIndentAndThen, validateEndColumnIndentation
-@docs mapWithRange, columnAndThen, offsetSourceAndThen, offsetSourceAndThenOrSucceed
+@docs mapWithRange, offsetSourceAndThen, offsetSourceAndThenOrSucceed
 @docs problem
 
 -}
@@ -263,18 +263,6 @@ validate isOkay (Parser parseA) =
 
                     else
                         pStepBadCommitting
-        )
-
-
-columnAndThen : (Int -> Parser a) -> Parser a
-columnAndThen callback =
-    Parser
-        (\s ->
-            let
-                (Parser parse) =
-                    callback s.col
-            in
-            parse s
         )
 
 
