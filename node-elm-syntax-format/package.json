@@ -3,11 +3,12 @@
   "name": "elm-syntax-format",
   "devDependencies": {
     "@lue-bird/elm-state-interface-experimental": "^3.0.6",
-    "elm-esm": "^1.1.4"
+    "elm-esm": "^1.1.4",
+    "elm-optimize-level-2": "^0.3.5"
   },
   "bin": "./src/index.js",
   "scripts": {
-    "build": "elm-esm make src/Main.elm --output=src/elmMain.js --optimize",
-    "start": "elm-esm make src/Main.elm --output=src/elmMain.js --optimize && node src/index.js"
+    "build": "node build.js",
+    "start": "node build.js && node src/index.js"
   }
 }
