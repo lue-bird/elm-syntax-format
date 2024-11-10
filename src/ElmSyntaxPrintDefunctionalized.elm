@@ -112,7 +112,7 @@ module_ syntaxModule =
                 [] ->
                     case maybeModuleDocumentation of
                         Nothing ->
-                            Print.linebreak
+                            printLinebreakLinebreak
 
                         Just _ ->
                             case commentsBeforeDeclarations of

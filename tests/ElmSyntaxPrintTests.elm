@@ -704,6 +704,7 @@ type alias T a b =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias T a b =
     ( a, b )
 """
@@ -715,6 +716,7 @@ type alias T a =
     List a"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias T a =
     List a
@@ -728,6 +730,7 @@ type alias T =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias T =
     String
 """
@@ -739,6 +742,7 @@ type alias A parameterA {--} parameterB =
     (parameterA,parameterB)"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias
     A
@@ -756,6 +760,7 @@ type alias A {--} parameterA parameterB =
     (parameterA,parameterB)"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias
     A
@@ -775,6 +780,7 @@ type alias A {- 0 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A {- 0 -} {- 1 -} parameterA parameterB =
     ( parameterA, parameterB )
 """
@@ -787,6 +793,7 @@ type alias A parameter {- 0 -} =
     parameter"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A parameter =
     {- 0 -}
@@ -802,6 +809,7 @@ type alias A {- 0 -} =
     Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A =
     {- 0 -}
@@ -819,6 +827,7 @@ type T a b
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type T a b
     = T ( a, b )
 """
@@ -830,6 +839,7 @@ type T a
     = T a a"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type T a
     = T a a
@@ -843,6 +853,7 @@ type T
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type T
     = T
 """
@@ -855,6 +866,7 @@ type T a
     -> a)"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type T a
     = T
@@ -873,6 +885,7 @@ type T
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type T
     = X
     | Y
@@ -885,6 +898,7 @@ type A parameterA {--} parameterB
     = A (parameterA,parameterB)"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type
     A
@@ -901,6 +915,7 @@ type A {--} parameterA parameterB
     = A (parameterA,parameterB)"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type
     A
@@ -919,6 +934,7 @@ type A {- 0 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type A {- 0 -} {- 1 -} parameterA parameterB
     = A ( parameterA, parameterB )
 """
@@ -930,6 +946,7 @@ type A parameter {- 0 -}
     = {- 1 -} A parameter"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type A parameter
     = {- 0 -} {- 1 -} A parameter
@@ -943,6 +960,7 @@ type A {- 0 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type A
     = {- 0 -} {- 1 -} A Int
 """
@@ -954,6 +972,7 @@ type A -- 0
     = {- 1 -} A Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type A
     = -- 0
@@ -969,6 +988,7 @@ type A
     | {- 1 -} B String"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type A
     = A Int
@@ -986,6 +1006,7 @@ type A
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type A
     = A Int
     | {- 0 -} {- 1 -} B String
@@ -999,6 +1020,7 @@ type A
     | {- 1 -} B {--} String"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type A
     = A Int
@@ -1016,6 +1038,7 @@ type A
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type A
     = A
         {--}
@@ -1031,6 +1054,7 @@ type A
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type A
     = A {- 0 -} {- 1 -} Int
 """
@@ -1042,6 +1066,7 @@ type A
     = A Int {--} Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type A
     = A
@@ -1058,6 +1083,7 @@ type A
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type A
     = A Int {- 0 -} {- 1 -} Int
 """
@@ -1071,6 +1097,7 @@ port sendMessage : String -> Cmd msg
 port messageReceiver : (String -> msg) -> Sub msg"""
                         |> expectPrintedAs
                             """port module A exposing (..)
+
 
 port sendMessage : String -> Cmd msg
 
@@ -1088,6 +1115,7 @@ port messageReceiver : (String -> msg) -> Sub msg"""
                         |> expectPrintedAs
                             """port module A exposing (..)
 
+
 port sendMessage : String -> Cmd msg
 
 
@@ -1103,6 +1131,7 @@ port sendMessage :
     String -> Cmd msg"""
                         |> expectPrintedAs
                             """port module A exposing (..)
+
 
 port sendMessage : String -> Cmd msg
 """
@@ -1133,6 +1162,7 @@ infix left  9 (<<) = composeL
 infix right 9 (>>) = composeR"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 infix right 0 (<|) = apL
 infix left  0 (|>) = apR
@@ -1168,6 +1198,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a : Int
 a =
     0
@@ -1181,6 +1212,7 @@ a =
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a :
     {- will always be 0 -}
@@ -1199,6 +1231,7 @@ a _ =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a :
     {- will always return 0 -}
     Int
@@ -1215,6 +1248,7 @@ a =
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a : Int
 
@@ -1237,6 +1271,7 @@ type alias T a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias T a =
     ( { a : Basics.Int, b : () }, { a | v : List String }, {} -> a -> ( Int, Int ) )
 """
@@ -1249,6 +1284,7 @@ type alias T a =
     ))"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias T a =
     ( { a : Basics.Int, b : () }
@@ -1270,6 +1306,7 @@ type alias T a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias T a =
     (Int -> Int) -> a
 """
@@ -1281,6 +1318,7 @@ type alias T a =
     Int -> (((Int -> Int))) -> a"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias T a =
     Int -> (Int -> Int) -> a
@@ -1294,6 +1332,7 @@ type alias T =
     Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias T =
     Int
@@ -1311,6 +1350,7 @@ type alias T =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias T =
     Int
     -> {- 0 -} {- 1 -} Int
@@ -1325,6 +1365,7 @@ type alias T =
     Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias T =
     Int
@@ -1342,6 +1383,7 @@ type alias A = { -- zero
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A =
     { -- zero
       zero : Int
@@ -1356,6 +1398,7 @@ type alias A = { -- 0
     zero : Int }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A =
     { -- 0
@@ -1373,6 +1416,7 @@ type alias A = { {- 0 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A =
     { {- 0 -} {- 1 -} zero : Int
     }
@@ -1385,6 +1429,7 @@ type alias A = { zero : -- zero
     Int }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A =
     { zero :
@@ -1401,6 +1446,7 @@ type alias A = { zero : {- 0 -} {- 1 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A =
     { zero :
         {- 0 -} {- 1 -} Int
@@ -1414,6 +1460,7 @@ type alias A = { zero : {- 0 -} {- 1 -} List
     Int }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A =
     { zero :
@@ -1432,6 +1479,7 @@ type alias A = { zero : -- 0
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A =
     { zero :
         -- 0
@@ -1447,6 +1495,7 @@ type alias A = { zero : Int, -- zero
     one : Int }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A =
     { zero : Int
@@ -1464,6 +1513,7 @@ type alias A = { zero : Int, -- 0
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A =
     { zero : Int
     , -- 0
@@ -1480,6 +1530,7 @@ type alias A = { zero : Int, one : Int
     }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A =
     { zero : Int
@@ -1499,6 +1550,7 @@ type alias A = { zero : Int, one : Int
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A =
     { zero : Int
     , one : Int
@@ -1516,6 +1568,7 @@ type alias A r = { -- zero
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A r =
     { -- zero
       r
@@ -1531,6 +1584,7 @@ type alias A r = { -- 0
     r | zero : Int }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A r =
     { -- 0
@@ -1548,6 +1602,7 @@ type alias A r = { {- zero -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A r =
     { {- zero -} r
         | zero : Int
@@ -1561,6 +1616,7 @@ type alias A r = { r | -- zero
     zero : Int }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A r =
     { r
@@ -1578,6 +1634,7 @@ type alias A r = { r | -- 0
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A r =
     { r
         | -- 0
@@ -1594,6 +1651,7 @@ type alias A r = { r | {- zero -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A r =
     { r
         | {- zero -} zero : Int
@@ -1607,6 +1665,7 @@ type alias A r = { r | zero : -- zero
     Int }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A r =
     { r
@@ -1624,6 +1683,7 @@ type alias A r = { r | zero : {- zero -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A r =
     { r
         | zero :
@@ -1638,6 +1698,7 @@ type alias A r = { r | zero : Int, -- zero
     one : Int }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A r =
     { r
@@ -1656,6 +1717,7 @@ type alias A r = { r | zero : Int, -- zero
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A r =
     { r
         | zero : Int
@@ -1673,6 +1735,7 @@ type alias A r = { r | zero : Int, {- one -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A r =
     { r
         | zero : Int
@@ -1688,6 +1751,7 @@ type alias A r = { r | zero : Int, one : Int
     }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A r =
     { r
@@ -1705,6 +1769,7 @@ type alias A = List Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A =
     List Int
 """
@@ -1717,6 +1782,7 @@ type alias A = List
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A =
     List
         Int
@@ -1728,6 +1794,7 @@ type alias A =
 type alias A = List {--}{--} Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A =
     List
@@ -1743,6 +1810,7 @@ type alias A = List {- 0 -} Int"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 type alias A =
     List {- 0 -} Int
 """
@@ -1754,6 +1822,7 @@ type alias A = List {- 0 -}{- 1 -} (List
                              Int)"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A =
     List
@@ -1770,6 +1839,7 @@ type alias A = Result {- 0 -}{- 1 -} Int (List
                                           Int)"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 type alias A =
     Result
@@ -1792,6 +1862,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     if True then
         0
@@ -1810,6 +1881,7 @@ a =
     then 0 else 1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     if
@@ -1831,6 +1903,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     if
         -- condition
@@ -1851,6 +1924,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     if True then
         -- 0
@@ -1868,6 +1942,7 @@ a =
         1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     if True then
@@ -1894,6 +1969,7 @@ a =
         )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     if True then
@@ -1923,6 +1999,7 @@ a =
         )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     if True then
@@ -1957,6 +2034,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     if True then
         0
@@ -1989,6 +2067,7 @@ a =
                             -- elm-format prints this really weirdly
                             """module A exposing (..)
 
+
 a =
     if True then
         0
@@ -2013,6 +2092,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     case () of
         () ->
@@ -2029,6 +2109,7 @@ a =
         () -> 0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     case
@@ -2050,6 +2131,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     case () of
         -- 0
@@ -2069,6 +2151,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     case () of
         () ->
@@ -2086,6 +2169,7 @@ a =
         Basics.False -> 1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     case 0 == 1 of
@@ -2106,6 +2190,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     \\b ->
         -- 0
@@ -2122,6 +2207,7 @@ a =
     b -> b"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     \\
@@ -2142,6 +2228,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     \\
      b
@@ -2161,6 +2248,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     \\{- 0 -} {- 1 -} b ->
         b
@@ -2173,6 +2261,7 @@ a =
     \\{- 0 -} {- 1 -} b (c{--}) -> b"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     \\
@@ -2192,6 +2281,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     \\
      {- 0 -} {- 1 -}
@@ -2210,6 +2300,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     let
         { b } =
@@ -2225,6 +2316,7 @@ a =
     let b () = 0 in b ()"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     let
@@ -2242,6 +2334,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     let
         b =
@@ -2257,6 +2350,7 @@ a =
     let b = 0 in {- 0 -} b"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     let
@@ -2276,6 +2370,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     let
         -- 0
@@ -2294,6 +2389,7 @@ a =
         c = 1 in b"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     let
@@ -2316,6 +2412,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     let
         b =
@@ -2334,6 +2431,7 @@ a =
         b = 0 in b"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     let
@@ -2357,6 +2455,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     let
         b : Int
@@ -2377,6 +2476,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     let
         { b } =
@@ -2396,6 +2496,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     (identity
      {--}
@@ -2411,6 +2512,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity
         {--}
@@ -2425,6 +2527,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity {- 0 -} {- 1 -} identity
 """
@@ -2438,6 +2541,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity
         {- 0 -} {- 1 -} identity
@@ -2450,6 +2554,7 @@ a =
     identity {- 0 -} {- 1 -} (identity{--})"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity
@@ -2468,6 +2573,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity {- 0 -} {- 1 -} identity
         identity
@@ -2481,6 +2587,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity identity {- 0 -} {- 1 -} identity
 """
@@ -2492,6 +2599,7 @@ a =
     identity identity {- 0 -} {- 1 -} (identity{--})"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity identity
@@ -2510,6 +2618,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity identity
         {- 0 -} {- 1 -} identity
@@ -2523,6 +2632,7 @@ a =
     identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity
@@ -2538,6 +2648,7 @@ a =
     identity |> identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity
@@ -2561,6 +2672,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity
         |> (if True then
@@ -2580,6 +2692,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity |> identity identity |> identity
 """
@@ -2591,6 +2704,7 @@ a =
     identity |> identity identity |> {- 0 -} {--} identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity
@@ -2608,6 +2722,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity |> identity identity |> {- 0 -} {- 1 -} identity
 """
@@ -2620,6 +2735,7 @@ a =
     identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity
@@ -2637,6 +2753,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity
         |> {- 0 -}
@@ -2653,6 +2770,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity |> {- 0 -} {- 1 -} identity identity |> identity
 """
@@ -2665,6 +2783,7 @@ a =
     identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity <|
@@ -2681,6 +2800,7 @@ a =
     identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity <|
@@ -2700,6 +2820,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity <|
         identity identity <|
@@ -2715,6 +2836,7 @@ a =
     identity identity <| identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity <|
@@ -2734,6 +2856,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity <|
         {- 0 -} {- 1 -} identity identity <|
@@ -2748,6 +2871,7 @@ a =
     identity <| identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity <|
@@ -2766,6 +2890,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity <|
         (\\_ ->
@@ -2783,6 +2908,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity <| identity identity <| identity
 """
@@ -2794,6 +2920,7 @@ a =
     identity <| identity identity <| (\\_ -> identity)"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     identity <| identity identity <| \\_ -> identity
@@ -2807,6 +2934,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     identity <| (\\_ -> identity) <| identity
 """
@@ -2818,6 +2946,7 @@ a =
     3 + (4 * 5 // 3) // 5 - 0 |> identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     3 + (4 * 5 // 3) // 5 - 0 |> identity
@@ -2831,6 +2960,7 @@ a =
     identity"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     3
@@ -2848,6 +2978,7 @@ a = ((-- zero
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     (-- zero
      0
@@ -2862,6 +2993,7 @@ a = ((-- 0
     (0)))"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     (-- 0
@@ -2879,6 +3011,7 @@ a = (((0)
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     (0
      -- zero
@@ -2894,6 +3027,7 @@ a = (((0)
    ))"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     (0
@@ -2912,6 +3046,7 @@ a = (-- before
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     (-- before
      0
@@ -2926,6 +3061,7 @@ a = [ {--}{- 0 -} ]"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     [{--}
      {- 0 -}
@@ -2939,6 +3075,7 @@ a = [ {- 0 -}{- 1 -} ]"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     [{- 0 -} {- 1 -}]
 """
@@ -2950,6 +3087,7 @@ a = [ -- zero
     0 ]"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     [ -- zero
@@ -2966,6 +3104,7 @@ a = [ -- 0
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     [ -- 0
       -- 1
@@ -2980,6 +3119,7 @@ a = [ 0, -- zero
     0 ]"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     [ 0
@@ -2996,6 +3136,7 @@ a = [ 0, -- 0
     0 ]"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     [ 0
@@ -3014,6 +3155,7 @@ a = [ 0, {- 0 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     [ 0
     , {- 0 -} {- 1 -} 0
@@ -3028,6 +3170,7 @@ a = [ 0, {- 0 -}
     (0{--}) ]"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     [ 0
@@ -3047,6 +3190,7 @@ a = [ 0, 0
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     [ 0
     , 0
@@ -3064,6 +3208,7 @@ a = [ 0, 0
     ]"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     [ 0
@@ -3083,6 +3228,7 @@ a = { -- 0
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     {-- 0
      -- 1
@@ -3098,6 +3244,7 @@ a = { {- 0 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     {{- 0 -} {- 1 -}}
 """
@@ -3109,6 +3256,7 @@ a = { -- zero
     zero = 0 }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     { -- zero
@@ -3123,6 +3271,7 @@ a = {{- zero -} zero = 0}"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     { {- zero -} zero = 0 }
 """
@@ -3134,6 +3283,7 @@ a = { {- zero -}
     zero = 0 }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     { {- zero -} zero = 0
@@ -3147,6 +3297,7 @@ a = { zero = -- zero
     0 }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     { zero =
@@ -3163,6 +3314,7 @@ a = { zero = {- zero -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     { zero =
         {- zero -} 0
@@ -3176,6 +3328,7 @@ a = { zero = {- zero -} identity
     0 }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     { zero =
@@ -3193,6 +3346,7 @@ a = { zero = {- zero -} 0
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     { zero = {- zero -} 0
     }
@@ -3205,6 +3359,7 @@ a = { zero = 0, -- zero
     one = 1 }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     { zero = 0
@@ -3221,6 +3376,7 @@ a = { zero = 0, {- zero -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     { zero = 0
     , {- zero -} one = 1
@@ -3235,6 +3391,7 @@ a = { zero = 0, one = 1
     }"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     { zero = 0
@@ -3251,6 +3408,7 @@ a = ( 0, 1 )"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     ( 0, 1 )
 """
@@ -3262,6 +3420,7 @@ a = ( 0, 1
     )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     ( 0
@@ -3276,6 +3435,7 @@ a = ( 0, ( 1, 2
     )    )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     ( 0
@@ -3292,6 +3452,7 @@ a = ( {- 0 -} 0, {- 1 -} 1 )"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     ( {- 0 -} 0, {- 1 -} 1 )
 """
@@ -3303,6 +3464,7 @@ a = ( {- 0 -} 0, {- 1 -} 1
     )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     ( {- 0 -} 0
@@ -3317,6 +3479,7 @@ a = ( 0, {- 1 -} {- 2 -} ( 1, 2
     )    )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     ( 0
@@ -3335,6 +3498,7 @@ a = ( 0, {--} {--} ( 1, 2
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     ( 0
     , {--}
@@ -3352,6 +3516,7 @@ a = ( 0, 1 {--} {--} )"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     ( 0
     , 1
@@ -3367,6 +3532,7 @@ a = ( 0, 1, 2 )"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     ( 0, 1, 2 )
 """
@@ -3378,6 +3544,7 @@ a = ( 0, 1, 2
     )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     ( 0
@@ -3393,6 +3560,7 @@ a = ( 0, 1, ( 2, 3, 4
     )       )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     ( 0
@@ -3411,6 +3579,7 @@ a = ( {- 0 -} 0, {- 1 -} 1, {- 2 -} 2 )"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     ( {- 0 -} 0, {- 1 -} 1, {- 2 -} 2 )
 """
@@ -3422,6 +3591,7 @@ a = ( {- 0 -} 0, {- 1 -} 1, {- 2 -} 2
     )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     ( {- 0 -} 0
@@ -3437,6 +3607,7 @@ a = ( 0, 1, {- 2 -} {- 3 -} {- 4 -} ( 2, 3, 4
     )       )"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     ( 0
@@ -3457,6 +3628,7 @@ a = ( 0, 1, {--} {--} ( 2, 3, 4
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     ( 0
     , 1
@@ -3476,6 +3648,7 @@ a = ( 0, 1, 2 {--} {--} )"""
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     ( 0
     , 1
@@ -3492,6 +3665,7 @@ a = 'n' """
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     'n'
 """
@@ -3502,6 +3676,7 @@ a =
 a = '\\u{000D}' """
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     '\\u{000D}'
@@ -3514,6 +3689,7 @@ a = "normal text" """
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     "normal text"
 """
@@ -3525,6 +3701,7 @@ a = "\\"\\\\\\t\\u{000D}" """
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     "\\"\\\\\\t\\u{000D}"
 """
@@ -3535,6 +3712,7 @@ a =
 a = \"\"\"normal text\"\"\" """
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     \"\"\"normal text\"\"\"
@@ -3549,6 +3727,7 @@ second line
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     \"\"\"first line
 second line
@@ -3562,6 +3741,7 @@ a = \"\"\"normal \\" text\"\"\" """
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     \"\"\"normal " text\"\"\"
 """
@@ -3572,6 +3752,7 @@ a =
 a = \"\"\"\\"normal text\"\"\" """
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     \"\"\"\\"normal text\"\"\"
@@ -3584,6 +3765,7 @@ a = \"\"\"normal text\\\"\"\"\" """
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     \"\"\"normal text\\\"\"\"\"
 """
@@ -3595,6 +3777,7 @@ a parameterA {--} parameterB =
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a
     parameterA
@@ -3611,6 +3794,7 @@ a {--} parameterA parameterB =
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a
     {--}
@@ -3629,6 +3813,7 @@ a parameter {- 0 -} =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a parameter =
     {- 0 -}
     {- 1 -}
@@ -3643,6 +3828,7 @@ a {- 0 -} =
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     {- 0 -}
@@ -3664,6 +3850,7 @@ a x =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a x =
     case x of
         ( { y, z } :: tail, Maybe.Nothing as nothing, ( Just [ "" ], 0 ) ) ->
@@ -3681,6 +3868,7 @@ a ({--}_ as argument) =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a
     ({--}
      _ as argument
@@ -3697,6 +3885,7 @@ a (_ as argument{--}) =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a
     (_ as argument
      {--}
@@ -3712,6 +3901,7 @@ a ({--}_ as argument{--}) =
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a
     ({--}
@@ -3731,6 +3921,7 @@ a ({-0-}{-1-}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a ({- 0 -} {- 1 -} _ as argument) =
     0
 """
@@ -3743,6 +3934,7 @@ a (_ as argument
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a (_ as argument {- 0 -} {- 1 -}) =
     0
@@ -3758,6 +3950,7 @@ a ({-0-}{-1-}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a ({- 0 -} {- 1 -} _ as argument {- 2 -} {- 3 -}) =
     0
 """
@@ -3772,6 +3965,7 @@ a ({-0-}{-1-}
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a
     ({- 0 -} {- 1 -}
@@ -3794,6 +3988,7 @@ a (_ as -- argument
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a
     (_
      as
@@ -3813,6 +4008,7 @@ a (_ as {- argument -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a (_ as {- argument -} argument) =
     0
 """
@@ -3826,6 +4022,7 @@ a ([-- in list
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a
     ([ -- in list
@@ -3849,6 +4046,7 @@ a ([-- in list
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a
     ([ -- in list
        _
@@ -3870,6 +4068,7 @@ a { -- 0
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a
     {-- 0
      -- 1
@@ -3888,6 +4087,7 @@ a { {- 0 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a {{- 0 -} {- 1 -}} =
     0
 """
@@ -3901,6 +4101,7 @@ a { -- 0
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a
     { -- 0
@@ -3921,6 +4122,7 @@ a { {- 0 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a { {- 0 -} {- 1 -} zero } =
     0
 """
@@ -3934,6 +4136,7 @@ a { zero, -- 0
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a
     { zero
@@ -3955,6 +4158,7 @@ a { zero, {- 0 -}
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a { zero, {- 0 -} {- 1 -} one } =
     0
 """
@@ -3969,6 +4173,7 @@ a { zero,
     0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a
     { zero
@@ -3991,6 +4196,7 @@ a =
         _ -> 1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     case [] of
@@ -4016,6 +4222,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     case [] of
         [{- 0 -} {- 1 -}] ->
@@ -4036,6 +4243,7 @@ a =
         _ -> 1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     case [] of
@@ -4061,6 +4269,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     case [] of
         [ 0
@@ -4085,6 +4294,7 @@ a =
         _ -> 1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     case [] of
@@ -4112,6 +4322,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     case [] of
         [ 0, {- 0 -} {- 1 -} 0 ] ->
@@ -4132,6 +4343,7 @@ a =
         _ -> 1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     case [] of
@@ -4155,6 +4367,7 @@ a =
         _ -> 1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     case [] of
@@ -4183,6 +4396,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     case [] of
         [ 0
@@ -4208,6 +4422,7 @@ a =
         _ -> 1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     case [] of
@@ -4236,6 +4451,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     case [] of
         b
@@ -4263,6 +4479,7 @@ a =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     case [] of
         b :: (Just c) :: {- 0 -} {- 1 -} d ->
@@ -4285,6 +4502,7 @@ a =
             0"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     case [] of
@@ -4316,6 +4534,7 @@ b =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     0
 
@@ -4344,6 +4563,7 @@ b =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     0
 
@@ -4369,6 +4589,7 @@ b =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     0
 
@@ -4392,6 +4613,7 @@ b =
     1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     0
@@ -4417,6 +4639,7 @@ b =
     1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     0
@@ -4444,6 +4667,7 @@ b =
     1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     0
@@ -4473,6 +4697,7 @@ b =
                         |> expectPrintedAs
                             """module A exposing (..)
 
+
 a =
     0
 
@@ -4501,6 +4726,7 @@ b =
     1"""
                         |> expectPrintedAs
                             """module A exposing (..)
+
 
 a =
     0
@@ -4537,6 +4763,7 @@ plus2 (n)= {- this adds 2-} n
                         |> Expect.equal
                             (Ok
                                 """module Sample exposing (..)
+
 
 plus2 n =
     {- this adds 2 -}
