@@ -59,35 +59,52 @@ toString print =
 -}
 toStringWithIndent : Int -> Print -> String
 toStringWithIndent indent print =
+    toStringWithIndentAndLinebreakIndentAsString indent "\n" print
+
+
+toStringWithIndentAndLinebreakIndentAsString : Int -> String -> Print -> String
+toStringWithIndentAndLinebreakIndentAsString indent linebreakIndentAsString print =
     -- IGNORE TCO
     case print of
         Exact string () ->
             string
 
         FollowedBy b a ->
-            toStringWithIndent indent a ++ toStringWithIndent indent b ++ ""
+            toStringWithIndentAndLinebreakIndentAsString indent linebreakIndentAsString a
+                ++ toStringWithIndentAndLinebreakIndentAsString indent linebreakIndentAsString b
+                ++ ""
 
         Linebreak () () ->
             "\n"
 
         LinebreakIndented () () ->
-            "\n" ++ stringIndentFast indent
+            linebreakIndentAsString
 
         WithIndentIncreasedBy increase innerPrint ->
-            toStringWithIndent (indent + increase)
+            toStringWithIndentAndLinebreakIndentAsString
+                (indent + increase)
+                (linebreakIndentAsString ++ stringIndentFastAtMost4 increase)
                 innerPrint
 
         WithIndentAtNextMultipleOf4 innerPrint () ->
-            toStringWithIndent (indent // 4 * 4 + 4)
+            let
+                increase : Int
+                increase =
+                    newIndent - indent
+
+                newIndent : Int
+                newIndent =
+                    indent // 4 * 4 + 4
+            in
+            toStringWithIndentAndLinebreakIndentAsString
+                newIndent
+                (linebreakIndentAsString ++ stringIndentFastAtMost4 increase)
                 innerPrint
 
 
-stringIndentFast : Int -> String
-stringIndentFast n =
+stringIndentFastAtMost4 : Int -> String
+stringIndentFastAtMost4 n =
     case n of
-        0 ->
-            ""
-
         1 ->
             " "
 
@@ -97,44 +114,9 @@ stringIndentFast n =
         3 ->
             "   "
 
-        4 ->
+        -- 4
+        _ ->
             "    "
-
-        5 ->
-            "     "
-
-        6 ->
-            "      "
-
-        7 ->
-            "       "
-
-        8 ->
-            "        "
-
-        9 ->
-            "         "
-
-        10 ->
-            "          "
-
-        11 ->
-            "           "
-
-        12 ->
-            "            "
-
-        13 ->
-            "             "
-
-        14 ->
-            "              "
-
-        15 ->
-            "               "
-
-        atLeast16 ->
-            "                " ++ stringIndentFast (atLeast16 - 16)
 
 
 {-| [How many lines](#LineSpread) the given [`Print`](#Print)
