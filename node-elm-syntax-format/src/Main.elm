@@ -182,9 +182,12 @@ singleRunInterface state =
                     |> Node.interfaceFutureMap
                         (\_ ->
                             SingleRun
-                                { state
-                                    | formattedModulesToWrite =
-                                        state.formattedModulesToWrite |> FastDict.remove moduleToFormatPath
+                                { formattedModulesToWrite =
+                                    state.formattedModulesToWrite |> FastDict.remove moduleToFormatPath
+                                , sourceDirectoriesToRead = state.sourceDirectoriesToRead
+                                , sourceFilesToRead = state.sourceFilesToRead
+                                , sourceDirectoryReadErrors = state.sourceDirectoryReadErrors
+                                , sourceFileReadErrors = state.sourceFileReadErrors
                                 }
                         )
             )
