@@ -239,18 +239,21 @@ singleRunInterface state =
 
                     Ok subPaths ->
                         SingleRun
-                            { state
-                                | sourceFilesToRead =
-                                    subPaths
-                                        |> List.foldl
-                                            (\subPath soFar ->
-                                                if subPath |> String.endsWith ".elm" then
-                                                    soFar |> FastSet.insert ("tests/" ++ subPath)
+                            { sourceFilesToRead =
+                                subPaths
+                                    |> List.foldl
+                                        (\subPath soFar ->
+                                            if subPath |> String.endsWith ".elm" then
+                                                soFar |> FastSet.insert ("tests/" ++ subPath)
 
-                                                else
-                                                    soFar
-                                            )
-                                            state.sourceFilesToRead
+                                            else
+                                                soFar
+                                        )
+                                        state.sourceFilesToRead
+                            , sourceDirectoriesToRead = state.sourceDirectoriesToRead
+                            , sourceFileReadErrors = state.sourceFileReadErrors
+                            , sourceDirectoryReadErrors = state.sourceDirectoryReadErrors
+                            , formattedModulesToWrite = state.formattedModulesToWrite
                             }
             )
     , state.sourceFilesToRead
