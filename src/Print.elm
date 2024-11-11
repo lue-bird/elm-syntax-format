@@ -71,7 +71,7 @@ toStringWithIndent indent print =
             "\n"
 
         LinebreakIndented () () ->
-            "\n" ++ String.repeat indent " "
+            "\n" ++ stringIndentFast indent
 
         WithIndentIncreasedBy increase innerPrint ->
             toStringWithIndent (indent + increase)
@@ -80,6 +80,61 @@ toStringWithIndent indent print =
         WithIndentAtNextMultipleOf4 innerPrint () ->
             toStringWithIndent (indent // 4 * 4 + 4)
                 innerPrint
+
+
+stringIndentFast : Int -> String
+stringIndentFast n =
+    case n of
+        0 ->
+            ""
+
+        1 ->
+            " "
+
+        2 ->
+            "  "
+
+        3 ->
+            "   "
+
+        4 ->
+            "    "
+
+        5 ->
+            "     "
+
+        6 ->
+            "      "
+
+        7 ->
+            "       "
+
+        8 ->
+            "        "
+
+        9 ->
+            "         "
+
+        10 ->
+            "          "
+
+        11 ->
+            "           "
+
+        12 ->
+            "            "
+
+        13 ->
+            "             "
+
+        14 ->
+            "              "
+
+        15 ->
+            "               "
+
+        atLeast16 ->
+            "                " ++ stringIndentFast (atLeast16 - 16)
 
 
 {-| [How many lines](#LineSpread) the given [`Print`](#Print)
