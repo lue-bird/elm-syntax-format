@@ -1,7 +1,5 @@
 port module Main exposing (main)
 
- 
-
 import Ansi.Color
 import Ansi.Cursor
 import Ansi.Font
@@ -79,32 +77,7 @@ interface state =
                     )
 
         ShowingHelp ->
-            Node.standardOutWrite
-                ("""Format elm 0.19 source directory and tests/ modules in the current project like elm-format (https://github.com/avh4/elm-format).
-
-"""
-                    ++ ([ { command = "elm-syntax-format"
-                          , description = "format all of them once"
-                          }
-                        , { command = "elm-syntax-format watch"
-                          , description = "format edited and added modules on save"
-                          }
-                        ]
-                            |> List.map
-                                (\commandAndDescription ->
-                                    "  - "
-                                        ++ (commandAndDescription.command
-                                                |> Ansi.Color.fontColor Ansi.Color.cyan
-                                           )
-                                        ++ ": "
-                                        ++ commandAndDescription.description
-                                )
-                            |> String.join "\n"
-                       )
-                    ++ """
-
-"""
-                )
+            Node.standardOutWrite helpText
 
         WaitingForElmJson waitingForElmJson ->
             Node.fileRequest "elm.json"
@@ -115,9 +88,6 @@ interface state =
                                 ElmJsonReadFailed
                                     ("elm.json couldn't be read because "
                                         ++ fileReadError.message
-                                        ++ " (code "
-                                        ++ fileReadError.code
-                                        ++ ")"
                                     )
 
                             Ok elmJsonBytes ->
@@ -170,6 +140,34 @@ interface state =
             , Node.exit 1
             ]
                 |> Node.interfaceBatch
+
+
+helpText : String
+helpText =
+    """Format elm 0.19 source directory and tests/ modules in the current project like elm-format (https://github.com/avh4/elm-format).
+
+"""
+        ++ ([ { command = "elm-syntax-format"
+              , description = "format all of them once"
+              }
+            , { command = "elm-syntax-format watch"
+              , description = "format edited and added modules on save"
+              }
+            ]
+                |> List.map
+                    (\commandAndDescription ->
+                        "  - "
+                            ++ (commandAndDescription.command
+                                    |> Ansi.Color.fontColor Ansi.Color.cyan
+                               )
+                            ++ ": "
+                            ++ commandAndDescription.description
+                    )
+                |> String.join "\n"
+           )
+        ++ """
+
+"""
 
 
 singleRunInterface : SingleRunState -> Node.Interface State
