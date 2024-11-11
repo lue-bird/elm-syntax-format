@@ -77,56 +77,40 @@ interface state =
                     )
 
         ShowingHelp ->
-            Node.standardOutWrite helpText
+            nodeShowHelpText
 
         WaitingForElmJson waitingForElmJson ->
-            Node.fileRequest "elm.json"
+            nodeElmJsonRequest
                 |> Node.interfaceFutureMap
                     (\elmJsonBytesOrError ->
                         case elmJsonBytesOrError of
-                            Err fileReadError ->
-                                ElmJsonReadFailed
-                                    ("elm.json couldn't be read because "
-                                        ++ fileReadError.message
-                                    )
+                            Err elmJsonReadError ->
+                                ElmJsonReadFailed elmJsonReadError
 
-                            Ok elmJsonBytes ->
-                                case elmJsonBytes |> Bytes.Decode.decode (Bytes.Decode.string (Bytes.width elmJsonBytes)) of
-                                    Nothing ->
-                                        ElmJsonReadFailed "elm.json bytes could not be decoded into UTF-8 String"
+                            Ok elmJson ->
+                                let
+                                    computedElmJsonSourceDirectories : List String
+                                    computedElmJsonSourceDirectories =
+                                        elmJson |> elmJsonSourceDirectories
+                                in
+                                case waitingForElmJson.mode of
+                                    ModeSingleRun ->
+                                        SingleRun
+                                            { sourceDirectoriesToRead =
+                                                computedElmJsonSourceDirectories |> FastSet.fromList
+                                            , sourceFilesToRead = FastSet.empty
+                                            , formattedModulesToWrite = FastDict.empty
+                                            , sourceFileReadErrors = []
+                                            , sourceDirectoryReadErrors = []
+                                            }
 
-                                    Just elmJsonString ->
-                                        case elmJsonString |> Json.Decode.decodeString Elm.Project.decoder of
-                                            Err jsonDecodeError ->
-                                                ElmJsonReadFailed
-                                                    ("elm.json failed to parse due to "
-                                                        ++ (jsonDecodeError |> Json.Decode.errorToString)
-                                                    )
-
-                                            Ok elmJson ->
-                                                let
-                                                    computedElmJsonSourceDirectories : List String
-                                                    computedElmJsonSourceDirectories =
-                                                        elmJson |> elmJsonSourceDirectories
-                                                in
-                                                case waitingForElmJson.mode of
-                                                    ModeSingleRun ->
-                                                        SingleRun
-                                                            { sourceDirectoriesToRead =
-                                                                computedElmJsonSourceDirectories |> FastSet.fromList
-                                                            , sourceFilesToRead = FastSet.empty
-                                                            , formattedModulesToWrite = FastDict.empty
-                                                            , sourceFileReadErrors = []
-                                                            , sourceDirectoryReadErrors = []
-                                                            }
-
-                                                    ModeWatch ->
-                                                        Watching
-                                                            { elmJsonSourceDirectories = computedElmJsonSourceDirectories
-                                                            , sourceFilesToRead = FastSet.empty
-                                                            , formattedModulesToWrite = FastDict.empty
-                                                            , sourceFileReadErrors = FastDict.empty
-                                                            }
+                                    ModeWatch ->
+                                        Watching
+                                            { elmJsonSourceDirectories = computedElmJsonSourceDirectories
+                                            , sourceFilesToRead = FastSet.empty
+                                            , formattedModulesToWrite = FastDict.empty
+                                            , sourceFileReadErrors = FastDict.empty
+                                            }
                     )
 
         SingleRun singleRunState ->
@@ -142,32 +126,64 @@ interface state =
                 |> Node.interfaceBatch
 
 
-helpText : String
-helpText =
-    """Format elm 0.19 source directory and tests/ modules in the current project like elm-format (https://github.com/avh4/elm-format).
+nodeShowHelpText : Node.Interface future_
+nodeShowHelpText =
+    Node.standardOutWrite
+        ("""Format elm 0.19 source directory and tests/ modules in the current project like elm-format (https://github.com/avh4/elm-format).
 
 """
-        ++ ([ { command = "elm-syntax-format"
-              , description = "format all of them once"
-              }
-            , { command = "elm-syntax-format watch"
-              , description = "format edited and added modules on save"
-              }
-            ]
-                |> List.map
-                    (\commandAndDescription ->
-                        "  - "
-                            ++ (commandAndDescription.command
-                                    |> Ansi.Color.fontColor Ansi.Color.cyan
-                               )
-                            ++ ": "
-                            ++ commandAndDescription.description
-                    )
-                |> String.join "\n"
-           )
-        ++ """
+            ++ ([ { command = "elm-syntax-format"
+                  , description = "format all of them once"
+                  }
+                , { command = "elm-syntax-format watch"
+                  , description = "format edited and added modules on save"
+                  }
+                ]
+                    |> List.map
+                        (\commandAndDescription ->
+                            "  - "
+                                ++ (commandAndDescription.command
+                                        |> Ansi.Color.fontColor Ansi.Color.cyan
+                                   )
+                                ++ ": "
+                                ++ commandAndDescription.description
+                        )
+                    |> String.join "\n"
+               )
+            ++ """
 
 """
+        )
+
+
+nodeElmJsonRequest : Node.Interface (Result String Elm.Project.Project)
+nodeElmJsonRequest =
+    Node.fileRequest "elm.json"
+        |> Node.interfaceFutureMap
+            (\elmJsonBytesOrError ->
+                case elmJsonBytesOrError of
+                    Err fileReadError ->
+                        Err
+                            ("elm.json couldn't be read because "
+                                ++ fileReadError.message
+                            )
+
+                    Ok elmJsonBytes ->
+                        case elmJsonBytes |> Bytes.Decode.decode (Bytes.Decode.string (Bytes.width elmJsonBytes)) of
+                            Nothing ->
+                                Err "elm.json bytes could not be decoded into UTF-8 String"
+
+                            Just elmJsonString ->
+                                case elmJsonString |> Json.Decode.decodeString Elm.Project.decoder of
+                                    Err jsonDecodeError ->
+                                        Err
+                                            ("elm.json failed to parse due to "
+                                                ++ (jsonDecodeError |> Json.Decode.errorToString)
+                                            )
+
+                                    Ok elmJson ->
+                                        Ok elmJson
+            )
 
 
 singleRunInterface : SingleRunState -> Node.Interface State
@@ -381,7 +397,7 @@ watchInterface state =
                         )
             )
         |> Node.interfaceBatch
-    , Node.fileChangeListen "tests"
+    , nodeTestsChangeListen
         |> Node.interfaceFutureMap
             (\fileChange ->
                 case fileChange of
@@ -465,7 +481,7 @@ watchInterface state =
                         )
             )
         |> Node.interfaceBatch
-    , Node.standardOutWrite Ansi.Cursor.hide
+    , nodeHideCursor
     , state.sourceFileReadErrors
         |> fastDictToListAndMap
             (\fileReadErrorPath fileReadError ->
@@ -483,6 +499,16 @@ watchInterface state =
         |> Node.interfaceBatch
 
 
+nodeHideCursor : Node.Interface future_
+nodeHideCursor =
+    Node.standardOutWrite Ansi.Cursor.hide
+
+
+nodeTestsChangeListen : Node.Interface Node.FileChange
+nodeTestsChangeListen =
+    Node.fileChangeListen "tests"
+
+
 elmJsonSourceDirectories : Elm.Project.Project -> List String
 elmJsonSourceDirectories elmJson =
     case elmJson of
@@ -490,7 +516,12 @@ elmJsonSourceDirectories elmJson =
             application.dirs
 
         Elm.Project.Package _ ->
-            [ "src" ]
+            packageSourceDirectories
+
+
+packageSourceDirectories : List String
+packageSourceDirectories =
+    [ "src" ]
 
 
 fastDictToListAndMap : (a -> b -> c) -> FastDict.Dict a b -> List c
