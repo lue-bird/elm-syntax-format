@@ -1,6 +1,7 @@
 module ElmSyntaxPrintTests exposing (suite)
 
 import Elm.Parser
+import ElmSyntaxParserLenient
 import ElmSyntaxPrint
 import Expect
 import Test exposing (Test)
@@ -4753,15 +4754,15 @@ module   Sample  exposing(..)
 plus2 (n)= {- this adds 2-} n
     + 2
 """
-                        |> Elm.Parser.parseToFile
-                        |> Result.map
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                        |> Maybe.map
                             (\syntaxModule ->
                                 syntaxModule
                                     |> ElmSyntaxPrint.module_
                                     |> ElmSyntaxPrint.toString
                             )
                         |> Expect.equal
-                            (Ok
+                            (Just
                                 """module Sample exposing (..)
 
 

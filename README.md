@@ -11,14 +11,14 @@ plus2 (n)= {- this adds 2-} n
     + 2
 """
     |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
-    |> Result.map
+    |> Maybe.map
         (\syntaxModule ->
             syntaxModule
                 |> ElmSyntaxPrint.module_
                 |> ElmSyntaxPrint.toString
         )
 -->
-Ok """module Sample exposing (..)
+Just """module Sample exposing (..)
 
 
 plus2 n =
