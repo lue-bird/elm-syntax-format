@@ -1,4 +1,4 @@
-module Benchmarks exposing (benchmarks, sample)
+module Benchmarks exposing (benchmarks)
 
 import Benchmark
 import Benchmark.Alternative
@@ -6,72 +6,48 @@ import Bitwise
 import Elm.Parser
 import Elm.Syntax.File
 import ElmSyntaxParserLenient
-import ElmSyntaxPrint
-import ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefine
-import ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefineMicroOptimized
-import ElmSyntaxPrintWithDefunctionalized
-import ElmSyntaxPrintWithDefunctionalizedAppendExact
-import ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape
-import ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscapeCachedLineSpread
+import ElmSyntaxPrintDefunctionalized
+import ElmSyntaxPrintDefunctionalizedFasterIndent
+import Print
+import PrintFasterIndent
 
 
 benchmarks : Benchmark.Benchmark
 benchmarks =
     Benchmark.describe "elm-syntax-format"
-        [ Benchmark.Alternative.rank "printing"
-            (\f -> f ())
-            [ {- ( "defunctionalized naive"
-                         , \() ->
-                               sample
-                                   |> Maybe.map ElmSyntaxPrintWithDefunctionalized.module_
-                                   |> Maybe.map ElmSyntaxPrintWithDefunctionalized.toString
-                         )
-                       ,
-                    ( "defunctionalized, append exact"
-                    , \() ->
-                          sample
-                              |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExact.module_
-                              |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExact.toString
-                    ),
-                 ( "defunctionalized, append exact, shortcut escape"
-                 , \() ->
-                       sample
-                           |> Maybe.map ElmSyntaxPrintWithDefunctionalizedAppendExactShortcutEscape.module_
+        [ case maybeSample of
+            Nothing ->
+                Benchmark.describe "sample didn't parse" []
 
-              -}
-              ( "defunctionalized, shortcut escape, more predefine, micro-optimize"
-              , \() ->
-                    sample
-                        |> Maybe.map ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefineMicroOptimized.module_
-                        |> Maybe.map ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefineMicroOptimized.toString
-              )
-            , ( "defunctionalized, shortcut escape, more predefine"
-              , \() ->
-                    sample
-                        |> Maybe.map ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefine.module_
-                        |> Maybe.map ElmSyntaxPrintDefunctionalizedShortcutEscapeMorePredefine.toString
-              )
-
-            {- , ( "Int -> String, composition"
-               , \() ->
-                     sample
-                         |> Maybe.map ElmSyntaxPrint.module_
-                         |> Maybe.map ElmSyntaxPrint.toString
-               )
-            -}
-            {- , ( "Int -> String, less composition"
-               , \() ->
-                     sample
-                         |> Maybe.map ElmSyntaxPrintLessComposition.module_
-                         |> Maybe.map ElmSyntaxPrintLessComposition.toString
-               )
-            -}
-            ]
+            Just sample ->
+                Benchmark.Alternative.rank "printing"
+                    (\f -> f sample)
+                    [ ( "current package implementation"
+                      , moduleToStringCurrentPackage
+                      )
+                    , ( "faster indent"
+                      , moduleToStringFasterIndent
+                      )
+                    ]
         ]
 
 
-sample : Maybe Elm.Syntax.File.File
-sample =
+moduleToStringCurrentPackage : Elm.Syntax.File.File -> String
+moduleToStringCurrentPackage syntaxModule =
+    syntaxModule
+        |> ElmSyntaxPrintDefunctionalized.module_
+        |> Print.toString
+
+
+moduleToStringFasterIndent : Elm.Syntax.File.File -> String
+moduleToStringFasterIndent syntaxModule =
+    syntaxModule
+        |> ElmSyntaxPrintDefunctionalizedFasterIndent.module_
+        |> PrintFasterIndent.toString
+
+
+maybeSample : Maybe Elm.Syntax.File.File
+maybeSample =
     -- taken from https://github.com/dwayne/elm-conduit/blob/master/src/Main.elm
     -- Thanks! Below it's license
     {-
