@@ -63,15 +63,15 @@ toStringWithIndent indent print =
 
 
 toStringWithIndentAndLinebreakIndentAsString : Int -> String -> Print -> String
-toStringWithIndentAndLinebreakIndentAsString indent linebreakIndentAsString print =
+toStringWithIndentAndLinebreakIndentAsString indentIgnoringMultiplesOfBy4 linebreakIndentAsString print =
     -- IGNORE TCO
     case print of
         Exact string () ->
             string
 
         FollowedBy b a ->
-            toStringWithIndentAndLinebreakIndentAsString indent linebreakIndentAsString a
-                ++ toStringWithIndentAndLinebreakIndentAsString indent linebreakIndentAsString b
+            toStringWithIndentAndLinebreakIndentAsString indentIgnoringMultiplesOfBy4 linebreakIndentAsString a
+                ++ toStringWithIndentAndLinebreakIndentAsString indentIgnoringMultiplesOfBy4 linebreakIndentAsString b
                 ++ ""
 
         Linebreak () () ->
@@ -82,29 +82,27 @@ toStringWithIndentAndLinebreakIndentAsString indent linebreakIndentAsString prin
 
         WithIndentIncreasedBy increase innerPrint ->
             toStringWithIndentAndLinebreakIndentAsString
-                (indent + increase)
-                (linebreakIndentAsString ++ stringIndentFastAtMost4 increase)
+                (indentIgnoringMultiplesOfBy4 + increase + 0)
+                (linebreakIndentAsString
+                    ++ indentAtMost4 increase
+                    ++ ""
+                )
                 innerPrint
 
         WithIndentAtNextMultipleOf4 innerPrint () ->
-            let
-                increase : Int
-                increase =
-                    newIndent - indent
-
-                newIndent : Int
-                newIndent =
-                    indent // 4 * 4 + 4
-            in
             toStringWithIndentAndLinebreakIndentAsString
-                newIndent
-                (linebreakIndentAsString ++ stringIndentFastAtMost4 increase)
+                0
+                (linebreakIndentAsString
+                    ++ indentInverseRemainderBy4
+                        (indentIgnoringMultiplesOfBy4 - indentIgnoringMultiplesOfBy4 // 4 * 4)
+                    ++ ""
+                )
                 innerPrint
 
 
-stringIndentFastAtMost4 : Int -> String
-stringIndentFastAtMost4 n =
-    case n of
+indentAtMost4 : Int -> String
+indentAtMost4 atMost4 =
+    case atMost4 of
         1 ->
             " "
 
@@ -117,6 +115,23 @@ stringIndentFastAtMost4 n =
         -- 4
         _ ->
             "    "
+
+
+indentInverseRemainderBy4 : Int -> String
+indentInverseRemainderBy4 inverseRemainderBy4 =
+    case inverseRemainderBy4 of
+        0 ->
+            "    "
+
+        1 ->
+            "   "
+
+        2 ->
+            "  "
+
+        -- 3
+        _ ->
+            " "
 
 
 {-| [How many lines](#LineSpread) the given [`Print`](#Print)
