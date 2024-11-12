@@ -1,3 +1,7 @@
+#### 1.14
+  - in module `ElmSyntaxPrint`
+      - faster
+
 #### 1.1.3
   - in module `ElmSyntaxParserLenient`
       - now merges consecutive `|`s in choice type declaration

@@ -59,44 +59,51 @@ toString print =
 -}
 toStringWithIndent : Int -> Print -> String
 toStringWithIndent indent print =
-    toStringWithIndentAndLinebreakIndentAsString indent "\n" print
+    toStringWithIndentAndLinebreakIndentAsStringWithRight indent "\n" "" print
 
 
-toStringWithIndentAndLinebreakIndentAsString : Int -> String -> Print -> String
-toStringWithIndentAndLinebreakIndentAsString indentIgnoringMultiplesOfBy4 linebreakIndentAsString print =
+toStringWithIndentAndLinebreakIndentAsStringWithRight : Int -> String -> String -> Print -> String
+toStringWithIndentAndLinebreakIndentAsStringWithRight indentIgnoringMultiplesOfBy4 linebreakIndentAsString right print =
     -- IGNORE TCO
     case print of
         Exact string () ->
-            string
+            string ++ right ++ ""
 
         FollowedBy b a ->
-            toStringWithIndentAndLinebreakIndentAsString indentIgnoringMultiplesOfBy4 linebreakIndentAsString a
-                ++ toStringWithIndentAndLinebreakIndentAsString indentIgnoringMultiplesOfBy4 linebreakIndentAsString b
-                ++ ""
+            toStringWithIndentAndLinebreakIndentAsStringWithRight indentIgnoringMultiplesOfBy4
+                linebreakIndentAsString
+                (toStringWithIndentAndLinebreakIndentAsStringWithRight indentIgnoringMultiplesOfBy4
+                    linebreakIndentAsString
+                    right
+                    b
+                )
+                a
 
         Linebreak () () ->
-            "\n"
+            "\n" ++ right
 
         LinebreakIndented () () ->
-            linebreakIndentAsString
+            linebreakIndentAsString ++ right ++ ""
 
         WithIndentIncreasedBy increase innerPrint ->
-            toStringWithIndentAndLinebreakIndentAsString
+            toStringWithIndentAndLinebreakIndentAsStringWithRight
                 (indentIgnoringMultiplesOfBy4 + increase + 0)
                 (linebreakIndentAsString
                     ++ indentAtMost4 increase
                     ++ ""
                 )
+                right
                 innerPrint
 
         WithIndentAtNextMultipleOf4 innerPrint () ->
-            toStringWithIndentAndLinebreakIndentAsString
+            toStringWithIndentAndLinebreakIndentAsStringWithRight
                 0
                 (linebreakIndentAsString
                     ++ indentInverseRemainderBy4
                         (indentIgnoringMultiplesOfBy4 - indentIgnoringMultiplesOfBy4 // 4 * 4)
                     ++ ""
                 )
+                right
                 innerPrint
 
 
