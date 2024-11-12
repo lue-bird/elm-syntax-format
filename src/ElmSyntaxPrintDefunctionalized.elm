@@ -317,7 +317,7 @@ commentsAfter end sortedComments =
             []
 
         (Elm.Syntax.Node.Node headCommentRange headComment) :: tailComments ->
-            case Elm.Syntax.Range.compareLocations headCommentRange.start end of
+            case locationCompareFast headCommentRange.start end of
                 LT ->
                     commentsAfter end tailComments
 
@@ -351,7 +351,7 @@ commentsInRange range sortedComments =
             []
 
         (Elm.Syntax.Node.Node headCommentRange headComment) :: tailComments ->
-            case Elm.Syntax.Range.compareLocations headCommentRange.start range.start of
+            case locationCompareFast headCommentRange.start range.start of
                 LT ->
                     commentsInRange range tailComments
 
@@ -359,7 +359,7 @@ commentsInRange range sortedComments =
                     headComment :: commentsInRange range tailComments
 
                 GT ->
-                    case Elm.Syntax.Range.compareLocations headCommentRange.end range.end of
+                    case locationCompareFast headCommentRange.end range.end of
                         GT ->
                             []
 
@@ -4173,7 +4173,7 @@ firstCommentInRange range sortedComments =
             Nothing
 
         (Elm.Syntax.Node.Node headCommentRange headComment) :: tailComments ->
-            case Elm.Syntax.Range.compareLocations headCommentRange.start range.start of
+            case locationCompareFast headCommentRange.start range.start of
                 LT ->
                     firstCommentInRange range tailComments
 
@@ -4181,7 +4181,7 @@ firstCommentInRange range sortedComments =
                     Just (Elm.Syntax.Node.Node headCommentRange headComment)
 
                 GT ->
-                    case Elm.Syntax.Range.compareLocations headCommentRange.end range.end of
+                    case locationCompareFast headCommentRange.end range.end of
                         GT ->
                             Nothing
 
@@ -4190,6 +4190,18 @@ firstCommentInRange range sortedComments =
 
                         EQ ->
                             Just (Elm.Syntax.Node.Node headCommentRange headComment)
+
+
+locationCompareFast : Elm.Syntax.Range.Location -> Elm.Syntax.Range.Location -> Basics.Order
+locationCompareFast left right =
+    if left.row - right.row < 0 then
+        LT
+
+    else if left.row - right.row > 0 then
+        GT
+
+    else
+        Basics.compare left.column right.column
 
 
 linebreaksFollowedByDeclaration :
