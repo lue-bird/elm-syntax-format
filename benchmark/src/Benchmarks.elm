@@ -5,31 +5,82 @@ import Benchmark.Alternative
 import Bitwise
 import Elm.Parser
 import Elm.Syntax.File
+import Elm.Syntax.Range
 import ElmSyntaxParserLenient
 import ElmSyntaxPrintDefunctionalized
 import ElmSyntaxPrintDefunctionalizedFasterIndent
 import Print
 import PrintFasterIndent
+import Random
 
 
 benchmarks : Benchmark.Benchmark
 benchmarks =
     Benchmark.describe "elm-syntax-format"
-        [ case maybeSample of
+        (case maybeSample of
             Nothing ->
-                Benchmark.describe "sample didn't parse" []
+                [ Benchmark.describe "sample didn't parse" [] ]
 
             Just sample ->
-                Benchmark.Alternative.rank "printing"
+                [ Benchmark.Alternative.rank "printing"
                     (\f -> f sample)
-                    [ ( "current package implementation"
-                      , moduleToStringCurrentPackage
-                      )
-                    , ( "faster indent"
+                    [ ( "attempt at faster"
                       , moduleToStringFasterIndent
                       )
+                    , ( "current package implementation"
+                      , moduleToStringCurrentPackage
+                      )
                     ]
-        ]
+
+                {- }, Benchmark.Alternative.rank "elm-syntax Location compare"
+                   (\f -> List.map2 f exampleLocations0 exampleLocations1)
+                   [ ( "attempt at faster"
+                     , locationCompareFast
+                     )
+                   , ( "elm-syntax implementation"
+                     , Elm.Syntax.Range.compareLocations
+                     )
+                   ]
+                -}
+                ]
+        )
+
+
+locationCompareFast : Elm.Syntax.Range.Location -> Elm.Syntax.Range.Location -> Basics.Order
+locationCompareFast left right =
+    if left.row - right.row < 0 then
+        LT
+
+    else if left.row - right.row > 0 then
+        GT
+
+    else
+        Basics.compare left.column right.column
+
+
+exampleLocations0 : List Elm.Syntax.Range.Location
+exampleLocations0 =
+    (Random.step (Random.list 100 locationRandomGenerator)
+        (Random.initialSeed 0)
+        |> Tuple.first
+    )
+        ++ List.repeat 10 { row = 1, column = 1 }
+
+
+exampleLocations1 : List Elm.Syntax.Range.Location
+exampleLocations1 =
+    (Random.step (Random.list 100 locationRandomGenerator)
+        (Random.initialSeed 1)
+        |> Tuple.first
+    )
+        ++ List.repeat 10 { row = 1, column = 1 }
+
+
+locationRandomGenerator : Random.Generator Elm.Syntax.Range.Location
+locationRandomGenerator =
+    Random.map2 (\row column -> { row = row, column = column })
+        (Random.int 1 30)
+        (Random.int 1 30)
 
 
 moduleToStringCurrentPackage : Elm.Syntax.File.File -> String

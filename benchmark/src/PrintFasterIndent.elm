@@ -4,7 +4,7 @@ module PrintFasterIndent exposing
     , followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten, listReverseAndMapAndIntersperseAndFlatten
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
     , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
-    , toStringWithIndentAndLinebreakIndentAsString
+    , toStringWithIndentAndLinebreakIndentAsStringWithRight
     )
 
 {-| simple pretty printing
@@ -28,8 +28,6 @@ module PrintFasterIndent exposing
 @docs LineSpread, lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
 
 -}
-
-import Bitwise
 
 
 {-| Like a string that knows which lines need to be indented
@@ -55,80 +53,58 @@ and no restrictions on line width
 -}
 toString : Print -> String
 toString print =
-    toStringWhereIndentRemainderBy4Is0WithLinebreakIndentAsString "\n" print
+    toStringWithIndent 0 print
 
 
 {-| Convert to a String with given base indentation
 -}
-toStringWithIndentAndLinebreakIndentAsString : Int -> String -> Print -> String
-toStringWithIndentAndLinebreakIndentAsString indentIgnoringMultiplesOfBy4 linebreakIndentAsString print =
+toStringWithIndent : Int -> Print -> String
+toStringWithIndent indent print =
+    toStringWithIndentAndLinebreakIndentAsStringWithRight indent "\n" "" print
+
+
+toStringWithIndentAndLinebreakIndentAsStringWithRight : Int -> String -> String -> Print -> String
+toStringWithIndentAndLinebreakIndentAsStringWithRight indentIgnoringMultiplesOfBy4 linebreakIndentAsString right print =
     -- IGNORE TCO
     case print of
         Exact string () ->
-            string
+            string ++ right ++ ""
 
         FollowedBy b a ->
-            toStringWithIndentAndLinebreakIndentAsString indentIgnoringMultiplesOfBy4 linebreakIndentAsString a
-                ++ toStringWithIndentAndLinebreakIndentAsString indentIgnoringMultiplesOfBy4 linebreakIndentAsString b
-                ++ ""
+            toStringWithIndentAndLinebreakIndentAsStringWithRight indentIgnoringMultiplesOfBy4
+                linebreakIndentAsString
+                (toStringWithIndentAndLinebreakIndentAsStringWithRight indentIgnoringMultiplesOfBy4
+                    linebreakIndentAsString
+                    right
+                    b
+                )
+                a
 
         Linebreak () () ->
-            "\n"
+            "\n" ++ right
 
         LinebreakIndented () () ->
-            linebreakIndentAsString
+            linebreakIndentAsString ++ right ++ ""
 
         WithIndentIncreasedBy increase innerPrint ->
-            toStringWithIndentAndLinebreakIndentAsString
+            toStringWithIndentAndLinebreakIndentAsStringWithRight
                 (indentIgnoringMultiplesOfBy4 + increase + 0)
                 (linebreakIndentAsString
                     ++ indentAtMost4 increase
                     ++ ""
                 )
+                right
                 innerPrint
 
         WithIndentAtNextMultipleOf4 innerPrint () ->
-            toStringWhereIndentRemainderBy4Is0WithLinebreakIndentAsString
+            toStringWithIndentAndLinebreakIndentAsStringWithRight
+                0
                 (linebreakIndentAsString
                     ++ indentInverseRemainderBy4
                         (indentIgnoringMultiplesOfBy4 - indentIgnoringMultiplesOfBy4 // 4 * 4)
                     ++ ""
                 )
-                innerPrint
-
-
-toStringWhereIndentRemainderBy4Is0WithLinebreakIndentAsString : String -> Print -> String
-toStringWhereIndentRemainderBy4Is0WithLinebreakIndentAsString linebreakIndentAsString print =
-    -- IGNORE TCO
-    case print of
-        Exact string () ->
-            string
-
-        FollowedBy b a ->
-            toStringWhereIndentRemainderBy4Is0WithLinebreakIndentAsString linebreakIndentAsString a
-                ++ toStringWhereIndentRemainderBy4Is0WithLinebreakIndentAsString linebreakIndentAsString b
-                ++ ""
-
-        Linebreak () () ->
-            "\n"
-
-        LinebreakIndented () () ->
-            linebreakIndentAsString
-
-        WithIndentIncreasedBy increase innerPrint ->
-            toStringWithIndentAndLinebreakIndentAsString
-                increase
-                (linebreakIndentAsString
-                    ++ indentAtMost4 increase
-                    ++ ""
-                )
-                innerPrint
-
-        WithIndentAtNextMultipleOf4 innerPrint () ->
-            toStringWhereIndentRemainderBy4Is0WithLinebreakIndentAsString
-                (linebreakIndentAsString
-                    ++ "    "
-                )
+                right
                 innerPrint
 
 
