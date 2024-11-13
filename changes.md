@@ -1,4 +1,4 @@
-#### 1.14
+#### 1.1.4
   - in module `ElmSyntaxPrint`
       - correct triple double quoted string literal escaping behavior
       - faster
