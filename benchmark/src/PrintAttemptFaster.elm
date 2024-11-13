@@ -1,7 +1,7 @@
 module PrintAttemptFaster exposing
     ( Print(..), toString, toStringWithIndent
     , exactly, empty, linebreak
-    , followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten, listReverseAndMapAndIntersperseAndFlatten
+    , followedBy, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten, listReverseAndMapAndIntersperseAndFlatten
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
     , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
     )
@@ -18,7 +18,7 @@ module PrintAttemptFaster exposing
 
 ### combine
 
-@docs followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten, listReverseAndMapAndIntersperseAndFlatten
+@docs followedBy, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten, listReverseAndMapAndIntersperseAndFlatten
 
 
 ### indent
@@ -223,7 +223,7 @@ linebreak =
         |> Print.toString
     --> "ab"
 
-To append more than 2, use [`Print.listFlatten`](#listFlatten)
+To append more than 2, use [`Print.listMapAndFlatten`](#listMapAndFlatten)
 
 -}
 followedBy : Print -> (Print -> Print)
@@ -385,23 +385,6 @@ listReverseAndMapAndIntersperseAndFlatten elementToPrint inBetweenPrint elements
                             |> followedBy soFar
                     )
                     (elementToPrint head)
-
-
-{-| Concatenate a given list of [`Print`](#Print)s
-one after the other
-
-    [ "a", "b" ]
-        |> List.map Print.exactly
-        |> Print.listFlatten
-        |> Print.toString
-    --> "ab"
-
-To only concatenate 2, use [`Print.followedBy`](#followedBy)
-
--}
-listFlatten : List Print -> Print
-listFlatten prints =
-    prints |> List.foldl followedBy empty
 
 
 {-| Set the indentation used by [`Print.linebreakIndented`](#linebreakIndented),
