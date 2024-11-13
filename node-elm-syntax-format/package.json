@@ -2,7 +2,7 @@
   "type": "module",
   "name": "elm-syntax-format",
   "devDependencies": {
-    "@lue-bird/elm-state-interface-experimental": "^3.0.6",
+    "@lue-bird/elm-state-interface-experimental": "^3.0.7",
     "elm-esm": "^1.1.4",
     "elm-optimize-level-2": "^0.3.5"
   },
