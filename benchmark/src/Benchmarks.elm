@@ -10,7 +10,7 @@ import ElmSyntaxParserLenient
 import ElmSyntaxPrintDefunctionalized
 import ElmSyntaxPrintDefunctionalizedAttemptFaster
 import Print
-import PrintFasterIndent
+import PrintAttemptFaster
 import Random
 
 
@@ -24,10 +24,7 @@ benchmarks =
             Just sample ->
                 [ Benchmark.Alternative.rank "printing"
                     (\f -> f sample)
-                    [ --( "attempt at faster"
-                      --, moduleToStringFasterIndent
-                      --)
-                      ( "current package implementation"
+                    [ ( "current package implementation"
                       , moduleToStringCurrentPackage
                       )
                     , ( "attempt to make it faster"
@@ -47,15 +44,6 @@ benchmarks =
                        , ( "current package implementation"
                          , parseModuleCurrentPackage
                          )
-                       ]
-
-                      (\f -> List.map2 f exampleLocations0 exampleLocations1)
-                      [ ( "attempt at faster"
-                        , locationCompareFast
-                        )
-                      , ( "elm-syntax implementation"
-                        , Elm.Syntax.Range.compareLocations
-                        )
                       ]
                 -}
                 ]
@@ -110,7 +98,7 @@ moduleToStringAttemptFaster : Elm.Syntax.File.File -> String
 moduleToStringAttemptFaster syntaxModule =
     syntaxModule
         |> ElmSyntaxPrintDefunctionalizedAttemptFaster.module_
-        |> PrintFasterIndent.toString
+        |> PrintAttemptFaster.toString
 
 
 parseModuleCurrentPackage : String -> Maybe Elm.Syntax.File.File

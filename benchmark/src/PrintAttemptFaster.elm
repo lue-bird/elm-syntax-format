@@ -1,10 +1,9 @@
-module PrintFasterIndent exposing
-    ( Print(..), toString
+module PrintAttemptFaster exposing
+    ( Print(..), toString, toStringWithIndent
     , exactly, empty, linebreak
     , followedBy, listFlatten, listMapAndFlatten, listIntersperseAndFlatten, listMapAndIntersperseAndFlatten, listReverseAndIntersperseAndFlatten, listReverseAndMapAndFlatten, listReverseAndMapAndIntersperseAndFlatten
     , withIndentAtNextMultipleOf4, withIndentIncreasedBy, linebreakIndented, spaceOrLinebreakIndented, emptyOrLinebreakIndented
     , LineSpread(..), lineSpreadMergeWith, lineSpreadMergeWithStrict, lineSpreadListMapAndCombine, lineSpread
-    , toStringWithIndentAndLinebreakIndentAsStringWithRight
     )
 
 {-| simple pretty printing

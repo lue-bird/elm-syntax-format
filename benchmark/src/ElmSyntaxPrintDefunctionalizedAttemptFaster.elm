@@ -33,7 +33,7 @@ import Elm.Syntax.Signature
 import Elm.Syntax.Type
 import Elm.Syntax.TypeAlias
 import Elm.Syntax.TypeAnnotation
-import PrintFasterIndent as Print exposing (Print)
+import PrintAttemptFaster as Print exposing (Print)
 import Unicode
 
 
@@ -1625,12 +1625,12 @@ patternIsSpaceSeparated syntaxPattern =
 stringLiteral : Elm.Syntax.Node.Node String -> Print
 stringLiteral (Elm.Syntax.Node.Node range stringContent) =
     let
-        stringContentEscaped : String
-        stringContentEscaped =
+        singleDoubleQuotedStringContentEscaped : String
+        singleDoubleQuotedStringContentEscaped =
             stringContent
                 |> String.foldl
                     (\contentChar soFar ->
-                        soFar ++ quotedStringCharToEscaped contentChar ++ ""
+                        soFar ++ singleDoubleQuotedStringCharToEscaped contentChar ++ ""
                     )
                     ""
 
@@ -1638,19 +1638,20 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
         wasProbablyTripleDoubleQuoteOriginally =
             (range.start.row /= range.end.row)
                 || ((range.end.column - range.start.column)
-                        - (stringContentEscaped |> String.length)
+                        - (singleDoubleQuotedStringContentEscaped |> String.length)
                         /= 2
                    )
     in
     if wasProbablyTripleDoubleQuoteOriginally then
         printExactlyDoubleQuoteDoubleQuoteDoubleQuote
             |> Print.followedBy
-                (stringContentEscaped
-                    |> String.replace "\\n" "\n"
-                    |> String.replace "\\r" "\u{000D}"
-                    |> String.replace "\\u{000D}" "\u{000D}"
-                    |> stringAlterAfterFirstBeforeLastChar
-                        (String.replace "\\\"" "\"")
+                (stringContent
+                    |> String.foldl
+                        (\contentChar soFar ->
+                            soFar ++ tripleDoubleQuotedStringCharToEscaped contentChar ++ ""
+                        )
+                        ""
+                    |> tripleDoubleQuotedStringEscapeDoubleQuotes
                     |> String.lines
                     |> Print.listMapAndIntersperseAndFlatten
                         Print.exactly
@@ -1659,22 +1660,72 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
             |> Print.followedBy printExactlyDoubleQuoteDoubleQuoteDoubleQuote
 
     else
-        Print.exactly ("\"" ++ stringContentEscaped ++ "\"")
+        Print.exactly ("\"" ++ singleDoubleQuotedStringContentEscaped ++ "\"")
 
 
-stringAlterAfterFirstBeforeLastChar : (String -> String) -> (String -> String)
-stringAlterAfterFirstBeforeLastChar alterAfterFirstBeforeLastChar string =
-    (string |> String.slice 0 1)
-        ++ (string
-                |> String.slice 1 ((string |> String.length) - 1)
-                |> alterAfterFirstBeforeLastChar
+tripleDoubleQuotedStringEscapeDoubleQuotes : String -> String
+tripleDoubleQuotedStringEscapeDoubleQuotes string =
+    let
+        beforeLastCharEscaped : { consecutiveDoubleQuoteCount : Int, result : String }
+        beforeLastCharEscaped =
+            -- escape continuous double quotes if combined length >= 3
+            string
+                |> String.slice 0 ((string |> String.length) - 1)
+                |> String.foldl
+                    (\char soFar ->
+                        case char of
+                            '"' ->
+                                { consecutiveDoubleQuoteCount =
+                                    soFar.consecutiveDoubleQuoteCount + 1
+                                , result = soFar.result
+                                }
+
+                            firstCharNotDoubleQuote ->
+                                { consecutiveDoubleQuoteCount = 0
+                                , result =
+                                    soFar.result
+                                        ++ (case soFar.consecutiveDoubleQuoteCount of
+                                                0 ->
+                                                    ""
+
+                                                1 ->
+                                                    "\""
+
+                                                2 ->
+                                                    "\"\""
+
+                                                atLeast3ConsecutiveDoubleQuoteCount ->
+                                                    String.repeat atLeast3ConsecutiveDoubleQuoteCount "\\\""
+                                           )
+                                        ++ String.fromChar firstCharNotDoubleQuote
+                                        ++ ""
+                                }
+                    )
+                    { consecutiveDoubleQuoteCount = 0
+                    , result = ""
+                    }
+    in
+    beforeLastCharEscaped.result
+        ++ (case
+                string
+                    |> String.slice
+                        ((string |> String.length) - 1)
+                        (string |> String.length)
+            of
+                "\"" ->
+                    -- escape preceding continuous double quotes if they connect to the last char double quote
+                    String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\\\""
+                        ++ "\\\""
+
+                lastCharNotDoubleQuote ->
+                    String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\""
+                        ++ lastCharNotDoubleQuote
            )
-        ++ (string |> String.slice ((string |> String.length) - 1) (string |> String.length))
         ++ ""
 
 
-quotedStringCharToEscaped : Char -> String
-quotedStringCharToEscaped character =
+singleDoubleQuotedStringCharToEscaped : Char -> String
+singleDoubleQuotedStringCharToEscaped character =
     case character of
         '"' ->
             "\\\""
@@ -1690,6 +1741,33 @@ quotedStringCharToEscaped character =
 
         '\u{000D}' ->
             "\\u{000D}"
+
+        otherCharacter ->
+            if characterIsPrint otherCharacter then
+                "\\u{" ++ characterHex otherCharacter ++ "}"
+
+            else
+                String.fromChar otherCharacter
+
+
+tripleDoubleQuotedStringCharToEscaped : Char -> String
+tripleDoubleQuotedStringCharToEscaped character =
+    case character of
+        '"' ->
+            -- edge cases handled in a later step
+            "\""
+
+        '\\' ->
+            "\\\\"
+
+        '\t' ->
+            "\\t"
+
+        '\n' ->
+            "\n"
+
+        '\u{000D}' ->
+            "\u{000D}"
 
         otherCharacter ->
             if characterIsPrint otherCharacter then
@@ -4170,8 +4248,7 @@ declarations context syntaxDeclarations =
                                                             )
                                                         |> Print.followedBy
                                                             (declaration
-                                                                { comments =
-                                                                    commentNodesInRange declarationRange context.comments
+                                                                { comments = commentNodesInRange declarationRange context.comments
                                                                 , portDocumentationComment = maybeDeclarationPortDocumentationComment
                                                                 }
                                                                 syntaxDeclaration
@@ -4179,8 +4256,7 @@ declarations context syntaxDeclarations =
 
                                                 [] ->
                                                     linebreaksFollowedByDeclaration
-                                                        { comments =
-                                                            commentNodesInRange declarationRange context.comments
+                                                        { comments = commentNodesInRange declarationRange context.comments
                                                         , portDocumentationComment = maybeDeclarationPortDocumentationComment
                                                         }
                                                         syntaxDeclaration
