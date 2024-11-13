@@ -1595,12 +1595,12 @@ patternIsSpaceSeparated syntaxPattern =
 stringLiteral : Elm.Syntax.Node.Node String -> Print
 stringLiteral (Elm.Syntax.Node.Node range stringContent) =
     let
-        stringContentEscaped : String
-        stringContentEscaped =
+        singleDoubleQuotedStringContentEscaped : String
+        singleDoubleQuotedStringContentEscaped =
             stringContent
                 |> String.foldl
                     (\contentChar soFar ->
-                        soFar ++ quotedStringCharToEscaped contentChar ++ ""
+                        soFar ++ singleDoubleQuotedStringCharToEscaped contentChar ++ ""
                     )
                     ""
 
@@ -1608,17 +1608,19 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
         wasProbablyTripleDoubleQuoteOriginally =
             (range.start.row /= range.end.row)
                 || ((range.end.column - range.start.column)
-                        - (stringContentEscaped |> String.length)
+                        - (singleDoubleQuotedStringContentEscaped |> String.length)
                         /= 2
                    )
     in
     if wasProbablyTripleDoubleQuoteOriginally then
         printExactlyDoubleQuoteDoubleQuoteDoubleQuote
             |> Print.followedBy
-                (stringContentEscaped
-                    |> String.replace "\\n" "\n"
-                    |> String.replace "\\r" "\u{000D}"
-                    |> String.replace "\\u{000D}" "\u{000D}"
+                (stringContent
+                    |> String.foldl
+                        (\contentChar soFar ->
+                            soFar ++ tripleDoubleQuotedStringCharToEscaped contentChar ++ ""
+                        )
+                        ""
                     |> stringAlterAfterFirstBeforeLastChar
                         (String.replace "\\\"" "\"")
                     |> String.lines
@@ -1629,10 +1631,10 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
             |> Print.followedBy printExactlyDoubleQuoteDoubleQuoteDoubleQuote
 
     else
-        Print.exactly ("\"" ++ stringContentEscaped ++ "\"")
+        Print.exactly ("\"" ++ singleDoubleQuotedStringContentEscaped ++ "\"")
 
 
-stringAlterAfterFirstBeforeLastChar : (String -> String) -> (String -> String)
+stringAlterAfterFirstBeforeLastChar : (String -> String) -> String -> String
 stringAlterAfterFirstBeforeLastChar alterAfterFirstBeforeLastChar string =
     (string |> String.slice 0 1)
         ++ (string
@@ -1643,8 +1645,8 @@ stringAlterAfterFirstBeforeLastChar alterAfterFirstBeforeLastChar string =
         ++ ""
 
 
-quotedStringCharToEscaped : Char -> String
-quotedStringCharToEscaped character =
+singleDoubleQuotedStringCharToEscaped : Char -> String
+singleDoubleQuotedStringCharToEscaped character =
     case character of
         '"' ->
             "\\\""
@@ -1660,6 +1662,32 @@ quotedStringCharToEscaped character =
 
         '\u{000D}' ->
             "\\u{000D}"
+
+        otherCharacter ->
+            if characterIsPrint otherCharacter then
+                "\\u{" ++ characterHex otherCharacter ++ "}"
+
+            else
+                String.fromChar otherCharacter
+
+
+tripleDoubleQuotedStringCharToEscaped : Char -> String
+tripleDoubleQuotedStringCharToEscaped character =
+    case character of
+        '"' ->
+            "\\\""
+
+        '\\' ->
+            "\\\\"
+
+        '\t' ->
+            "\\t"
+
+        '\n' ->
+            "\n"
+
+        '\u{000D}' ->
+            "\u{000D}"
 
         otherCharacter ->
             if characterIsPrint otherCharacter then

@@ -3695,6 +3695,18 @@ a =
     "normal text"
 """
                 )
+            , Test.test "single double quote string with escaped backslash followed by n"
+                (\() ->
+                    """module A exposing (..)
+a = "\\\\n" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    "\\\\n"
+"""
+                )
             , Test.test "single double quote string with escapes"
                 (\() ->
                     """module A exposing (..)
@@ -3769,6 +3781,54 @@ a = \"\"\"normal text\\\"\"\"\" """
 
 a =
     \"\"\"normal text\\\"\"\"\"
+"""
+                )
+            , Test.test "triple double quote string with escaped backslash followed by n"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"\\\\n\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"\\\\n\"\"\"
+"""
+                )
+            , Test.test "triple double quote string with escaped backslash followed by r"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"\\\\r\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"\\\\r\"\"\"
+"""
+                )
+            , Test.test "triple double quote string with escaped backslash followed by u{000D}"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"\\\\u{000D}\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"\\\\u{000D}\"\"\"
+"""
+                )
+            , Test.test "triple double quote string with escaped backslash followed by u{1234}"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"\\\\u{1234}\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"\\\\u{1234}\"\"\"
 """
                 )
             , Test.test "comments between parameters"
