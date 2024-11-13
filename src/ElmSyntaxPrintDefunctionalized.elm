@@ -1621,8 +1621,7 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
                             soFar ++ tripleDoubleQuotedStringCharToEscaped contentChar ++ ""
                         )
                         ""
-                    |> stringAlterAfterFirstBeforeLastChar
-                        (String.replace "\\\"" "\"")
+                    |> tripleDoubleQuotedStringEscapeDoubleQuotes
                     |> String.lines
                     |> Print.listMapAndIntersperseAndFlatten
                         Print.exactly
@@ -1634,14 +1633,64 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
         Print.exactly ("\"" ++ singleDoubleQuotedStringContentEscaped ++ "\"")
 
 
-stringAlterAfterFirstBeforeLastChar : (String -> String) -> String -> String
-stringAlterAfterFirstBeforeLastChar alterAfterFirstBeforeLastChar string =
-    (string |> String.slice 0 1)
-        ++ (string
-                |> String.slice 1 ((string |> String.length) - 1)
-                |> alterAfterFirstBeforeLastChar
+tripleDoubleQuotedStringEscapeDoubleQuotes : String -> String
+tripleDoubleQuotedStringEscapeDoubleQuotes string =
+    let
+        beforeLastCharEscaped : { consecutiveDoubleQuoteCount : Int, result : String }
+        beforeLastCharEscaped =
+            -- escape continuous double quotes if combined length >= 3
+            string
+                |> String.slice 0 ((string |> String.length) - 1)
+                |> String.foldl
+                    (\char soFar ->
+                        case char of
+                            '"' ->
+                                { consecutiveDoubleQuoteCount =
+                                    soFar.consecutiveDoubleQuoteCount + 1
+                                , result = soFar.result
+                                }
+
+                            firstCharNotDoubleQuote ->
+                                { consecutiveDoubleQuoteCount = 0
+                                , result =
+                                    soFar.result
+                                        ++ (case soFar.consecutiveDoubleQuoteCount of
+                                                0 ->
+                                                    ""
+
+                                                1 ->
+                                                    "\""
+
+                                                2 ->
+                                                    "\"\""
+
+                                                atLeast3ConsecutiveDoubleQuoteCount ->
+                                                    String.repeat atLeast3ConsecutiveDoubleQuoteCount "\\\""
+                                           )
+                                        ++ String.fromChar firstCharNotDoubleQuote
+                                        ++ ""
+                                }
+                    )
+                    { consecutiveDoubleQuoteCount = 0
+                    , result = ""
+                    }
+    in
+    beforeLastCharEscaped.result
+        ++ (case
+                string
+                    |> String.slice
+                        ((string |> String.length) - 1)
+                        (string |> String.length)
+            of
+                "\"" ->
+                    -- escape preceding continuous double quotes if they connect to the last char double quote
+                    String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\\\""
+                        ++ "\\\""
+
+                lastCharNotDoubleQuote ->
+                    String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\""
+                        ++ lastCharNotDoubleQuote
            )
-        ++ (string |> String.slice ((string |> String.length) - 1) (string |> String.length))
         ++ ""
 
 
@@ -1675,7 +1724,8 @@ tripleDoubleQuotedStringCharToEscaped : Char -> String
 tripleDoubleQuotedStringCharToEscaped character =
     case character of
         '"' ->
-            "\\\""
+            -- edge cases handled in a later step
+            "\""
 
         '\\' ->
             "\\\\"

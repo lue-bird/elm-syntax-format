@@ -1,6 +1,6 @@
 #### 1.14
   - in module `ElmSyntaxPrint`
-      - correct triple double quoted string literal escaped backslash + n/r/u{} behavior
+      - correct triple double quoted string literal escaping behavior
       - faster
 
 #### 1.1.3

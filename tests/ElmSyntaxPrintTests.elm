@@ -3759,7 +3759,7 @@ a =
     \"\"\"normal " text\"\"\"
 """
                 )
-            , Test.test "triple double quote string escapes double quote as first char"
+            , Test.test "triple double quote string does not escape double quote as first char if not followed by single double quote"
                 (\() ->
                     """module A exposing (..)
 a = \"\"\"\\"normal text\"\"\" """
@@ -3768,7 +3768,43 @@ a = \"\"\"\\"normal text\"\"\" """
 
 
 a =
-    \"\"\"\\"normal text\"\"\"
+    \"\"\"\"normal text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string does not escape double quote as first and second char if not followed by single double quote"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"\\""normal text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"\"\"normal text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string escapes double quote as first and second and third char"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"\\\"\"\"normal text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"\\"\\"\\"normal text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string escapes double quote as first and second and third and fourth char"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"\\\"\"\"\\"normal text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"\\"\\"\\"\\"normal text\"\"\"
 """
                 )
             , Test.test "triple double quote string escapes double quote as last char"
@@ -3781,6 +3817,78 @@ a = \"\"\"normal text\\\"\"\"\" """
 
 a =
     \"\"\"normal text\\\"\"\"\"
+"""
+                )
+            , Test.test "triple double quote string escapes double quote as second-last and last char"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"normal text"\\\"\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"normal text\\"\\\"\"\"\"
+"""
+                )
+            , Test.test "triple double quote string does not escape double quote as second-last before last char not double quote"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"normal text".\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"normal text".\"\"\"
+"""
+                )
+            , Test.test "triple double quote string does not escape double quote not as the first or last char and not neighboring double quotes"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"normal " text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"normal " text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string does not escape 2 consecutive double quotes not as the first or last char and not neighboring double quotes"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"normal "" text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"normal "" text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string escapes 3 consecutive double quotes not as the first or last char and not neighboring double quotes"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"normal \\""\\" text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"normal \\"\\"\\" text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string escapes 4 consecutive double quotes not as the first or last char and not neighboring double quotes"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"normal \\""\\"" text\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"normal \\"\\"\\"\\" text\"\"\"
 """
                 )
             , Test.test "triple double quote string with escaped backslash followed by n"
