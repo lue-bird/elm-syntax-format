@@ -146,13 +146,12 @@ take up if turned into a string?
 -}
 lineSpread : Print -> LineSpread
 lineSpread print =
-    -- IGNORE TCO
     case print of
         Exact _ () ->
             SingleLine
 
         FollowedBy b a ->
-            lineSpread a |> lineSpreadMergeWith (\() -> lineSpread b)
+            lineSpreadWithRemaining a [ b ]
 
         Linebreak () () ->
             MultipleLines
@@ -165,6 +164,33 @@ lineSpread print =
 
         WithIndentAtNextMultipleOf4 innerPrint () ->
             lineSpread innerPrint
+
+
+lineSpreadWithRemaining : Print -> List Print -> LineSpread
+lineSpreadWithRemaining print remainingPrints =
+    case print of
+        Exact _ () ->
+            case remainingPrints of
+                [] ->
+                    SingleLine
+
+                nextPrint :: nextRemainingPrints ->
+                    lineSpreadWithRemaining nextPrint nextRemainingPrints
+
+        FollowedBy b a ->
+            lineSpreadWithRemaining a (b :: remainingPrints)
+
+        Linebreak () () ->
+            MultipleLines
+
+        LinebreakIndented () () ->
+            MultipleLines
+
+        WithIndentIncreasedBy _ innerPrint ->
+            lineSpreadWithRemaining innerPrint remainingPrints
+
+        WithIndentAtNextMultipleOf4 innerPrint () ->
+            lineSpreadWithRemaining innerPrint remainingPrints
 
 
 {-| A given string. Mostly used for keywords, symbols and literal text.
