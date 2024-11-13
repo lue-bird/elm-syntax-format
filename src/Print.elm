@@ -401,14 +401,7 @@ To only concatenate 2, use [`Print.followedBy`](#followedBy)
 -}
 listFlatten : List Print -> Print
 listFlatten prints =
-    case prints of
-        [] ->
-            empty
-
-        head :: tail ->
-            tail
-                |> List.foldl followedBy
-                    head
+    prints |> List.foldl followedBy empty
 
 
 {-| Set the indentation used by [`Print.linebreakIndented`](#linebreakIndented),
@@ -417,8 +410,8 @@ and [`Print.emptyOrLinebreakIndented`](#emptyOrLinebreakIndented)
 to the current indent + a given number.
 -}
 withIndentIncreasedBy : Int -> (Print -> Print)
-withIndentIncreasedBy indentationIncrease print =
-    WithIndentIncreasedBy indentationIncrease print
+withIndentIncreasedBy =
+    WithIndentIncreasedBy
 
 
 {-| Set the indentation used by [`Print.linebreakIndented`](#linebreakIndented),
