@@ -22,13 +22,25 @@ benchmarks =
                 [ Benchmark.describe "sample didn't parse" [] ]
 
             Just sample ->
-                [ Benchmark.Alternative.rank "printing"
-                    (\f -> f sample)
-                    [ ( "attempt at faster"
-                      , moduleToStringFasterIndent
+                [ -- Benchmark.Alternative.rank "printing"
+                  --   (\f -> f sample)
+                  --   [ --( "attempt at faster"
+                  --     --, moduleToStringFasterIndent
+                  --     --)
+                  --     ( "current package implementation"
+                  --     , moduleToStringCurrentPackage
+                  --     )
+                  --   ],
+                  Benchmark.Alternative.rank "printing"
+                    (\f -> f sampleModuleSource)
+                    [ --( "attempt at faster"
+                      --, moduleToStringFasterIndent
+                      --),
+                      ( "current elm-syntax implementation"
+                      , parseModuleElmSyntax
                       )
                     , ( "current package implementation"
-                      , moduleToStringCurrentPackage
+                      , parseModuleCurrentPackage
                       )
                     ]
 
@@ -97,27 +109,46 @@ moduleToStringFasterIndent syntaxModule =
         |> PrintFasterIndent.toString
 
 
+parseModuleCurrentPackage : String -> Maybe Elm.Syntax.File.File
+parseModuleCurrentPackage moduleSource =
+    moduleSource
+        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+
+
+parseModuleElmSyntax : String -> Maybe Elm.Syntax.File.File
+parseModuleElmSyntax moduleSource =
+    moduleSource
+        |> Elm.Parser.parseToFile
+        |> Result.toMaybe
+
+
 maybeSample : Maybe Elm.Syntax.File.File
 maybeSample =
+    sampleModuleSource
+        |> parseModuleCurrentPackage
+
+
+sampleModuleSource : String
+sampleModuleSource =
     -- taken from https://github.com/dwayne/elm-conduit/blob/master/src/Main.elm
     -- Thanks! Below it's license
     {-
            Copyright 2024 Dwayne Crooks
-
+    
        Redistribution and use in source and binary forms, with or without
        modification, are permitted provided that the following conditions are met:
-
+    
        1. Redistributions of source code must retain the above copyright notice, this
        list of conditions and the following disclaimer.
-
+    
        2. Redistributions in binary form must reproduce the above copyright notice,
        this list of conditions and the following disclaimer in the documentation
        and/or other materials provided with the distribution.
-
+    
        3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-
+    
        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
        ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -1093,5 +1124,3 @@ withUserForView toView viewer =
         Viewer.User user ->
             toView user
 """
-        |> Elm.Parser.parseToFile
-        |> Result.toMaybe
