@@ -43,6 +43,3 @@ Please [report](https://github.com/lue-bird/elm-syntax-format/issues/new) others
 
 ## performance problems?
 Please [open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new).
-
-Ideas:
-  - pre-filter comments per declaration

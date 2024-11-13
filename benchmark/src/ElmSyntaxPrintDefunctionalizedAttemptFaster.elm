@@ -1,4 +1,4 @@
-module ElmSyntaxPrintDefunctionalizedFasterIndent exposing
+module ElmSyntaxPrintDefunctionalizedAttemptFaster exposing
     ( module_
     , moduleHeader, moduleExposing, expose, imports, import_, importExposing, moduleLevelComments, comments, comment
     , declarations, declaration, declarationChoiceType, declarationSignature, declarationExpression, declarationInfix, declarationPort, declarationTypeAlias
@@ -344,9 +344,42 @@ moduleLevelCommentsBeforeDeclaration syntaxComments =
             )
 
 
+commentNodesInRange : Elm.Syntax.Range.Range -> List (Elm.Syntax.Node.Node String) -> List (Elm.Syntax.Node.Node String)
+commentNodesInRange range sortedComments =
+    case sortedComments of
+        [] ->
+            []
+
+        headCommentNode :: tailComments ->
+            let
+                (Elm.Syntax.Node.Node headCommentRange _) =
+                    headCommentNode
+            in
+            case locationCompareFast headCommentRange.start range.start of
+                LT ->
+                    commentNodesInRange range tailComments
+
+                EQ ->
+                    headCommentNode :: commentNodesInRange range tailComments
+
+                GT ->
+                    case locationCompareFast headCommentRange.end range.end of
+                        GT ->
+                            []
+
+                        LT ->
+                            headCommentNode :: commentNodesInRange range tailComments
+
+                        EQ ->
+                            headCommentNode :: commentNodesInRange range tailComments
+
+
 commentsInRange : Elm.Syntax.Range.Range -> List (Elm.Syntax.Node.Node String) -> List String
 commentsInRange range sortedComments =
     case sortedComments of
+        [] ->
+            []
+
         (Elm.Syntax.Node.Node headCommentRange headComment) :: tailComments ->
             case locationCompareFast headCommentRange.start range.start of
                 LT ->
@@ -365,9 +398,6 @@ commentsInRange range sortedComments =
 
                         EQ ->
                             headComment :: commentsInRange range tailComments
-
-        [] ->
-            []
 
 
 lineSpreadInRange : Elm.Syntax.Range.Range -> Print.LineSpread
@@ -4140,7 +4170,8 @@ declarations context syntaxDeclarations =
                                                             )
                                                         |> Print.followedBy
                                                             (declaration
-                                                                { comments = context.comments
+                                                                { comments =
+                                                                    commentNodesInRange declarationRange context.comments
                                                                 , portDocumentationComment = maybeDeclarationPortDocumentationComment
                                                                 }
                                                                 syntaxDeclaration
@@ -4148,7 +4179,8 @@ declarations context syntaxDeclarations =
 
                                                 [] ->
                                                     linebreaksFollowedByDeclaration
-                                                        { comments = context.comments
+                                                        { comments =
+                                                            commentNodesInRange declarationRange context.comments
                                                         , portDocumentationComment = maybeDeclarationPortDocumentationComment
                                                         }
                                                         syntaxDeclaration
