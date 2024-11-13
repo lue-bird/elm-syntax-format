@@ -46,5 +46,3 @@ Please [open an issue](https://github.com/lue-bird/elm-syntax-format/issues/new)
 
 Ideas:
   - pre-filter comments per declaration
-  - pre-define prints for static parts like symbols
-  - make `Print.lineSpread` faster (cache in Print and or convert Print to defunctionalized)
