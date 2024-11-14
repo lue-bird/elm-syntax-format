@@ -76,7 +76,11 @@ interface state =
                                         (arg == "--yes")
                                             || (arg == "--elm-version")
                                             || (arg == "0.19.0")
+                                            || (arg == "0.19.1")
                                             || (arg == "0.19")
+                                            || (arg == "--elm-version=0.19")
+                                            || (arg == "--elm-version=0.19.0")
+                                            || (arg == "--elm-version=0.19.1")
                                     )
                         of
                             [] ->
