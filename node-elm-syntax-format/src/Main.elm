@@ -22,13 +22,19 @@ import Node
 type State
     = WaitingForLaunchArguments
     | ShowingHelp
-    | WaitingForElmJson { mode : Mode }
-    | SingleRun SingleRunState
+    | WaitingForElmJson { mode : ProjectMode }
+    | SingleProjectRun SingleProjectRunState
+    | SingleFileStandardStreamRun SingleFileStandardStreamRunState
     | Watching WatchState
     | ElmJsonReadFailed String
 
 
-type alias SingleRunState =
+type SingleFileStandardStreamRunState
+    = WaitingForModuleSourceFromStandardIn
+    | ModuleSourceReceived String
+
+
+type alias SingleProjectRunState =
     { sourceDirectoriesToRead : FastSet.Set String
     , sourceFilesToRead : FastSet.Set String
     , formattedModulesToWrite : FastDict.Dict String Bytes
@@ -45,9 +51,9 @@ type alias WatchState =
     }
 
 
-type Mode
-    = ModeSingleRun
-    | ModeWatch
+type ProjectMode
+    = ProjectModeSingleRun
+    | ProjectModeWatch
 
 
 initialState : State
@@ -62,22 +68,38 @@ interface state =
             Node.launchArgumentsRequest
                 |> Node.interfaceFutureMap
                     (\launchArguments ->
-                        case launchArguments |> List.drop 2 of
+                        case
+                            launchArguments
+                                |> List.drop 2
+                                |> List.filter
+                                    (\arg ->
+                                        (arg == "--yes")
+                                            || (arg == "--elm-version")
+                                            || (arg == "0.19.0")
+                                            || (arg == "0.19")
+                                    )
+                        of
                             [] ->
-                                WaitingForElmJson { mode = ModeSingleRun }
+                                WaitingForElmJson { mode = ProjectModeSingleRun }
 
                             [ "watch" ] ->
-                                WaitingForElmJson { mode = ModeWatch }
+                                WaitingForElmJson { mode = ProjectModeWatch }
 
                             [ "help" ] ->
                                 ShowingHelp
 
-                            _ ->
+                            [ "--stdin" ] ->
                                 ShowingHelp
+
+                            _ ->
+                                SingleFileStandardStreamRun WaitingForModuleSourceFromStandardIn
                     )
 
         ShowingHelp ->
             nodeShowHelpText
+
+        SingleFileStandardStreamRun singleFileStandardStreamRun ->
+            interfaceSingleFileStandardStreamRun singleFileStandardStreamRun
 
         WaitingForElmJson waitingForElmJson ->
             nodeElmJsonRequest
@@ -94,8 +116,8 @@ interface state =
                                         elmJson |> elmJsonSourceDirectories
                                 in
                                 case waitingForElmJson.mode of
-                                    ModeSingleRun ->
-                                        SingleRun
+                                    ProjectModeSingleRun ->
+                                        SingleProjectRun
                                             { sourceDirectoriesToRead =
                                                 computedElmJsonSourceDirectories |> FastSet.fromList
                                             , sourceFilesToRead = FastSet.empty
@@ -104,7 +126,7 @@ interface state =
                                             , sourceDirectoryReadErrors = []
                                             }
 
-                                    ModeWatch ->
+                                    ProjectModeWatch ->
                                         Watching
                                             { elmJsonSourceDirectories = computedElmJsonSourceDirectories
                                             , sourceFilesToRead = FastSet.empty
@@ -113,17 +135,22 @@ interface state =
                                             }
                     )
 
-        SingleRun singleRunState ->
+        SingleProjectRun singleRunState ->
             singleRunInterface singleRunState
 
         Watching watchState ->
             watchInterface watchState
 
         ElmJsonReadFailed elmJsonDecodeError ->
-            [ Node.standardErrWrite (elmJsonDecodeError ++ "\n")
-            , Node.exit 1
-            ]
-                |> Node.interfaceBatch
+            errorInterface elmJsonDecodeError
+
+
+errorInterface : String -> Node.Interface future_
+errorInterface message =
+    [ Node.standardErrWrite (message ++ "\n")
+    , Node.exit 1
+    ]
+        |> Node.interfaceBatch
 
 
 nodeShowHelpText : Node.Interface future_
@@ -156,6 +183,34 @@ nodeShowHelpText =
         )
 
 
+interfaceSingleFileStandardStreamRun : SingleFileStandardStreamRunState -> Node.Interface State
+interfaceSingleFileStandardStreamRun singleFileStandardStreamRun =
+    case singleFileStandardStreamRun of
+        WaitingForModuleSourceFromStandardIn ->
+            Node.standardInListen
+                |> Node.interfaceFutureMap
+                    (\moduleSource ->
+                        SingleFileStandardStreamRun
+                            (ModuleSourceReceived moduleSource)
+                    )
+
+        ModuleSourceReceived moduleSource ->
+            case moduleSource |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_ of
+                Nothing ->
+                    errorInterface
+                        ("module failed to parse: "
+                            ++ (moduleSource |> String.left 90)
+                            ++ "..."
+                        )
+
+                Just moduleSyntax ->
+                    Node.standardOutWrite
+                        (moduleSyntax
+                            |> ElmSyntaxPrint.module_
+                            |> ElmSyntaxPrint.toString
+                        )
+
+
 nodeElmJsonRequest : Node.Interface (Result String Elm.Project.Project)
 nodeElmJsonRequest =
     Node.fileRequest "elm.json"
@@ -186,7 +241,7 @@ nodeElmJsonRequest =
             )
 
 
-singleRunInterface : SingleRunState -> Node.Interface State
+singleRunInterface : SingleProjectRunState -> Node.Interface State
 singleRunInterface state =
     [ state.formattedModulesToWrite
         |> fastDictToListAndMap
@@ -197,7 +252,7 @@ singleRunInterface state =
                     }
                     |> Node.interfaceFutureMap
                         (\_ ->
-                            SingleRun
+                            SingleProjectRun
                                 { formattedModulesToWrite =
                                     state.formattedModulesToWrite |> FastDict.remove moduleToFormatPath
                                 , sourceDirectoriesToRead = state.sourceDirectoriesToRead
@@ -216,7 +271,7 @@ singleRunInterface state =
                         (\subPathsOrError ->
                             case subPathsOrError of
                                 Err sourceDirectoryReadError ->
-                                    SingleRun
+                                    SingleProjectRun
                                         { state
                                             | sourceDirectoryReadErrors =
                                                 { path = sourceDirectoryPath
@@ -226,7 +281,7 @@ singleRunInterface state =
                                         }
 
                                 Ok subPaths ->
-                                    SingleRun
+                                    SingleProjectRun
                                         { sourceDirectoriesToRead =
                                             state.sourceDirectoriesToRead
                                                 |> FastSet.remove sourceDirectoryPath
@@ -254,10 +309,10 @@ singleRunInterface state =
                 case testSubPathsOrError of
                     Err _ ->
                         -- tests/ is optional. So all's fine
-                        SingleRun state
+                        SingleProjectRun state
 
                     Ok subPaths ->
-                        SingleRun
+                        SingleProjectRun
                             { sourceFilesToRead =
                                 subPaths
                                     |> List.foldl
@@ -293,7 +348,7 @@ singleRunInterface state =
                             in
                             case sourceBytesOrReadError of
                                 Err readError ->
-                                    SingleRun
+                                    SingleProjectRun
                                         { state
                                             | sourceFileReadErrors =
                                                 { path = sourceFilePath
@@ -303,7 +358,7 @@ singleRunInterface state =
                                         }
 
                                 Ok syntax ->
-                                    SingleRun
+                                    SingleProjectRun
                                         { sourceDirectoriesToRead = state.sourceDirectoriesToRead
                                         , sourceFileReadErrors = state.sourceFileReadErrors
                                         , sourceDirectoryReadErrors = state.sourceDirectoryReadErrors
