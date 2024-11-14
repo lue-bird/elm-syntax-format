@@ -73,14 +73,14 @@ interface state =
                                 |> List.drop 2
                                 |> List.filter
                                     (\arg ->
-                                        (arg == "--yes")
-                                            || (arg == "--elm-version")
-                                            || (arg == "0.19.0")
-                                            || (arg == "0.19.1")
-                                            || (arg == "0.19")
-                                            || (arg == "--elm-version=0.19")
-                                            || (arg == "--elm-version=0.19.0")
-                                            || (arg == "--elm-version=0.19.1")
+                                        (arg /= "--yes")
+                                            && (arg /= "--elm-version")
+                                            && (arg /= "0.19.0")
+                                            && (arg /= "0.19.1")
+                                            && (arg /= "0.19")
+                                            && (arg /= "--elm-version=0.19")
+                                            && (arg /= "--elm-version=0.19.0")
+                                            && (arg /= "--elm-version=0.19.1")
                                     )
                         of
                             [] ->
@@ -93,10 +93,10 @@ interface state =
                                 ShowingHelp
 
                             [ "--stdin" ] ->
-                                ShowingHelp
+                                SingleFileStandardStreamRun (AssemblingModuleSourceFromStandardIn "")
 
                             _ ->
-                                SingleFileStandardStreamRun (AssemblingModuleSourceFromStandardIn "")
+                                ShowingHelp
                     )
 
         ShowingHelp ->
