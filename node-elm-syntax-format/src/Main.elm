@@ -169,6 +169,9 @@ nodeShowHelpText =
                 , { command = "elm-syntax-format watch"
                   , description = "format edited and added modules on save"
                   }
+                , { command = "elm-syntax-format --stdin"
+                  , description = "for editors and other tooling. Behaves exactly like elm-format --stdin so you can drop-in replace it"
+                  }
                 ]
                     |> List.map
                         (\commandAndDescription ->
