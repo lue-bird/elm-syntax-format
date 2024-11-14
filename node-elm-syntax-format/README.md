@@ -1,5 +1,5 @@
 ```bash
-npm install
+npm install && npm run build
 ```
 
 To add it to your editor, set "Elm LS: Elm Format Path"
