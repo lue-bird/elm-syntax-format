@@ -30,7 +30,7 @@ type State
 
 
 type SingleFileStandardStreamRunState
-    = WaitingForModuleSourceFromStandardIn
+    = AssemblingModuleSourceFromStandardIn String
     | ModuleSourceReceived String
 
 
@@ -92,7 +92,7 @@ interface state =
                                 ShowingHelp
 
                             _ ->
-                                SingleFileStandardStreamRun WaitingForModuleSourceFromStandardIn
+                                SingleFileStandardStreamRun (AssemblingModuleSourceFromStandardIn "")
                     )
 
         ShowingHelp ->
@@ -186,12 +186,22 @@ nodeShowHelpText =
 interfaceSingleFileStandardStreamRun : SingleFileStandardStreamRunState -> Node.Interface State
 interfaceSingleFileStandardStreamRun singleFileStandardStreamRun =
     case singleFileStandardStreamRun of
-        WaitingForModuleSourceFromStandardIn ->
-            Node.standardInListen
+        AssemblingModuleSourceFromStandardIn moduleSourceSoFar ->
+            Node.standardInRawListen
                 |> Node.interfaceFutureMap
-                    (\moduleSource ->
+                    (\nextModuleSourceChunkOrEnd ->
                         SingleFileStandardStreamRun
-                            (ModuleSourceReceived moduleSource)
+                            (case nextModuleSourceChunkOrEnd of
+                                Node.StreamDataEndReached ->
+                                    ModuleSourceReceived moduleSourceSoFar
+
+                                Node.StreamDataReceived nextModuleSourceChunk ->
+                                    AssemblingModuleSourceFromStandardIn
+                                        (moduleSourceSoFar
+                                            ++ nextModuleSourceChunk
+                                            ++ ""
+                                        )
+                            )
                     )
 
         ModuleSourceReceived moduleSource ->
@@ -201,6 +211,7 @@ interfaceSingleFileStandardStreamRun singleFileStandardStreamRun =
                         ("module failed to parse: "
                             ++ (moduleSource |> String.left 90)
                             ++ "..."
+                            ++ (moduleSource |> String.right 90)
                         )
 
                 Just moduleSyntax ->
