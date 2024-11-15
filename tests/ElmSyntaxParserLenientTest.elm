@@ -32,23 +32,22 @@ all =
                 )
                 ElmSyntaxParserLenientTestFullModules.allSamples
             )
-
-        -- , describe "Error messages" <|
-        --     [ test "failure on module name" <|
-        --         \() ->
-        --             Parser.parse "module foo exposing (..)\nx = 1"
-        --                 |> Result.toMaybe
-        --                 |> Expect.equal Nothing
-        --     , test "failure on declaration" <|
-        --         \() ->
-        --             Parser.parse "module Foo exposing (..)\n\ntype x = \n  1"
-        --                 |> Expect.equal (Err [ "Could not continue parsing on location (2,0)" ])
-        --     , test "failure on declaration expression" <|
-        --         \() ->
-        --             Parser.parse "module Foo exposing (..) \nx = \n  x + _"
-        --                 |> Expect.equal (Err [ "Could not continue parsing on location (2,6)" ])
-        --     ]
-        , Test.test "moduleName"
+        , -- , describe "Error messages" <|
+          --     [ test "failure on module name" <|
+          --         \() ->
+          --             Parser.parse "module foo exposing (..)\nx = 1"
+          --                 |> Result.toMaybe
+          --                 |> Expect.equal Nothing
+          --     , test "failure on declaration" <|
+          --         \() ->
+          --             Parser.parse "module Foo exposing (..)\n\ntype x = \n  1"
+          --                 |> Expect.equal (Err [ "Could not continue parsing on location (2,0)" ])
+          --     , test "failure on declaration expression" <|
+          --         \() ->
+          --             Parser.parse "module Foo exposing (..) \nx = \n  x + _"
+          --                 |> Expect.equal (Err [ "Could not continue parsing on location (2,6)" ])
+          --     ]
+          Test.test "moduleName"
             (\() ->
                 "Foo"
                     |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.moduleName
@@ -1711,7 +1710,9 @@ port sendResponse : String -> Cmd msg
                 in
                 ("""module Foo exposing (..)
 a = 1
-""" ++ comments)
+"""
+                    ++ comments
+                )
                     |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
                     |> Maybe.map (\ast -> List.length ast.comments)
                     |> Expect.equal (Just 3000)
@@ -1904,7 +1905,8 @@ foo = bar"""
                 )
             , Test.test "documentation comment inside a let is invalid"
                 (\() ->
-                    expectFailsToParse ElmSyntaxParserLenient.declaration """foo =
+                    expectFailsToParse ElmSyntaxParserLenient.declaration
+                        """foo =
  let
   {-| b is one -}
   b = 1
@@ -3372,7 +3374,7 @@ Nothing"""
                             |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
-                                (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
+                                (Just (Elm.Syntax.Expression.Floatable 0.02))
                     )
                 , Test.test "integer with negative exponent (uppercase E)"
                     (\() ->
@@ -3380,7 +3382,7 @@ Nothing"""
                             |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
-                                (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
+                                (Just (Elm.Syntax.Expression.Floatable 0.02))
                     )
                 , Test.test "integer with positive exponent"
                     (\() ->
@@ -3388,7 +3390,7 @@ Nothing"""
                             |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
-                                (Just (Elm.Syntax.Expression.Floatable 2.0e2))
+                                (Just (Elm.Syntax.Expression.Floatable 200.0))
                     )
                 , Test.test "float with negative exponent"
                     (\() ->
@@ -3396,7 +3398,7 @@ Nothing"""
                             |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
-                                (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
+                                (Just (Elm.Syntax.Expression.Floatable 0.02))
                     )
                 , Test.test "float with negative exponent (uppercase E)"
                     (\() ->
@@ -3404,7 +3406,7 @@ Nothing"""
                             |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
-                                (Just (Elm.Syntax.Expression.Floatable 2.0e-2))
+                                (Just (Elm.Syntax.Expression.Floatable 0.02))
                     )
                 , Test.test "float with positive exponent"
                     (\() ->
@@ -3412,7 +3414,7 @@ Nothing"""
                             |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
                             |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
                             |> Expect.equal
-                                (Just (Elm.Syntax.Expression.Floatable 2.0e2))
+                                (Just (Elm.Syntax.Expression.Floatable 200.0))
                     )
                 ]
             , Test.test "String literal"
@@ -4210,25 +4212,24 @@ Nothing"""
                     "z = a < b == c"
                         |> expectFailsToParse ElmSyntaxParserLenient.declaration
                 )
-
-            -- TODO introduce validation step for
-            -- , test "<| followed by |> operation without parenthesis should not be valid" <|
-            --     \() ->
-            --         "z = a <| b |> c"
-            --             |> ParserWithCommentsUtil.expectInvalid ElmSyntaxParserLenient.declaration
-            -- , test "|> followed by <| operation without parenthesis should not be valid" <|
-            --     \() ->
-            --         "z = a |> b <| c"
-            --             |> ParserWithCommentsUtil.expectInvalid ElmSyntaxParserLenient.declaration
-            -- , test "<< followed by >> operation without parenthesis should not be valid" <|
-            --     \() ->
-            --         "z = a << b >> c"
-            --             |> ParserWithCommentsUtil.expectInvalid ElmSyntaxParserLenient.declaration
-            -- , test ">> followed by << operation without parenthesis should not be valid" <|
-            --     \() ->
-            --         "z = a >> b << c"
-            --             |> ParserWithCommentsUtil.expectInvalid ElmSyntaxParserLenient.declaration
-            , Test.test "prefix notation"
+            , -- TODO introduce validation step for
+              -- , test "<| followed by |> operation without parenthesis should not be valid" <|
+              --     \() ->
+              --         "z = a <| b |> c"
+              --             |> ParserWithCommentsUtil.expectInvalid ElmSyntaxParserLenient.declaration
+              -- , test "|> followed by <| operation without parenthesis should not be valid" <|
+              --     \() ->
+              --         "z = a |> b <| c"
+              --             |> ParserWithCommentsUtil.expectInvalid ElmSyntaxParserLenient.declaration
+              -- , test "<< followed by >> operation without parenthesis should not be valid" <|
+              --     \() ->
+              --         "z = a << b >> c"
+              --             |> ParserWithCommentsUtil.expectInvalid ElmSyntaxParserLenient.declaration
+              -- , test ">> followed by << operation without parenthesis should not be valid" <|
+              --     \() ->
+              --         "z = a >> b << c"
+              --             |> ParserWithCommentsUtil.expectInvalid ElmSyntaxParserLenient.declaration
+              Test.test "prefix notation"
                 (\() ->
                     "(::) x"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
@@ -5287,7 +5288,8 @@ True -> 1"""
                     )
                 , Test.test "should fail to parse case expression with second branch indented differently than the first line (before)"
                     (\() ->
-                        expectFailsToParse ElmSyntaxParserLenient.expression """case f of
+                        expectFailsToParse ElmSyntaxParserLenient.expression
+                            """case f of
   True -> 1
  False -> 2"""
                     )
