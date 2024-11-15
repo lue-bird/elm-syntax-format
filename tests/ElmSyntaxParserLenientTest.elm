@@ -70,14 +70,14 @@ all =
         {- foo 
 -}
 
-    0"""
+    f 0"""
                         |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Maybe.map (\_ -> ())
                         |> Expect.equal (Just ())
                 )
             , Test.test "positively indented, too few spaces"
                 (\() ->
-                    """a =
+                    """a = f
 0"""
                         |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
                         |> Expect.equal Nothing
@@ -249,11 +249,14 @@ all =
                                 )
                             )
                 )
-            , Test.test "unformatted wrong"
+            , Test.test "allow module name without indentation"
                 (\() ->
-                    "module \nFoo \n exposing  (..)"
+                    """module 
+Foo 
+ exposing  (..)"""
                         |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.moduleHeader
-                        |> Expect.equal Nothing
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
             , Test.test "exposing all"
                 (\() ->
@@ -2650,7 +2653,8 @@ type Color = Blue String | Red | Green"""
                 )
             , Test.test "type args should not continue on next line"
                 (\() ->
-                    "type D = C B\na"
+                    """type D = C B
+a"""
                         |> expectFailsToParse ElmSyntaxParserLenient.declaration
                 )
             , Test.test "type with GenericType"
@@ -2676,11 +2680,13 @@ type Color = Blue String | Red | Green"""
                                 )
                             )
                 )
-            , Test.test "type with value on next line "
+            , Test.test "allow type with variant name without indentation"
                 (\() ->
-                    "type Maybe a = Just a |\nNothing"
+                    """type Maybe a = Just a |
+Nothing"""
                         |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
-                        |> Expect.equal Nothing
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
             , Test.test "fail if declarations not on module-level"
                 (\() ->
@@ -4905,23 +4911,27 @@ type Color = Blue String | Red | Green"""
   bar"""
                             |> expectFailsToParse ElmSyntaxParserLenient.expression
                     )
-                , Test.test "should not parse let destructuring with non-positive layout before ="
+                , Test.test "allow let destructuring = to be top indented"
                     (\() ->
                         """let
     (bar)
     =     1
   in
   bar"""
-                            |> expectFailsToParse ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\_ -> ())
+                            |> Expect.equal (Just ())
                     )
-                , Test.test "should not parse let destructuring with non-positive layout before expression"
+                , Test.test "allow let destructuring with top indented expression"
                     (\() ->
                         """let
     (bar) =
     1
   in
   bar"""
-                            |> expectFailsToParse ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\_ -> ())
+                            |> Expect.equal (Just ())
                     )
                 , Test.test "should not parse let type annotation without a declaration"
                     (\() ->
@@ -5101,33 +5111,41 @@ type Color = Blue String | Red | Green"""
                     )
                 ]
             , Test.describe "case-of"
-                [ Test.test "should fail to parse when the matched expression has the wrong indentation"
+                [ Test.test "allow the matched expression to be top indented"
                     (\() ->
                         """case
 True
   of
     A -> 1"""
-                            |> expectFailsToParse ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\_ -> ())
+                            |> Expect.equal (Just ())
                     )
-                , Test.test "should fail to parse when the `of` keyword has the wrong indentation"
+                , Test.test "allow the `of` keyword to be top indented"
                     (\() ->
                         """case True
 of
                A -> 1"""
-                            |> expectFailsToParse ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\_ -> ())
+                            |> Expect.equal (Just ())
                     )
-                , Test.test "should fail to parse a branch at the start of a line"
+                , Test.test "allow a case first branch pattern to be top indented"
                     (\() ->
                         """case True of
 True -> 1"""
-                            |> expectFailsToParse ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\_ -> ())
+                            |> Expect.equal (Just ())
                     )
-                , Test.test "should fail to parse when branch body starts at the start of a line"
+                , Test.test "allow case branch result to be top indented"
                     (\() ->
                         """case f of
   True ->
 1"""
-                            |> expectFailsToParse ElmSyntaxParserLenient.expression
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\_ -> ())
+                            |> Expect.equal (Just ())
                     )
                 , Test.test "case expression"
                     (\() ->
@@ -5306,7 +5324,7 @@ True -> 1"""
                                 )
                     )
                 ]
-            , Test.test "fail if condition is top indented"
+            , Test.test "allow if condition to be top indented"
                 (\() ->
                     """a =
     let
@@ -5315,9 +5333,11 @@ True -> 1"""
         f y then  1 else 0
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if `then` indentation overlaps with top indent"
+            , Test.test "allow `then` indentation to be top indented"
                 (\() ->
                     """a =
     let
@@ -5326,7 +5346,9 @@ True -> 1"""
         then  1 else 0
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
             , Test.test "allow if `then` to not be positively indented if it doesn't overlap with existing indents"
                 (\() ->
@@ -5341,7 +5363,7 @@ True -> 1"""
                         |> Maybe.map (\_ -> ())
                         |> Expect.equal (Just ())
                 )
-            , Test.test "fail if if-true-branch top indented"
+            , Test.test "allow if-true-branch to be top indented"
                 (\() ->
                     """a =
     let
@@ -5350,9 +5372,11 @@ True -> 1"""
         1   else 0
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if `else` is top indented"
+            , Test.test "allow if `else` to be top indented"
                 (\() ->
                     """a =
     let
@@ -5361,7 +5385,9 @@ True -> 1"""
         else 0
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
             , Test.test "allow if `else` to not positively indented if it doesn't overlap with existing indents"
                 (\() ->
@@ -5376,18 +5402,20 @@ True -> 1"""
                         |> Maybe.map (\_ -> ())
                         |> Expect.equal (Just ())
                 )
-            , Test.test "fail if if-false-branch is top indented"
+            , Test.test "allow if if-false-branch to be top indented"
                 (\() ->
-                    """ a =
+                    """a =
     let
         x =
             if True then 1 else
         0
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if record closing curly is top indented"
+            , Test.test "allow record closing curly to be top indented"
                 (\() ->
                     """a =
     let
@@ -5396,9 +5424,11 @@ True -> 1"""
         }
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if record field value is top indented"
+            , Test.test "allow record field value to be top indented"
                 (\() ->
                     """a =
     let
@@ -5407,9 +5437,11 @@ True -> 1"""
         1 }
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if record field name is top indented"
+            , Test.test "allow record field name to be top indented"
                 (\() ->
                     """a =
     let
@@ -5418,9 +5450,11 @@ True -> 1"""
         b       = 1 }
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if record field `=` is top indented"
+            , Test.test "allow record field `=` to be top indented"
                 (\() ->
                     """a =
     let
@@ -5429,9 +5463,11 @@ True -> 1"""
         =         1 }
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if tuple closing parens is top indented"
+            , Test.test "allow tuple closing parens to be top indented"
                 (\() ->
                     """a =
     let
@@ -5440,9 +5476,11 @@ True -> 1"""
         )
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if first tuple part is top indented"
+            , Test.test "allow first tuple part to be top indented"
                 (\() ->
                     """a =
     let
@@ -5452,9 +5490,11 @@ True -> 1"""
             )
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if second tuple part is top indented"
+            , Test.test "allow second tuple part to be top indented"
                 (\() ->
                     """a =
     let
@@ -5463,9 +5503,11 @@ True -> 1"""
         1   )
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if operator is top indented"
+            , Test.test "allow infix operator to be top indented"
                 (\() ->
                     """a =
     let
@@ -5474,7 +5516,9 @@ True -> 1"""
         + 1
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
             , Test.test "fail if function call argument is top indented"
                 (\() ->
@@ -5487,7 +5531,7 @@ True -> 1"""
     x"""
                         |> expectFailsToParse ElmSyntaxParserLenient.declaration
                 )
-            , Test.test "fail if lambda result is top indented"
+            , Test.test "allow lambda result to be top indented"
                 (\() ->
                     """a =
     let
@@ -5496,15 +5540,19 @@ True -> 1"""
         y
     in
     x"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
-            , Test.test "fail if case branch result call argument overlaps with top indent"
+            , Test.test "allow case branch result call argument to be top indented"
                 (\() ->
                     """foo = 
     case Nothing of
         Nothing -> a <|
         \\_ -> ()"""
-                        |> expectFailsToParse ElmSyntaxParserLenient.declaration
+                        |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.declaration
+                        |> Maybe.map (\_ -> ())
+                        |> Expect.equal (Just ())
                 )
             , Test.test "allow if case branch result call argument to not positively indented if it doesn't overlap with existing indents"
                 (\() ->

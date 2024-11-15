@@ -333,7 +333,7 @@ exposeDefinition =
                 Elm.Syntax.Node.Node range exposingListInnerResult.syntax
             }
         )
-        (ParserFast.symbolFollowedBy "exposing" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.symbolFollowedBy "exposing" whitespaceAndComments)
         exposing_
 
 
@@ -357,7 +357,7 @@ exposing_ =
                         , syntax = Elm.Syntax.Exposing.All range
                         }
                     )
-                    (ParserFast.symbolFollowedBy ".." whitespaceAndCommentsEndsPositivelyIndented)
+                    (ParserFast.symbolFollowedBy ".." whitespaceAndComments)
                 )
                 (ParserFast.mapWithRange
                     (\range comments ->
@@ -365,16 +365,16 @@ exposing_ =
                         , syntax = Elm.Syntax.Exposing.All range
                         }
                     )
-                    (ParserFast.symbolFollowedBy "..." whitespaceAndCommentsEndsPositivelyIndented)
+                    (ParserFast.symbolFollowedBy "..." whitespaceAndComments)
                 )
-                (exposingWithinParensExplicitMap identity)
+                (exposingWithinParensExplicitFollowedByWhitespaceAndCommentsMap identity)
             )
         )
         |> ParserFast.followedBySymbol ")"
 
 
-exposingWithinParensExplicitMap : (Elm.Syntax.Exposing.Exposing -> syntax) -> ParserFast.Parser (WithComments syntax)
-exposingWithinParensExplicitMap exposingToSyntax =
+exposingWithinParensExplicitFollowedByWhitespaceAndCommentsMap : (Elm.Syntax.Exposing.Exposing -> syntax) -> ParserFast.Parser (WithComments syntax)
+exposingWithinParensExplicitFollowedByWhitespaceAndCommentsMap exposingToSyntax =
     ParserFast.map4
         (\commentsBeforeHeadElement headElement commentsAfterHeadElement tailElements ->
             { comments =
@@ -389,11 +389,11 @@ exposingWithinParensExplicitMap exposingToSyntax =
             }
         )
         (ParserFast.orSucceed
-            (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy "," whitespaceAndComments)
             ropeEmpty
         )
         expose
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (manyWithComments
             (ParserFast.symbolFollowedBy ","
                 (ParserFast.map4
@@ -406,13 +406,13 @@ exposingWithinParensExplicitMap exposingToSyntax =
                         , syntax = result.syntax
                         }
                     )
-                    whitespaceAndCommentsEndsPositivelyIndented
+                    whitespaceAndComments
                     (ParserFast.orSucceed
-                        (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                        (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                         ropeEmpty
                     )
                     expose
-                    whitespaceAndCommentsEndsPositivelyIndented
+                    whitespaceAndComments
                 )
             )
         )
@@ -472,8 +472,8 @@ typeExpose =
             (\range left right ->
                 Just { comments = left |> ropePrependTo right, syntax = range }
             )
-            (ParserFast.symbolFollowedBy "(" whitespaceAndCommentsEndsPositivelyIndented)
-            (ParserFast.symbolFollowedBy ".." whitespaceAndCommentsEndsPositivelyIndented
+            (ParserFast.symbolFollowedBy "(" whitespaceAndComments)
+            (ParserFast.symbolFollowedBy ".." whitespaceAndComments
                 |> ParserFast.followedBySymbol ")"
             )
             Nothing
@@ -511,8 +511,8 @@ effectWhereClause =
             }
         )
         nameLowercase
-        whitespaceAndCommentsEndsPositivelyIndented
-        (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+        whitespaceAndComments
+        (ParserFast.symbolFollowedBy "=" whitespaceAndComments)
         nameUppercaseNode
 
 
@@ -559,11 +559,25 @@ whereBlock =
                     }
                 }
             )
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             effectWhereClause
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             (manyWithComments
-                (ParserFast.symbolFollowedBy "," (surroundedByWhitespaceAndCommentsEndsPositivelyIndented effectWhereClause))
+                (ParserFast.symbolFollowedBy ","
+                    (ParserFast.map3
+                        (\commentsBefore v commentsAfter ->
+                            { comments =
+                                commentsBefore
+                                    |> ropePrependTo v.comments
+                                    |> ropePrependTo commentsAfter
+                            , syntax = v.syntax
+                            }
+                        )
+                        whitespaceAndComments
+                        effectWhereClause
+                        whitespaceAndComments
+                    )
+                )
             )
         )
         |> ParserFast.followedBySymbol "}"
@@ -591,7 +605,7 @@ effectWhereClauses =
             , syntax = whereResult.syntax
             }
         )
-        (ParserFast.keywordFollowedBy "where" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "where" whitespaceAndComments)
         whereBlock
 
 
@@ -617,12 +631,12 @@ effectModuleDefinition =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "effect" whitespaceAndCommentsEndsPositivelyIndented)
-        (ParserFast.keywordFollowedBy "module" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "effect" whitespaceAndComments)
+        (ParserFast.keywordFollowedBy "module" whitespaceAndComments)
         moduleName
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         effectWhereClauses
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         exposeDefinition
 
 
@@ -643,9 +657,9 @@ normalModuleDefinition =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "module" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "module" whitespaceAndComments)
         moduleName
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         exposeDefinition
 
 
@@ -663,10 +677,10 @@ portModuleDefinition =
                     (Elm.Syntax.Module.PortModule { moduleName = moduleNameNode, exposingList = exposingList.syntax })
             }
         )
-        (ParserFast.keywordFollowedBy "port" whitespaceAndCommentsEndsPositivelyIndented)
-        (ParserFast.keywordFollowedBy "module" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "port" whitespaceAndComments)
+        (ParserFast.keywordFollowedBy "module" whitespaceAndComments)
         moduleName
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         exposeDefinition
 
 
@@ -753,7 +767,7 @@ import_ =
                                     }
                             }
         )
-        (ParserFast.keywordFollowedBy "import" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "import" whitespaceAndComments)
         moduleName
         whitespaceAndComments
         (ParserFast.map3OrSucceed
@@ -763,7 +777,7 @@ import_ =
                     , syntax = moduleAliasNode
                     }
             )
-            (ParserFast.keywordFollowedBy "as" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.keywordFollowedBy "as" whitespaceAndComments)
             (nameUppercaseMapWithRange
                 (\range moduleAlias ->
                     Elm.Syntax.Node.Node range [ moduleAlias ]
@@ -792,7 +806,7 @@ import_ =
                                 Just (Elm.Syntax.Node.Node range exposingListInner)
                     }
                 )
-                (ParserFast.symbolFollowedBy "exposing" whitespaceAndCommentsEndsPositivelyIndented)
+                (ParserFast.symbolFollowedBy "exposing" whitespaceAndComments)
                 (ParserFast.symbolFollowedBy "("
                     (ParserFast.map2
                         (\commentsBefore inner ->
@@ -808,7 +822,7 @@ import_ =
                                     , syntax = Just (Elm.Syntax.Exposing.All range)
                                     }
                                 )
-                                (ParserFast.symbolFollowedBy ".." whitespaceAndCommentsEndsPositivelyIndented)
+                                (ParserFast.symbolFollowedBy ".." whitespaceAndComments)
                                 |> ParserFast.followedBySymbol ")"
                             )
                             (ParserFast.mapWithRange
@@ -817,11 +831,11 @@ import_ =
                                     , syntax = Just (Elm.Syntax.Exposing.All range)
                                     }
                                 )
-                                (ParserFast.symbolFollowedBy "..." whitespaceAndCommentsEndsPositivelyIndented)
+                                (ParserFast.symbolFollowedBy "..." whitespaceAndComments)
                                 |> ParserFast.followedBySymbol ")"
                             )
                             (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
-                            (exposingWithinParensExplicitMap Just
+                            (exposingWithinParensExplicitFollowedByWhitespaceAndCommentsMap Just
                                 |> ParserFast.followedBySymbol ")"
                             )
                         )
@@ -1107,7 +1121,7 @@ functionAfterDocumentation =
             )
             -- infix declarations itself don't have documentation
             nameLowercaseNode
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             (ParserFast.map4OrSucceed
                 (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
                     { comments =
@@ -1122,17 +1136,17 @@ functionAfterDocumentation =
                             }
                     }
                 )
-                (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+                (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
                 type_
                 (whitespaceAndCommentsEndsTopIndentedFollowedBy
                     nameLowercaseNode
                 )
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
                 { comments = ropeEmpty, syntax = Nothing }
             )
             parameterPatternsEqual
-            whitespaceAndCommentsEndsPositivelyIndented
-            expressionFollowedByOptimisticLayout
+            whitespaceAndComments
+            expressionFollowedByWhitespaceAndComments
         )
         (ParserFast.map8WithStartLocation
             (\start commentsBeforeTypeAnnotation typeAnnotationResult commentsBetweenTypeAndName nameNode afterImplementationName arguments commentsAfterEqual result ->
@@ -1161,14 +1175,14 @@ functionAfterDocumentation =
                         }
                 }
             )
-            (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
             type_
             whitespaceAndCommentsEndsTopIndented
             nameLowercaseNode
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             parameterPatternsEqual
-            whitespaceAndCommentsEndsPositivelyIndented
-            expressionFollowedByOptimisticLayout
+            whitespaceAndComments
+            expressionFollowedByWhitespaceAndComments
         )
 
 
@@ -1234,7 +1248,7 @@ functionDeclarationWithoutDocumentation =
                         }
             )
             functionNameNotInfixNode
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             (ParserFast.map4OrSucceed
                 (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
                     Just
@@ -1247,17 +1261,17 @@ functionDeclarationWithoutDocumentation =
                         , typeAnnotation = typeAnnotationResult.syntax
                         }
                 )
-                (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+                (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
                 type_
                 (whitespaceAndCommentsEndsTopIndentedFollowedBy
                     nameLowercaseNode
                 )
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
                 Nothing
             )
             parameterPatternsEqual
-            whitespaceAndCommentsEndsPositivelyIndented
-            expressionFollowedByOptimisticLayout
+            whitespaceAndComments
+            expressionFollowedByWhitespaceAndComments
             |> ParserFast.validate
                 (\result ->
                     let
@@ -1343,14 +1357,14 @@ functionDeclarationWithoutDocumentation =
                         )
                 }
             )
-            (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
             type_
             whitespaceAndCommentsEndsTopIndented
             nameLowercaseNode
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             parameterPatternsEqual
-            whitespaceAndCommentsEndsPositivelyIndented
-            expressionFollowedByOptimisticLayout
+            whitespaceAndComments
+            expressionFollowedByWhitespaceAndComments
         )
 
 
@@ -1368,7 +1382,7 @@ parameterPatternsEqual =
                 }
             )
             patternNotSpaceSeparated
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
         )
 
 
@@ -1389,11 +1403,11 @@ infixDeclaration =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "infix" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "infix" whitespaceAndComments)
         infixDirection
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (ParserFast.integerDecimalMapWithRange Elm.Syntax.Node.Node)
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (ParserFast.symbolFollowedBy "("
             (ParserFast.whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollowedBySymbol
                 (\operatorRange operator ->
@@ -1408,8 +1422,8 @@ infixDeclaration =
                 ")"
             )
         )
-        whitespaceAndCommentsEndsPositivelyIndented
-        (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+        whitespaceAndComments
+        (ParserFast.symbolFollowedBy "=" whitespaceAndComments)
         nameLowercaseNode
 
 
@@ -1442,10 +1456,10 @@ portDeclarationAfterDocumentation =
                     }
             }
         )
-        (ParserFast.keywordFollowedBy "port" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "port" whitespaceAndComments)
         nameLowercaseNode
-        whitespaceAndCommentsEndsPositivelyIndented
-        (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+        whitespaceAndComments
+        (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
         type_
 
 
@@ -1477,10 +1491,10 @@ portDeclarationWithoutDocumentation =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "port" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "port" whitespaceAndComments)
         nameLowercaseNode
-        whitespaceAndCommentsEndsPositivelyIndented
-        (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+        whitespaceAndComments
+        (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
         type_
 
 
@@ -1492,7 +1506,7 @@ typeOrTypeAliasDefinitionAfterDocumentation =
             , syntax = declarationAfterDocumentation.syntax
             }
         )
-        (ParserFast.keywordFollowedBy "type" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "type" whitespaceAndComments)
         (ParserFast.oneOf2
             typeAliasDefinitionAfterDocumentationAfterTypePrefix
             customTypeDefinitionAfterDocumentationAfterTypePrefix
@@ -1517,11 +1531,11 @@ typeAliasDefinitionAfterDocumentationAfterTypePrefix =
                     }
             }
         )
-        (ParserFast.keywordFollowedBy "alias" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "alias" whitespaceAndComments)
         nameUppercaseNode
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         typeGenericListEquals
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         type_
 
 
@@ -1546,33 +1560,31 @@ customTypeDefinitionAfterDocumentationAfterTypePrefix =
             }
         )
         nameUppercaseNode
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         typeGenericListEquals
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (ParserFast.orSucceed
-            (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy "|" whitespaceAndComments)
             ropeEmpty
         )
-        variantDeclarationFollowedByOptimisticLayout
+        variantDeclarationFollowedByWhitespaceAndComments
         (manyWithCommentsReverse
-            (positivelyIndentedFollowedBy
-                (ParserFast.symbolFollowedBy "|"
-                    (ParserFast.map3
-                        (\commentsBeforePipe commentsWithExtraPipe variantResult ->
-                            { comments =
-                                commentsBeforePipe
-                                    |> ropePrependTo commentsWithExtraPipe
-                                    |> ropePrependTo variantResult.comments
-                            , syntax = variantResult.syntax
-                            }
-                        )
-                        whitespaceAndCommentsEndsPositivelyIndented
-                        (ParserFast.orSucceed
-                            (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
-                            ropeEmpty
-                        )
-                        variantDeclarationFollowedByOptimisticLayout
+            (ParserFast.symbolFollowedBy "|"
+                (ParserFast.map3
+                    (\commentsBeforePipe commentsWithExtraPipe variantResult ->
+                        { comments =
+                            commentsBeforePipe
+                                |> ropePrependTo commentsWithExtraPipe
+                                |> ropePrependTo variantResult.comments
+                        , syntax = variantResult.syntax
+                        }
                     )
+                    whitespaceAndComments
+                    (ParserFast.orSucceed
+                        (ParserFast.symbolFollowedBy "|" whitespaceAndComments)
+                        ropeEmpty
+                    )
+                    variantDeclarationFollowedByWhitespaceAndComments
                 )
             )
         )
@@ -1634,9 +1646,7 @@ typeOrTypeAliasDefinitionWithoutDocumentation =
                             )
                     }
         )
-        (ParserFast.keywordFollowedBy "type"
-            whitespaceAndCommentsEndsPositivelyIndented
-        )
+        (ParserFast.keywordFollowedBy "type" whitespaceAndComments)
         (ParserFast.oneOf2
             typeAliasDefinitionWithoutDocumentationAfterTypePrefix
             customTypeDefinitionWithoutDocumentationAfterTypePrefix
@@ -1661,11 +1671,11 @@ typeAliasDefinitionWithoutDocumentationAfterTypePrefix =
                     }
             }
         )
-        (ParserFast.keywordFollowedBy "alias" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.keywordFollowedBy "alias" whitespaceAndComments)
         nameUppercaseNode
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         typeGenericListEquals
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         type_
 
 
@@ -1690,40 +1700,38 @@ customTypeDefinitionWithoutDocumentationAfterTypePrefix =
             }
         )
         nameUppercaseNode
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         typeGenericListEquals
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (ParserFast.orSucceed
-            (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy "|" whitespaceAndComments)
             ropeEmpty
         )
-        variantDeclarationFollowedByOptimisticLayout
+        variantDeclarationFollowedByWhitespaceAndComments
         (manyWithCommentsReverse
-            (positivelyIndentedFollowedBy
-                (ParserFast.symbolFollowedBy "|"
-                    (ParserFast.map3
-                        (\commentsBeforePipe commentsWithExtraPipe variantResult ->
-                            { comments =
-                                commentsBeforePipe
-                                    |> ropePrependTo commentsWithExtraPipe
-                                    |> ropePrependTo variantResult.comments
-                            , syntax = variantResult.syntax
-                            }
-                        )
-                        whitespaceAndCommentsEndsPositivelyIndented
-                        (ParserFast.orSucceed
-                            (ParserFast.symbolFollowedBy "|" whitespaceAndCommentsEndsPositivelyIndented)
-                            ropeEmpty
-                        )
-                        variantDeclarationFollowedByOptimisticLayout
+            (ParserFast.symbolFollowedBy "|"
+                (ParserFast.map3
+                    (\commentsBeforePipe commentsWithExtraPipe variantResult ->
+                        { comments =
+                            commentsBeforePipe
+                                |> ropePrependTo commentsWithExtraPipe
+                                |> ropePrependTo variantResult.comments
+                        , syntax = variantResult.syntax
+                        }
                     )
+                    whitespaceAndComments
+                    (ParserFast.orSucceed
+                        (ParserFast.symbolFollowedBy "|" whitespaceAndComments)
+                        ropeEmpty
+                    )
+                    variantDeclarationFollowedByWhitespaceAndComments
                 )
             )
         )
 
 
-variantDeclarationFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Type.ValueConstructor))
-variantDeclarationFollowedByOptimisticLayout =
+variantDeclarationFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Type.ValueConstructor))
+variantDeclarationFollowedByWhitespaceAndComments =
     ParserFast.map3
         (\nameNode commentsAfterName argumentsReverse ->
             let
@@ -1776,7 +1784,7 @@ typeGenericListEquals =
                 }
             )
             nameLowercaseNode
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
         )
 
 
@@ -1797,20 +1805,18 @@ type_ =
             whitespaceAndComments
         )
         (ParserFast.symbolFollowedBy "->"
-            (positivelyIndentedPlusFollowedBy 2
-                (ParserFast.map3
-                    (\commentsAfterArrow typeAnnotationResult commentsAfterType ->
-                        { comments =
-                            commentsAfterArrow
-                                |> ropePrependTo typeAnnotationResult.comments
-                                |> ropePrependTo commentsAfterType
-                        , syntax = typeAnnotationResult.syntax
-                        }
-                    )
-                    whitespaceAndCommentsEndsPositivelyIndented
-                    (ParserFast.lazy (\() -> typeAnnotationNotFunction))
-                    whitespaceAndComments
+            (ParserFast.map3
+                (\commentsAfterArrow typeAnnotationResult commentsAfterType ->
+                    { comments =
+                        commentsAfterArrow
+                            |> ropePrependTo typeAnnotationResult.comments
+                            |> ropePrependTo commentsAfterType
+                    , syntax = typeAnnotationResult.syntax
+                    }
                 )
+                whitespaceAndComments
+                (ParserFast.lazy (\() -> typeAnnotationNotFunction))
+                whitespaceAndComments
             )
         )
         (\inType outType ->
@@ -1836,7 +1842,7 @@ typeAnnotationNotFunction : Parser (WithComments (Elm.Syntax.Node.Node Elm.Synta
 typeAnnotationNotFunction =
     ParserFast.oneOf4
         parensTypeAnnotation
-        typedTypeAnnotationWithArgumentsOptimisticLayout
+        typedTypeAnnotationWithArgumentsFollowedByWhitespaceAndComments
         genericTypeAnnotation
         recordTypeAnnotation
 
@@ -1891,9 +1897,9 @@ parensTypeAnnotation =
                             )
                     }
                 )
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
                 type_
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
                 (ParserFast.oneOf2
                     (ParserFast.symbol ")"
                         { comments = ropeEmpty, syntax = Nothing }
@@ -1908,9 +1914,9 @@ parensTypeAnnotation =
                                 , syntax = Just { maybeThirdPart = maybeThirdPartResult.syntax, secondPart = secondPartResult.syntax }
                                 }
                             )
-                            whitespaceAndCommentsEndsPositivelyIndented
+                            whitespaceAndComments
                             type_
-                            whitespaceAndCommentsEndsPositivelyIndented
+                            whitespaceAndComments
                             (ParserFast.oneOf2
                                 (ParserFast.symbol ")"
                                     { comments = ropeEmpty, syntax = Nothing }
@@ -1925,9 +1931,9 @@ parensTypeAnnotation =
                                             , syntax = Just thirdPartResult.syntax
                                             }
                                         )
-                                        whitespaceAndCommentsEndsPositivelyIndented
+                                        whitespaceAndComments
                                         type_
-                                        whitespaceAndCommentsEndsPositivelyIndented
+                                        whitespaceAndComments
                                         |> ParserFast.followedBySymbol ")"
                                     )
                                 )
@@ -1969,7 +1975,7 @@ recordTypeAnnotation =
                         Elm.Syntax.Node.Node range afterCurlyResult.syntax
                     }
         )
-        (ParserFast.symbolFollowedBy "{" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.symbolFollowedBy "{" whitespaceAndComments)
         (ParserFast.oneOf2
             (ParserFast.symbol "}" Nothing)
             (ParserFast.map4
@@ -1989,11 +1995,11 @@ recordTypeAnnotation =
                         }
                 )
                 (ParserFast.orSucceed
-                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                    (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                     ropeEmpty
                 )
                 nameLowercaseNode
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
                 (ParserFast.oneOf2
                     (ParserFast.symbolFollowedBy "|"
                         (ParserFast.map3WithRange
@@ -2007,8 +2013,8 @@ recordTypeAnnotation =
                                         (Elm.Syntax.Node.Node range (head.syntax :: tail.syntax))
                                 }
                             )
-                            whitespaceAndCommentsEndsPositivelyIndented
-                            typeRecordFieldDefinition
+                            whitespaceAndComments
+                            typeRecordFieldDefinitionFollowedByWhitespaceAndComments
                             (manyWithComments
                                 (ParserFast.symbolFollowedBy ","
                                     (ParserFast.map3
@@ -2020,12 +2026,12 @@ recordTypeAnnotation =
                                             , syntax = field.syntax
                                             }
                                         )
-                                        whitespaceAndCommentsEndsPositivelyIndented
+                                        whitespaceAndComments
                                         (ParserFast.orSucceed
-                                            (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                                            (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                                             ropeEmpty
                                         )
-                                        typeRecordFieldDefinition
+                                        typeRecordFieldDefinitionFollowedByWhitespaceAndComments
                                     )
                                 )
                             )
@@ -2046,12 +2052,12 @@ recordTypeAnnotation =
                             }
                         )
                         (ParserFast.oneOf2OrSucceed
-                            (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
-                            (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+                            (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
+                            (ParserFast.symbolFollowedBy "=" whitespaceAndComments)
                             ropeEmpty
                         )
                         type_
-                        whitespaceAndCommentsEndsPositivelyIndented
+                        whitespaceAndComments
                         (ParserFast.orSucceed
                             (ParserFast.symbolFollowedBy "," recordFieldsTypeAnnotation)
                             { comments = ropeEmpty, syntax = [] }
@@ -2085,12 +2091,12 @@ recordFieldsTypeAnnotation =
             , syntax = head.syntax :: tail.syntax
             }
         )
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (ParserFast.orSucceed
-            (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy "," whitespaceAndComments)
             ropeEmpty
         )
-        typeRecordFieldDefinition
+        typeRecordFieldDefinitionFollowedByWhitespaceAndComments
         (manyWithComments
             (ParserFast.symbolFollowedBy ","
                 (ParserFast.map3
@@ -2102,42 +2108,40 @@ recordFieldsTypeAnnotation =
                         , syntax = field.syntax
                         }
                     )
-                    whitespaceAndCommentsEndsPositivelyIndented
+                    whitespaceAndComments
                     (ParserFast.orSucceed
-                        (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                        (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                         ropeEmpty
                     )
-                    typeRecordFieldDefinition
+                    typeRecordFieldDefinitionFollowedByWhitespaceAndComments
                 )
             )
         )
 
 
-typeRecordFieldDefinition : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.RecordField))
-typeRecordFieldDefinition =
-    ParserFast.map6WithRange
-        (\range commentsBeforeName name commentsAfterName commentsAfterColon value commentsAfterValue ->
+typeRecordFieldDefinitionFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.RecordField))
+typeRecordFieldDefinitionFollowedByWhitespaceAndComments =
+    ParserFast.map5WithRange
+        (\range name commentsAfterName commentsAfterColon value commentsAfterValue ->
             { comments =
-                commentsBeforeName
-                    |> ropePrependTo commentsAfterName
+                commentsAfterName
                     |> ropePrependTo commentsAfterColon
                     |> ropePrependTo value.comments
                     |> ropePrependTo commentsAfterValue
             , syntax = Elm.Syntax.Node.Node range ( name, value.syntax )
             }
         )
-        whitespaceAndCommentsEndsPositivelyIndented
         nameLowercaseNode
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (ParserFast.oneOf2OrSucceed
-            (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
-            (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
+            (ParserFast.symbolFollowedBy "=" whitespaceAndComments)
             ropeEmpty
         )
         type_
         -- This extra whitespace is just included for compatibility with earlier version
         -- TODO for v8: move to recordFieldsTypeAnnotation
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
 
 
 typedTypeAnnotationWithoutArguments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
@@ -2180,8 +2184,8 @@ maybeDotNamesUppercaseTuple =
         Nothing
 
 
-typedTypeAnnotationWithArgumentsOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
-typedTypeAnnotationWithArgumentsOptimisticLayout =
+typedTypeAnnotationWithArgumentsFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
+typedTypeAnnotationWithArgumentsFollowedByWhitespaceAndComments =
     ParserFast.map3
         (\nameNode commentsAfterName argsReverse ->
             let
@@ -2427,12 +2431,12 @@ precedence9ComposeL =
 -}
 expression : Parser { comments : Comments, syntax : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression }
 expression =
-    expressionFollowedByOptimisticLayout
+    expressionFollowedByWhitespaceAndComments
 
 
-expressionFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-expressionFollowedByOptimisticLayout =
-    extendedSubExpressionOptimisticLayout
+expressionFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionFollowedByWhitespaceAndComments =
+    extendedSubExpressionFollowedByWhitespaceAndComments
         { afterCommitting = .extensionRightParser
         , validateRightPrecedence = Just
         }
@@ -2497,7 +2501,7 @@ expressionAfterOpeningSquareBracket =
                         elements.syntax
                 }
             )
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             (ParserFast.oneOf2
                 (ParserFast.symbol "]" { comments = ropeEmpty, syntax = Elm.Syntax.Expression.ListExpr [] })
                 (ParserFast.map3
@@ -2510,30 +2514,27 @@ expressionAfterOpeningSquareBracket =
                         }
                     )
                     (ParserFast.orSucceed
-                        (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                        (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                         ropeEmpty
                     )
-                    expressionFollowedByOptimisticLayout
-                    (positivelyIndentedFollowedBy
-                        (manyWithComments
-                            (ParserFast.symbolFollowedBy ","
-                                (ParserFast.map3
-                                    (\commentsBefore commentsWithExtraComma expressionResult ->
-                                        { comments =
-                                            commentsBefore
-                                                |> ropePrependTo commentsWithExtraComma
-                                                |> ropePrependTo expressionResult.comments
-                                        , syntax = expressionResult.syntax
-                                        }
-                                    )
-                                    whitespaceAndCommentsEndsPositivelyIndented
-                                    (ParserFast.orSucceed
-                                        (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
-                                        ropeEmpty
-                                    )
-                                    expressionFollowedByOptimisticLayout
-                                    |> endsPositivelyIndented
+                    expressionFollowedByWhitespaceAndComments
+                    (manyWithComments
+                        (ParserFast.symbolFollowedBy ","
+                            (ParserFast.map3
+                                (\commentsBefore commentsWithExtraComma expressionResult ->
+                                    { comments =
+                                        commentsBefore
+                                            |> ropePrependTo commentsWithExtraComma
+                                            |> ropePrependTo expressionResult.comments
+                                    , syntax = expressionResult.syntax
+                                    }
                                 )
+                                whitespaceAndComments
+                                (ParserFast.orSucceed
+                                    (ParserFast.symbolFollowedBy "," whitespaceAndComments)
+                                    ropeEmpty
+                                )
+                                expressionFollowedByWhitespaceAndComments
                             )
                         )
                     )
@@ -2554,14 +2555,14 @@ recordExpressionFollowedByRecordAccess =
                 , syntax = Elm.Syntax.Node.Node (rangeMoveStartLeftByOneColumn range) afterCurly.syntax
                 }
             )
-            whitespaceAndCommentsEndsPositivelyIndented
-            recordContentsCurlyEnd
+            whitespaceAndComments
+            recordContentsFollowedByCurlyEnd
             |> followedByMultiRecordAccess
         )
 
 
-recordContentsCurlyEnd : Parser (WithComments Elm.Syntax.Expression.Expression)
-recordContentsCurlyEnd =
+recordContentsFollowedByCurlyEnd : Parser (WithComments Elm.Syntax.Expression.Expression)
+recordContentsFollowedByCurlyEnd =
     ParserFast.oneOf3
         (ParserFast.map5
             (\nameNode commentsAfterName afterNameBeforeFields tailFields commentsBeforeClosingCurly ->
@@ -2599,7 +2600,7 @@ recordContentsCurlyEnd =
                 }
             )
             nameLowercaseNode
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             (ParserFast.oneOf2
                 (ParserFast.symbolFollowedBy "|"
                     (ParserFast.map2
@@ -2608,8 +2609,8 @@ recordContentsCurlyEnd =
                             , syntax = RecordUpdateFirstSetter setterResult.syntax
                             }
                         )
-                        whitespaceAndCommentsEndsPositivelyIndented
-                        recordSetterNodeWithLayout
+                        whitespaceAndComments
+                        recordSetterNodeFollowedByWhitespaceAndComments
                     )
                 )
                 (ParserFast.map2
@@ -2628,22 +2629,19 @@ recordContentsCurlyEnd =
                                 }
                     )
                     (ParserFast.oneOf2OrSucceed
-                        (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
-                        (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+                        (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
+                        (ParserFast.symbolFollowedBy "=" whitespaceAndComments)
                         ropeEmpty
                     )
                     (ParserFast.mapOrSucceed
                         Just
-                        (expressionFollowedByOptimisticLayout
-                            |> endsPositivelyIndented
-                        )
+                        expressionFollowedByWhitespaceAndComments
                         Nothing
                     )
-                    |> endsPositivelyIndented
                 )
             )
             recordFields
-            (whitespaceAndCommentsEndsPositivelyIndented |> ParserFast.followedBySymbol "}")
+            (whitespaceAndComments |> ParserFast.followedBySymbol "}")
         )
         (ParserFast.symbol "}" { comments = ropeEmpty, syntax = Elm.Syntax.Expression.RecordExpr [] })
         -- prefixed comma
@@ -2657,7 +2655,7 @@ recordContentsCurlyEnd =
                 }
             )
             recordFields
-            (whitespaceAndCommentsEndsPositivelyIndented |> ParserFast.followedBySymbol "}")
+            (whitespaceAndComments |> ParserFast.followedBySymbol "}")
         )
 
 
@@ -2680,18 +2678,18 @@ recordFields =
                     , syntax = setterResult.syntax
                     }
                 )
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
                 (ParserFast.orSucceed
-                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                    (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                     ropeEmpty
                 )
-                recordSetterNodeWithLayout
+                recordSetterNodeFollowedByWhitespaceAndComments
             )
         )
 
 
-recordSetterNodeWithLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.RecordSetter))
-recordSetterNodeWithLayout =
+recordSetterNodeFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.RecordSetter))
+recordSetterNodeFollowedByWhitespaceAndComments =
     ParserFast.map4WithRange
         (\range nameNode commentsAfterName commentsAfterEquals maybeValueResult ->
             -- This extra whitespace is just included for compatibility with earlier version
@@ -2727,17 +2725,15 @@ recordSetterNodeWithLayout =
                     }
         )
         nameLowercaseNode
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (ParserFast.oneOf2OrSucceed
-            (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
-            (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
+            (ParserFast.symbolFollowedBy "=" whitespaceAndComments)
             ropeEmpty
         )
         (ParserFast.mapOrSucceed
             Just
-            (expressionFollowedByOptimisticLayout
-                |> endsPositivelyIndented
-            )
+            expressionFollowedByWhitespaceAndComments
             Nothing
         )
 
@@ -2762,8 +2758,8 @@ charLiteralExpression =
         )
 
 
-lambdaExpressionFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-lambdaExpressionFollowedByOptimisticLayout =
+lambdaExpressionFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+lambdaExpressionFollowedByWhitespaceAndComments =
     ParserFast.map6WithStartLocation
         (\start commentsAfterBackslash firstArg commentsAfterFirstArg secondUpArgs commentsAfterArrow expressionResult ->
             let
@@ -2789,9 +2785,9 @@ lambdaExpressionFollowedByOptimisticLayout =
                     )
             }
         )
-        (ParserFast.symbolFollowedBy "\\" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.symbolFollowedBy "\\" whitespaceAndComments)
         patternNotSpaceSeparated
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (untilWithComments
             (ParserFast.oneOf3
                 (ParserFast.symbol "->" ())
@@ -2807,11 +2803,11 @@ lambdaExpressionFollowedByOptimisticLayout =
                     }
                 )
                 patternNotSpaceSeparated
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
             )
         )
-        whitespaceAndCommentsEndsPositivelyIndented
-        expressionFollowedByOptimisticLayout
+        whitespaceAndComments
+        expressionFollowedByWhitespaceAndComments
 
 
 caseExpressionFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
@@ -2849,16 +2845,14 @@ caseExpressionFollowedByOptimisticLayout =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "case" whitespaceAndCommentsEndsPositivelyIndented)
-        expressionFollowedByOptimisticLayout
-        (positivelyIndentedFollowedBy
-            (ParserFast.keywordFollowedBy "of" whitespaceAndCommentsEndsPositivelyIndented)
-        )
-        (ParserFast.withIndentSetToColumn caseStatementsFollowedByOptimisticLayout)
+        (ParserFast.keywordFollowedBy "case" whitespaceAndComments)
+        expressionFollowedByWhitespaceAndComments
+        (ParserFast.keywordFollowedBy "of" whitespaceAndComments)
+        (ParserFast.withIndentSetToColumn caseStatementsFollowedByWhitespaceAndComments)
 
 
-caseStatementsFollowedByOptimisticLayout : Parser (WithComments ( Elm.Syntax.Expression.Case, List Elm.Syntax.Expression.Case ))
-caseStatementsFollowedByOptimisticLayout =
+caseStatementsFollowedByWhitespaceAndComments : Parser (WithComments ( Elm.Syntax.Expression.Case, List Elm.Syntax.Expression.Case ))
+caseStatementsFollowedByWhitespaceAndComments =
     ParserFast.map5
         (\firstCasePatternResult commentsAfterFirstCasePattern commentsAfterFirstCaseArrowRight firstCaseExpressionResult lastToSecondCase ->
             { comments =
@@ -2874,14 +2868,14 @@ caseStatementsFollowedByOptimisticLayout =
             }
         )
         pattern
-        whitespaceAndCommentsEndsPositivelyIndented
-        (ParserFast.symbolFollowedBy "->" whitespaceAndCommentsEndsPositivelyIndented)
-        expressionFollowedByOptimisticLayout
-        (manyWithCommentsReverse caseStatementFollowedByOptimisticLayout)
+        whitespaceAndComments
+        (ParserFast.symbolFollowedBy "->" whitespaceAndComments)
+        expressionFollowedByWhitespaceAndComments
+        (manyWithCommentsReverse caseStatementFollowedByWhitespaceAndComments)
 
 
-caseStatementFollowedByOptimisticLayout : Parser (WithComments Elm.Syntax.Expression.Case)
-caseStatementFollowedByOptimisticLayout =
+caseStatementFollowedByWhitespaceAndComments : Parser (WithComments Elm.Syntax.Expression.Case)
+caseStatementFollowedByWhitespaceAndComments =
     topIndentedFollowedBy
         (ParserFast.map4
             (\patternResult commentsBeforeArrowRight commentsAfterArrowRight expr ->
@@ -2894,9 +2888,9 @@ caseStatementFollowedByOptimisticLayout =
                 }
             )
             pattern
-            whitespaceAndCommentsEndsPositivelyIndented
-            (ParserFast.symbolFollowedBy "->" whitespaceAndCommentsEndsPositivelyIndented)
-            expressionFollowedByOptimisticLayout
+            whitespaceAndComments
+            (ParserFast.symbolFollowedBy "->" whitespaceAndComments)
+            expressionFollowedByWhitespaceAndComments
         )
 
 
@@ -2934,16 +2928,13 @@ letExpressionFollowedByOptimisticLayout =
                         , declarations = letDeclarationsResult.syntax
                         }
                     )
-                    whitespaceAndCommentsEndsPositivelyIndented
+                    whitespaceAndComments
                     (ParserFast.withIndentSetToColumn letDeclarationsIn)
                 )
             )
         )
-        -- checks that the `in` token used as the end parser in letDeclarationsIn is indented correctly
-        (positivelyIndentedPlusFollowedBy 2
-            whitespaceAndCommentsEndsPositivelyIndented
-        )
-        expressionFollowedByOptimisticLayout
+        whitespaceAndComments
+        expressionFollowedByWhitespaceAndComments
 
 
 letDeclarationsIn : Parser (WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Expression.LetDeclaration)))
@@ -3001,9 +2992,9 @@ letDestructuringDeclarationFollowedByOptimisticLayout =
             }
         )
         patternNotSpaceSeparated
-        whitespaceAndCommentsEndsPositivelyIndented
-        (ParserFast.symbolFollowedBy "=" whitespaceAndCommentsEndsPositivelyIndented)
-        expressionFollowedByOptimisticLayout
+        whitespaceAndComments
+        (ParserFast.symbolFollowedBy "=" whitespaceAndComments)
+        expressionFollowedByWhitespaceAndComments
 
 
 letFunctionFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.LetDeclaration))
@@ -3071,7 +3062,7 @@ letFunctionFollowedByOptimisticLayout =
                         }
             )
             nameLowercaseNode
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             (ParserFast.map4OrSucceed
                 (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
                     Just
@@ -3084,17 +3075,17 @@ letFunctionFollowedByOptimisticLayout =
                         , typeAnnotation = typeAnnotationResult.syntax
                         }
                 )
-                (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+                (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
                 type_
                 (whitespaceAndCommentsEndsTopIndentedFollowedBy
                     nameLowercaseNode
                 )
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
                 Nothing
             )
             parameterPatternsEqual
-            whitespaceAndCommentsEndsPositivelyIndented
-            expressionFollowedByOptimisticLayout
+            whitespaceAndComments
+            expressionFollowedByWhitespaceAndComments
             |> ParserFast.validate
                 (\result ->
                     let
@@ -3168,14 +3159,14 @@ letFunctionFollowedByOptimisticLayout =
                         )
                 }
             )
-            (ParserFast.symbolFollowedBy ":" whitespaceAndCommentsEndsPositivelyIndented)
+            (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
             type_
             whitespaceAndCommentsEndsTopIndented
             nameLowercaseNode
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             parameterPatternsEqual
-            whitespaceAndCommentsEndsPositivelyIndented
-            expressionFollowedByOptimisticLayout
+            whitespaceAndComments
+            expressionFollowedByWhitespaceAndComments
         )
 
 
@@ -3226,19 +3217,15 @@ ifBlockExpressionFollowedByOptimisticLayout =
                     )
             }
         )
-        (ParserFast.keywordFollowedBy "if" whitespaceAndCommentsEndsPositivelyIndented)
-        expressionFollowedByOptimisticLayout
-        (positivelyIndentedFollowedBy
-            (ParserFast.oneOf2
-                (ParserFast.keywordFollowedBy "then" whitespaceAndCommentsEndsPositivelyIndented)
-                (ParserFast.keywordFollowedBy "->" whitespaceAndCommentsEndsPositivelyIndented)
-            )
+        (ParserFast.keywordFollowedBy "if" whitespaceAndComments)
+        expressionFollowedByWhitespaceAndComments
+        (ParserFast.oneOf2
+            (ParserFast.keywordFollowedBy "then" whitespaceAndComments)
+            (ParserFast.keywordFollowedBy "->" whitespaceAndComments)
         )
-        expressionFollowedByOptimisticLayout
-        (positivelyIndentedFollowedBy
-            (ParserFast.keywordFollowedBy "else" whitespaceAndCommentsEndsPositivelyIndented)
-        )
-        expressionFollowedByOptimisticLayout
+        expressionFollowedByWhitespaceAndComments
+        (ParserFast.keywordFollowedBy "else" whitespaceAndComments)
+        expressionFollowedByWhitespaceAndComments
 
 
 negationOperation : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
@@ -3440,43 +3427,38 @@ tupledExpressionInnerAfterOpeningParens =
                             )
             }
         )
-        whitespaceAndCommentsEndsPositivelyIndented
-        expressionFollowedByOptimisticLayout
-        (positivelyIndentedFollowedBy
-            (ParserFast.oneOf2
-                (ParserFast.symbol ")"
-                    { comments = ropeEmpty, syntax = TupledParenthesized () () }
-                )
-                (ParserFast.symbolFollowedBy ","
-                    (ParserFast.map3
-                        (\commentsBefore partResult maybeThirdPart ->
-                            { comments =
-                                commentsBefore
-                                    |> ropePrependTo partResult.comments
-                                    |> ropePrependTo maybeThirdPart.comments
-                            , syntax = TupledTwoOrThree partResult.syntax maybeThirdPart.syntax
-                            }
-                        )
-                        whitespaceAndCommentsEndsPositivelyIndented
-                        expressionFollowedByOptimisticLayout
-                        (positivelyIndentedFollowedBy
-                            (ParserFast.oneOf2
-                                (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
-                                (ParserFast.symbolFollowedBy ","
-                                    (ParserFast.map2
-                                        (\commentsBefore partResult ->
-                                            { comments =
-                                                commentsBefore
-                                                    |> ropePrependTo partResult.comments
-                                            , syntax = Just partResult.syntax
-                                            }
-                                        )
-                                        whitespaceAndCommentsEndsPositivelyIndented
-                                        expressionFollowedByOptimisticLayout
-                                        |> endsPositivelyIndented
-                                        |> ParserFast.followedBySymbol ")"
-                                    )
+        whitespaceAndComments
+        expressionFollowedByWhitespaceAndComments
+        (ParserFast.oneOf2
+            (ParserFast.symbol ")"
+                { comments = ropeEmpty, syntax = TupledParenthesized () () }
+            )
+            (ParserFast.symbolFollowedBy ","
+                (ParserFast.map3
+                    (\commentsBefore partResult maybeThirdPart ->
+                        { comments =
+                            commentsBefore
+                                |> ropePrependTo partResult.comments
+                                |> ropePrependTo maybeThirdPart.comments
+                        , syntax = TupledTwoOrThree partResult.syntax maybeThirdPart.syntax
+                        }
+                    )
+                    whitespaceAndComments
+                    expressionFollowedByWhitespaceAndComments
+                    (ParserFast.oneOf2
+                        (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
+                        (ParserFast.symbolFollowedBy ","
+                            (ParserFast.map2
+                                (\commentsBefore partResult ->
+                                    { comments =
+                                        commentsBefore
+                                            |> ropePrependTo partResult.comments
+                                    , syntax = Just partResult.syntax
+                                    }
                                 )
+                                whitespaceAndComments
+                                expressionFollowedByWhitespaceAndComments
+                                |> ParserFast.followedBySymbol ")"
                             )
                         )
                     )
@@ -3495,13 +3477,13 @@ type Tupled
 ---
 
 
-extendedSubExpressionOptimisticLayout :
+extendedSubExpressionFollowedByWhitespaceAndComments :
     { info_
         | afterCommitting : InfixOperatorInfo -> Parser (WithComments ExtensionRight)
         , validateRightPrecedence : InfixOperatorInfo -> Maybe InfixOperatorInfo
     }
     -> Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-extendedSubExpressionOptimisticLayout info =
+extendedSubExpressionFollowedByWhitespaceAndComments info =
     ParserFast.map2
         (\expressionResult maybeCases ->
             case maybeCases of
@@ -3528,10 +3510,8 @@ extendedSubExpressionOptimisticLayout info =
                     }
         )
         (ParserFast.loopWhileSucceedsOntoResultFromParser
-            (positivelyIndentedFollowedBy
-                (infixOperatorAndThen info)
-            )
-            subExpressionMaybeAppliedFollowedByOptimisticLayout
+            (infixOperatorAndThen info)
+            subExpressionMaybeAppliedFollowedByWhitespaceAndComments
             (\extensionRightResult leftNodeWithComments ->
                 { comments =
                     leftNodeWithComments.comments
@@ -3569,9 +3549,9 @@ extendedSubExpressionOptimisticLayout info =
                             , cases = firstCase :: List.reverse lastToSecondCase
                             }
                     )
-                    whitespaceAndCommentsEndsPositivelyIndented
+                    whitespaceAndComments
                     (ParserFast.withIndentSetToColumn
-                        (ParserFast.lazy (\() -> caseStatementsFollowedByOptimisticLayout))
+                        (ParserFast.lazy (\() -> caseStatementsFollowedByWhitespaceAndComments))
                     )
                 )
             )
@@ -3598,9 +3578,9 @@ extensionRightParser extensionRightInfo =
                     }
             }
         )
-        whitespaceAndCommentsEndsPositivelyIndented
+        whitespaceAndComments
         (ParserFast.lazy
-            (\() -> extendedSubExpressionOptimisticLayout extensionRightInfo)
+            (\() -> extendedSubExpressionFollowedByWhitespaceAndComments extensionRightInfo)
         )
 
 
@@ -3809,8 +3789,8 @@ infixOperatorAndThen extensionRightConstraints =
         extensionRightConstraints.afterCommitting
 
 
-subExpressionMaybeAppliedFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-subExpressionMaybeAppliedFollowedByOptimisticLayout =
+subExpressionMaybeAppliedFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+subExpressionMaybeAppliedFollowedByWhitespaceAndComments =
     -- functionally, a simple oneOf would be correct as well.
     -- However, since this parser is called _a lot_,
     --   we squeeze out a bit more speed by de-duplicating slices etc
@@ -3833,7 +3813,7 @@ subExpressionMaybeAppliedFollowedByOptimisticLayout =
                     caseOrUnqualifiedReferenceExpressionMaybeApplied
 
                 "\\" ->
-                    lambdaExpressionFollowedByOptimisticLayout
+                    lambdaExpressionFollowedByWhitespaceAndComments
 
                 "l" ->
                     letOrUnqualifiedReferenceExpressionMaybeApplied
@@ -4110,7 +4090,7 @@ pattern =
                     }
                 )
                 (ParserFast.lazy (\() -> composablePattern))
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
             )
             (ParserFast.symbolFollowedBy "::"
                 (ParserFast.map3
@@ -4122,9 +4102,9 @@ pattern =
                         , syntax = patternResult.syntax
                         }
                     )
-                    whitespaceAndCommentsEndsPositivelyIndented
+                    whitespaceAndComments
                     (ParserFast.lazy (\() -> composablePattern))
-                    whitespaceAndCommentsEndsPositivelyIndented
+                    whitespaceAndComments
                 )
             )
             (\consed afterCons ->
@@ -4143,7 +4123,7 @@ pattern =
                             , syntax = name
                             }
                     )
-                    whitespaceAndCommentsEndsPositivelyIndented
+                    whitespaceAndComments
                     nameLowercaseNode
                 )
             )
@@ -4164,7 +4144,7 @@ parensPattern =
                         contentResult.syntax
                 }
             )
-            whitespaceAndCommentsEndsPositivelyIndented
+            whitespaceAndComments
             -- yes, (  ) is a valid pattern but not a valid type or expression
             (ParserFast.oneOf2
                 (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Elm.Syntax.Pattern.UnitPattern })
@@ -4189,7 +4169,7 @@ parensPattern =
                         }
                     )
                     pattern
-                    whitespaceAndCommentsEndsPositivelyIndented
+                    whitespaceAndComments
                     (ParserFast.oneOf2
                         (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
                         (ParserFast.symbolFollowedBy ","
@@ -4203,9 +4183,9 @@ parensPattern =
                                     , syntax = Just { maybeThirdPart = maybeThirdPart.syntax, secondPart = secondPart.syntax }
                                     }
                                 )
-                                whitespaceAndCommentsEndsPositivelyIndented
+                                whitespaceAndComments
                                 pattern
-                                whitespaceAndCommentsEndsPositivelyIndented
+                                whitespaceAndComments
                                 (ParserFast.oneOf2
                                     (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
                                     (ParserFast.symbolFollowedBy ","
@@ -4218,9 +4198,9 @@ parensPattern =
                                                 , syntax = Just thirdPart.syntax
                                                 }
                                             )
-                                            whitespaceAndCommentsEndsPositivelyIndented
+                                            whitespaceAndComments
                                             pattern
-                                            whitespaceAndCommentsEndsPositivelyIndented
+                                            whitespaceAndComments
                                             |> ParserFast.followedBySymbol ")"
                                         )
                                     )
@@ -4273,7 +4253,7 @@ listPattern =
                     , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.ListPattern elements.syntax)
                     }
         )
-        (ParserFast.symbolFollowedBy "[" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.symbolFollowedBy "[" whitespaceAndComments)
         (ParserFast.oneOf2
             (ParserFast.symbol "]" Nothing)
             (ParserFast.map4
@@ -4288,11 +4268,11 @@ listPattern =
                         }
                 )
                 (ParserFast.orSucceed
-                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                    (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                     ropeEmpty
                 )
                 pattern
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
                 (manyWithComments
                     (ParserFast.symbolFollowedBy ","
                         (ParserFast.map4
@@ -4305,13 +4285,13 @@ listPattern =
                                 , syntax = v.syntax
                                 }
                             )
-                            whitespaceAndCommentsEndsPositivelyIndented
+                            whitespaceAndComments
                             (ParserFast.orSucceed
-                                (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                                (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                                 ropeEmpty
                             )
                             pattern
-                            whitespaceAndCommentsEndsPositivelyIndented
+                            whitespaceAndComments
                         )
                     )
                 )
@@ -4399,16 +4379,14 @@ qualifiedPatternWithConsumeArgs =
         qualifiedNameRefNode
         whitespaceAndComments
         (manyWithCommentsReverse
-            (positivelyIndentedFollowedBy
-                (ParserFast.map2
-                    (\arg commentsAfterArg ->
-                        { comments = arg.comments |> ropePrependTo commentsAfterArg
-                        , syntax = arg.syntax
-                        }
-                    )
-                    patternNotSpaceSeparated
-                    whitespaceAndComments
+            (ParserFast.map2
+                (\arg commentsAfterArg ->
+                    { comments = arg.comments |> ropePrependTo commentsAfterArg
+                    , syntax = arg.syntax
+                    }
                 )
+                patternNotSpaceSeparated
+                whitespaceAndComments
             )
         )
 
@@ -4462,7 +4440,7 @@ recordPattern =
                 Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.RecordPattern elements.syntax)
             }
         )
-        (ParserFast.symbolFollowedBy "{" whitespaceAndCommentsEndsPositivelyIndented)
+        (ParserFast.symbolFollowedBy "{" whitespaceAndComments)
         (ParserFast.oneOf2
             (ParserFast.symbol "}" { comments = ropeEmpty, syntax = [] })
             (ParserFast.map4
@@ -4475,11 +4453,11 @@ recordPattern =
                     }
                 )
                 (ParserFast.orSucceed
-                    (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                    (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                     ropeEmpty
                 )
                 nameLowercaseNode
-                whitespaceAndCommentsEndsPositivelyIndented
+                whitespaceAndComments
                 (manyWithComments
                     (ParserFast.symbolFollowedBy ","
                         (ParserFast.map4
@@ -4491,13 +4469,13 @@ recordPattern =
                                 , syntax = name
                                 }
                             )
-                            whitespaceAndCommentsEndsPositivelyIndented
+                            whitespaceAndComments
                             (ParserFast.orSucceed
-                                (ParserFast.symbolFollowedBy "," whitespaceAndCommentsEndsPositivelyIndented)
+                                (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                                 ropeEmpty
                             )
                             nameLowercaseNode
-                            whitespaceAndCommentsEndsPositivelyIndented
+                            whitespaceAndComments
                         )
                     )
                 )
@@ -5048,49 +5026,6 @@ whitespaceAndCommentsOrEmptyLoop =
         identity
 
 
-whitespaceAndCommentsEndsPositivelyIndented : Parser Comments
-whitespaceAndCommentsEndsPositivelyIndented =
-    whitespaceAndComments |> endsPositivelyIndented
-
-
-endsPositivelyIndented : Parser a -> Parser a
-endsPositivelyIndented parser =
-    ParserFast.validateEndColumnIndentation
-        (\column indent ->
-            (column > 1)
-                && (indent |> List.all (\nestedIndent -> column /= nestedIndent))
-        )
-        parser
-
-
-{-| Check that the indentation of an already parsed token
-would be valid
--}
-positivelyIndentedPlusFollowedBy : Int -> Parser a -> Parser a
-positivelyIndentedPlusFollowedBy extraIndent nextParser =
-    ParserFast.columnIndentAndThen
-        (\column indent ->
-            case indent of
-                [] ->
-                    if column > 1 + extraIndent then
-                        nextParser
-
-                    else
-                        ParserFast.problem
-
-                highestIndent :: lowerIndents ->
-                    if
-                        (column > 1)
-                            && (column /= highestIndent + extraIndent)
-                            && (lowerIndents |> List.all (\nestedIndent -> column /= nestedIndent))
-                    then
-                        nextParser
-
-                    else
-                        ParserFast.problem
-        )
-
-
 positivelyIndentedFollowedBy : Parser a -> Parser a
 positivelyIndentedFollowedBy nextParser =
     ParserFast.columnIndentAndThen
@@ -5176,22 +5111,6 @@ topIndentedFollowedBy nextParser =
                     else
                         ParserFast.problem
         )
-
-
-surroundedByWhitespaceAndCommentsEndsPositivelyIndented : Parser (WithComments b) -> Parser (WithComments b)
-surroundedByWhitespaceAndCommentsEndsPositivelyIndented x =
-    ParserFast.map3
-        (\before v after ->
-            { comments =
-                before
-                    |> ropePrependTo v.comments
-                    |> ropePrependTo after
-            , syntax = v.syntax
-            }
-        )
-        whitespaceAndCommentsEndsPositivelyIndented
-        x
-        whitespaceAndCommentsEndsPositivelyIndented
 
 
 type alias WithComments res =
