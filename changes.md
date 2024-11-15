@@ -3,6 +3,7 @@
       - fix bug where multi-line expressions after an infix operator were sometimes indented to little
       - merges consecutive `->` in function type
       - allow any indentation with `)`, `]`, `}`, `,`, `->`, `=`, `|`, `:`, `::`, `in`, `of`, `as`, `then`, `else`, `exposing`, `where`, `..`, infix operators, list elements, record field names, record field values, exposing elements, `(` after exposing, on True, on False, result after case `->`, between `case` and `of`, parameters before `=`/`=`, type after `->`, pattern after `::`, name after pattern `as`, module name after start of module header, module name after `import`, `module` after `port`, type after `:`, in parens, type after type alias declaration `=`, type declaration name, type alias declaration name, variant name, let first declaration, let result after `in`, variant pattern arguments, lambda result, expression after value/function declaration `=`, tuple part after `,`, expression after infix operator
+      - faster
   - in module `ElmSyntaxPrint`
       - correct character in """ string literal that spans multiple UTF-16 codes
 
