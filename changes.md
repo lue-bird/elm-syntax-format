@@ -5,7 +5,6 @@
       - TODO (?) correct lambda and function type `→` to `->`
   - in module `ElmSyntaxPrint`
       - correct character in """ string literal that spans multiple UTF-16 codes
-      - TODO find uot why some """ in triple double equals string doesn't get escaped (? solved)
 
 #### 1.1.4
   - in module `ElmSyntaxPrint`
