@@ -1766,10 +1766,6 @@ tripleDoubleQuotedStringCharToEscaped character =
                 "\\u{" ++ characterHex otherCharacter ++ "}"
 
             else
-                let
-                    _ =
-                        Debug.log "char as string" (String.fromChar otherCharacter)
-                in
                 String.fromChar otherCharacter
 
 
@@ -1862,7 +1858,7 @@ characterIsNotPrint character =
                 True
 
             Just category ->
-                case category |> Debug.log "category" of
+                case category of
                     Unicode.SeparatorLine ->
                         True
 
