@@ -3683,6 +3683,18 @@ a =
     '\\u{000D}'
 """
                 )
+            , Test.test "char emoji (multiple codes, SymbolOther)"
+                (\() ->
+                    """module A exposing (..)
+a = '🟩' """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    '🟩'
+"""
+                )
             , Test.test "single double quote string without escapes"
                 (\() ->
                     """module A exposing (..)
@@ -3719,6 +3731,18 @@ a =
     "\\"\\\\\\t\\u{000D}"
 """
                 )
+            , Test.test "single double quote string with emoji (multiple codes, SymbolOther)"
+                (\() ->
+                    """module A exposing (..)
+a = "🟩" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    "🟩"
+"""
+                )
             , Test.test "triple double quote string single-line without escapes"
                 (\() ->
                     """module A exposing (..)
@@ -3729,6 +3753,18 @@ a = \"\"\"normal text\"\"\" """
 
 a =
     \"\"\"normal text\"\"\"
+"""
+                )
+            , Test.test "triple double quote string single-line with emoji (multiple codes, SymbolOther)"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"🟩\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"🟩\"\"\"
 """
                 )
             , Test.test "triple double quote string multi-line without escapes"

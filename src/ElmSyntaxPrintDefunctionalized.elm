@@ -1638,7 +1638,7 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
         wasProbablyTripleDoubleQuoteOriginally =
             (range.start.row /= range.end.row)
                 || ((range.end.column - range.start.column)
-                        - (singleDoubleQuotedStringContentEscaped |> String.length)
+                        - (singleDoubleQuotedStringContentEscaped |> stringUnicodeLength)
                         /= 2
                    )
     in
@@ -1663,6 +1663,11 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
         Print.exactly ("\"" ++ singleDoubleQuotedStringContentEscaped ++ "\"")
 
 
+stringUnicodeLength : String -> Int
+stringUnicodeLength string =
+    string |> String.foldl (\_ soFar -> soFar + 1) 0
+
+
 tripleDoubleQuotedStringEscapeDoubleQuotes : String -> String
 tripleDoubleQuotedStringEscapeDoubleQuotes string =
     let
@@ -1670,7 +1675,6 @@ tripleDoubleQuotedStringEscapeDoubleQuotes string =
         beforeLastCharEscaped =
             -- escape continuous double quotes if combined length >= 3
             string
-                |> String.slice 0 ((string |> String.length) - 1)
                 |> String.foldl
                     (\char soFar ->
                         case char of
@@ -1706,20 +1710,8 @@ tripleDoubleQuotedStringEscapeDoubleQuotes string =
                     }
     in
     beforeLastCharEscaped.result
-        ++ (case
-                string
-                    |> String.slice
-                        ((string |> String.length) - 1)
-                        (string |> String.length)
-            of
-                "\"" ->
-                    -- escape preceding continuous double quotes if they connect to the last char double quote
-                    String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\\\""
-                        ++ "\\\""
-
-                lastCharNotDoubleQuote ->
-                    String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\""
-                        ++ lastCharNotDoubleQuote
+        ++ (-- escape preceding continuous double quotes if they connect to the last char double quote
+            String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\\\""
            )
         ++ ""
 
@@ -1743,7 +1735,7 @@ singleDoubleQuotedStringCharToEscaped character =
             "\\u{000D}"
 
         otherCharacter ->
-            if characterIsPrint otherCharacter then
+            if characterIsNotPrint otherCharacter then
                 "\\u{" ++ characterHex otherCharacter ++ "}"
 
             else
@@ -1770,10 +1762,14 @@ tripleDoubleQuotedStringCharToEscaped character =
             "\u{000D}"
 
         otherCharacter ->
-            if characterIsPrint otherCharacter then
+            if characterIsNotPrint otherCharacter then
                 "\\u{" ++ characterHex otherCharacter ++ "}"
 
             else
+                let
+                    _ =
+                        Debug.log "char as string" (String.fromChar otherCharacter)
+                in
                 String.fromChar otherCharacter
 
 
@@ -1846,10 +1842,10 @@ characterHex character =
     String.toUpper (intToHexString (Char.toCode character))
 
 
-characterIsPrint : Char -> Bool
-characterIsPrint character =
+characterIsNotPrint : Char -> Bool
+characterIsNotPrint character =
     if
-        -- Unicode.getCategory is extremely expensive so we shortcut if at all possible
+        -- Unicode.getCategory is very expensive so we shortcut if at all possible
         Char.Extra.isLatinAlphaNumOrUnderscoreFast character
             || (character == ' ')
             || (character == '.')
@@ -1863,10 +1859,10 @@ characterIsPrint character =
     else
         case Unicode.getCategory character of
             Nothing ->
-                False
+                True
 
             Just category ->
-                case category of
+                case category |> Debug.log "category" of
                     Unicode.SeparatorLine ->
                         True
 
@@ -1916,7 +1912,7 @@ characterIsPrint character =
                         False
 
                     Unicode.SeparatorSpace ->
-                        False
+                        True
 
                     Unicode.LetterModifier ->
                         False
@@ -1984,7 +1980,7 @@ quotedCharToEscaped character =
             "\\u{000D}"
 
         otherCharacter ->
-            if characterIsPrint otherCharacter then
+            if characterIsNotPrint otherCharacter then
                 "\\u{" ++ characterHex otherCharacter ++ "}"
 
             else

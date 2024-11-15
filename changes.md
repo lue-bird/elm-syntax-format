@@ -1,3 +1,10 @@
+#### 1.1.5
+  - in module `ElmSyntaxParserLenient`
+      - allow any indentation for `}`, `]`, `)`, `=`, `:`, `,`, `|`, `->`, `..`, `then`, `else`, `of`, `as`, `exposing`, `in`, `where`, operators, `(` after exposing, `module` after `port`, exposing elements, list elements, on True, in parens, after tuple `,`, on False, after case ->, between case and of, lambda argument patterns, lambda result, after operator, expression after =, type after :, type after type alias =, first variant after type =
+  - in module `ElmSyntaxPrint`
+      - correct character in """ string literal that spans multiple UTF-16 codes
+      - TODO find uot why some """ in triple double equals string doesn't get escaped (? solved)
+
 #### 1.1.4
   - in module `ElmSyntaxPrint`
       - correct triple double quoted string literal escaping behavior
