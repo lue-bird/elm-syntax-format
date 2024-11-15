@@ -3135,6 +3135,26 @@ Nothing"""
                                 )
                             )
                 )
+            , Test.test "function type reference multiple with consecutive ->"
+                (\() ->
+                    "Foo->->Bar -> baz"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.type_
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 18 } }
+                                (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } }
+                                        (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } ( [], "Foo" )) [])
+                                    )
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 18 } }
+                                        (Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
+                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } }
+                                                (Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } ( [], "Bar" )) [])
+                                            )
+                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 18 } } (Elm.Syntax.TypeAnnotation.GenericType "baz"))
+                                        )
+                                    )
+                                )
+                            )
+                )
             , Test.test "function type reference generics"
                 (\() ->
                     "cMsg -> cModel -> a"

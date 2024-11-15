@@ -44,6 +44,8 @@ Some additional lenient parsing:
 
   - removes remove extra `|` before first variant declaration
 
+  - merges consecutive `->` in function type
+
   - corrects `port module` to `module` if no ports exist and the other way round
 
   - corrects exposing `(...)` → `(..)`
@@ -1805,16 +1807,21 @@ type_ =
             whitespaceAndComments
         )
         (ParserFast.symbolFollowedBy "->"
-            (ParserFast.map3
-                (\commentsAfterArrow typeAnnotationResult commentsAfterType ->
+            (ParserFast.map4
+                (\commentsAfterArrow commentsWithExtraArrow typeAnnotationResult commentsAfterType ->
                     { comments =
                         commentsAfterArrow
+                            |> ropePrependTo commentsWithExtraArrow
                             |> ropePrependTo typeAnnotationResult.comments
                             |> ropePrependTo commentsAfterType
                     , syntax = typeAnnotationResult.syntax
                     }
                 )
                 whitespaceAndComments
+                (ParserFast.orSucceed
+                    (ParserFast.symbolFollowedBy "->" whitespaceAndComments)
+                    ropeEmpty
+                )
                 (ParserFast.lazy (\() -> typeAnnotationNotFunction))
                 whitespaceAndComments
             )
