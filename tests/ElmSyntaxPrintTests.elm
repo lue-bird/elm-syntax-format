@@ -2658,6 +2658,23 @@ a =
         |> identity
 """
                 )
+            , Test.test "++ pipeline with multi-line list"
+                (\() ->
+                    """module A exposing (..)
+a =
+    [] ++ [ 0
+    ] ++ []"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    []
+        ++ [ 0
+           ]
+        ++ []
+"""
+                )
             , Test.test "|> pipeline with parenthesized multi-line function"
                 (\() ->
                     """module A exposing (..)

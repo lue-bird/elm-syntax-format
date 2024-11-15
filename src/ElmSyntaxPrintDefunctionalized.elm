@@ -5671,12 +5671,7 @@ expressionOperation syntaxComments syntaxOperation =
                     let
                         expressionPrint : Print
                         expressionPrint =
-                            if operationExpanded.rightestExpression |> expressionIsSpaceSeparatedExceptApplication then
-                                Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
-                                    (expressionParenthesized syntaxComments operationExpanded.rightestExpression)
-
-                            else
-                                expressionNotParenthesized syntaxComments operationExpanded.rightestExpression
+                            expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments operationExpanded.rightestExpression
                     in
                     Print.withIndentAtNextMultipleOf4
                         (Print.spaceOrLinebreakIndented lineSpread
@@ -5698,7 +5693,10 @@ expressionOperation syntaxComments syntaxOperation =
                                                     )
                                             )
                                 )
-                            |> Print.followedBy expressionPrint
+                            |> Print.followedBy
+                                (Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
+                                    expressionPrint
+                                )
                         )
     in
     leftestPrint
@@ -5755,11 +5753,7 @@ expressionOperation syntaxComments syntaxOperation =
                                                         )
                                             )
                                         |> Print.followedBy
-                                            (if operatorExpression.expression |> expressionIsSpaceSeparatedExceptApplication then
-                                                Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
-                                                    operatorExpression.expressionPrint
-
-                                             else
+                                            (Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
                                                 operatorExpression.expressionPrint
                                             )
                                     )
