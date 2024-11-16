@@ -33,7 +33,7 @@ import Elm.Syntax.Signature
 import Elm.Syntax.Type
 import Elm.Syntax.TypeAlias
 import Elm.Syntax.TypeAnnotation
-import PrintAttemptFaster as Print exposing (Print)
+import Print exposing (Print)
 import Unicode
 
 
@@ -453,13 +453,13 @@ exposingMulti syntaxComments syntaxExposing =
         |> Print.followedBy
             (case containedComments of
                 [] ->
-                    Print.empty
+                    printExactlyParensClosing
 
                 comment0 :: comment1Up ->
                     comments (comment0 :: comment1Up)
                         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
+                        |> Print.followedBy printExactlyParensClosing
             )
-        |> Print.followedBy printExactlyParensClosing
 
 
 listMapAndFlattenToString : (a -> String) -> List a -> String
@@ -669,13 +669,13 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                         |> Print.followedBy
                             (case containedComments of
                                 [] ->
-                                    Print.empty
+                                    printExactlyParensClosing
 
                                 comment0 :: comment1Up ->
                                     comments (comment0 :: comment1Up)
                                         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
+                                        |> Print.followedBy printExactlyParensClosing
                             )
-                        |> Print.followedBy printExactlyParensClosing
 
                 expose0 :: expose1 :: expose2Up ->
                     case context.atDocsLines of
@@ -746,7 +746,7 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                         |> Print.followedBy
                                             (case atDocsExposeLines.remainingExposes of
                                                 [] ->
-                                                    Print.empty
+                                                    printExactlyParensClosing
 
                                                 remainingExpose0 :: remainingExpose1Up ->
                                                     Print.exactly
@@ -758,8 +758,8 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                                                )
                                                         )
                                                         |> Print.followedBy Print.linebreakIndented
+                                                        |> Print.followedBy printExactlyParensClosing
                                             )
-                                        |> Print.followedBy printExactlyParensClosing
 
                         [] ->
                             exposingMulti context.comments
@@ -821,7 +821,7 @@ exposeToAtDocsString syntaxExpose =
             choiceTypeExpose.name
 
 
-listFirstJustMap : (a -> Maybe b) -> (List a -> Maybe b)
+listFirstJustMap : (a -> Maybe b) -> List a -> Maybe b
 listFirstJustMap elementToMaybe list =
     case list of
         [] ->
@@ -1638,7 +1638,7 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
         wasProbablyTripleDoubleQuoteOriginally =
             (range.start.row /= range.end.row)
                 || ((range.end.column - range.start.column)
-                        - (singleDoubleQuotedStringContentEscaped |> String.length)
+                        - (singleDoubleQuotedStringContentEscaped |> stringUnicodeLength)
                         /= 2
                    )
     in
@@ -1663,6 +1663,11 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
         Print.exactly ("\"" ++ singleDoubleQuotedStringContentEscaped ++ "\"")
 
 
+stringUnicodeLength : String -> Int
+stringUnicodeLength string =
+    string |> String.foldl (\_ soFar -> soFar + 1) 0
+
+
 tripleDoubleQuotedStringEscapeDoubleQuotes : String -> String
 tripleDoubleQuotedStringEscapeDoubleQuotes string =
     let
@@ -1670,7 +1675,6 @@ tripleDoubleQuotedStringEscapeDoubleQuotes string =
         beforeLastCharEscaped =
             -- escape continuous double quotes if combined length >= 3
             string
-                |> String.slice 0 ((string |> String.length) - 1)
                 |> String.foldl
                     (\char soFar ->
                         case char of
@@ -1706,20 +1710,8 @@ tripleDoubleQuotedStringEscapeDoubleQuotes string =
                     }
     in
     beforeLastCharEscaped.result
-        ++ (case
-                string
-                    |> String.slice
-                        ((string |> String.length) - 1)
-                        (string |> String.length)
-            of
-                "\"" ->
-                    -- escape preceding continuous double quotes if they connect to the last char double quote
-                    String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\\\""
-                        ++ "\\\""
-
-                lastCharNotDoubleQuote ->
-                    String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\""
-                        ++ lastCharNotDoubleQuote
+        ++ (-- escape preceding continuous double quotes if they connect to the last char double quote
+            String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\\\""
            )
         ++ ""
 
@@ -1743,7 +1735,7 @@ singleDoubleQuotedStringCharToEscaped character =
             "\\u{000D}"
 
         otherCharacter ->
-            if characterIsPrint otherCharacter then
+            if characterIsNotPrint otherCharacter then
                 "\\u{" ++ characterHex otherCharacter ++ "}"
 
             else
@@ -1770,7 +1762,7 @@ tripleDoubleQuotedStringCharToEscaped character =
             "\u{000D}"
 
         otherCharacter ->
-            if characterIsPrint otherCharacter then
+            if characterIsNotPrint otherCharacter then
                 "\\u{" ++ characterHex otherCharacter ++ "}"
 
             else
@@ -1846,10 +1838,10 @@ characterHex character =
     String.toUpper (intToHexString (Char.toCode character))
 
 
-characterIsPrint : Char -> Bool
-characterIsPrint character =
+characterIsNotPrint : Char -> Bool
+characterIsNotPrint character =
     if
-        -- Unicode.getCategory is extremely expensive so we shortcut if at all possible
+        -- Unicode.getCategory is very expensive so we shortcut if at all possible
         Char.Extra.isLatinAlphaNumOrUnderscoreFast character
             || (character == ' ')
             || (character == '.')
@@ -1863,7 +1855,7 @@ characterIsPrint character =
     else
         case Unicode.getCategory character of
             Nothing ->
-                False
+                True
 
             Just category ->
                 case category of
@@ -1916,7 +1908,7 @@ characterIsPrint character =
                         False
 
                     Unicode.SeparatorSpace ->
-                        False
+                        True
 
                     Unicode.LetterModifier ->
                         False
@@ -1984,7 +1976,7 @@ quotedCharToEscaped character =
             "\\u{000D}"
 
         otherCharacter ->
-            if characterIsPrint otherCharacter then
+            if characterIsNotPrint otherCharacter then
                 "\\u{" ++ characterHex otherCharacter ++ "}"
 
             else
@@ -2032,7 +2024,7 @@ hexLiteral int =
            )
 
 
-stringResizePadLeftWith0s : Int -> (String -> String)
+stringResizePadLeftWith0s : Int -> String -> String
 stringResizePadLeftWith0s length unpaddedString =
     if length < (unpaddedString |> String.length) then
         String.left length unpaddedString
@@ -2257,7 +2249,7 @@ patternList syntaxComments syntaxList =
                 |> Print.followedBy
                     (case commentsInRange syntaxList.fullRange syntaxComments of
                         [] ->
-                            Print.empty
+                            printExactlySquareClosing
 
                         comment0 :: comment1Up ->
                             let
@@ -2271,8 +2263,8 @@ patternList syntaxComments syntaxList =
                                     (Print.emptyOrLinebreakIndented
                                         commentsCollapsed.lineSpread
                                     )
+                                |> Print.followedBy printExactlySquareClosing
                     )
-                |> Print.followedBy printExactlySquareClosing
 
         element0 :: element1Up ->
             let
@@ -2295,12 +2287,12 @@ patternList syntaxComments syntaxList =
                                 in
                                 { end = elementRange.end
                                 , reverse =
-                                    ((case
+                                    (case
                                         commentsInRange { start = soFar.end, end = elementRange.start }
                                             syntaxComments
-                                      of
+                                     of
                                         [] ->
-                                            Print.empty
+                                            elementPrint
 
                                         comment0 :: comment1Up ->
                                             let
@@ -2316,8 +2308,7 @@ patternList syntaxComments syntaxList =
                                                                 (\() -> elementPrint |> Print.lineSpread)
                                                         )
                                                     )
-                                     )
-                                        |> Print.followedBy elementPrint
+                                                |> Print.followedBy elementPrint
                                     )
                                         :: soFar.reverse
                                 }
@@ -2360,15 +2351,15 @@ patternList syntaxComments syntaxList =
                 |> Print.followedBy
                     (case commentsAfterElements of
                         Nothing ->
-                            Print.empty
+                            Print.spaceOrLinebreakIndented lineSpread
 
                         Just commentsCollapsibleAfterElements ->
                             Print.withIndentIncreasedBy 2
                                 (Print.spaceOrLinebreakIndented lineSpread
                                     |> Print.followedBy commentsCollapsibleAfterElements.print
                                 )
+                                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                     )
-                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                 |> Print.followedBy printExactlySquareClosing
 
 
@@ -2414,12 +2405,12 @@ patternCons syntaxComments syntaxCons =
                                     tailPatternNode
                         in
                         { reverse =
-                            ((case
+                            (case
                                 commentsInRange { start = soFar.end, end = tailPatternRange.start }
                                     syntaxComments
-                              of
+                             of
                                 [] ->
-                                    Print.empty
+                                    print
 
                                 comment0 :: comment1Up ->
                                     let
@@ -2435,8 +2426,7 @@ patternCons syntaxComments syntaxCons =
                                                         (\() -> print |> Print.lineSpread)
                                                 )
                                             )
-                             )
-                                |> Print.followedBy print
+                                        |> Print.followedBy print
                             )
                                 :: soFar.reverse
                         , end = tailPatternRange.end
@@ -2575,6 +2565,10 @@ patternAs syntaxComments syntaxAs =
             commentsCollapsibleBeforeAliasName.lineSpread
                 |> Print.lineSpreadMergeWith
                     (\() -> aliasedPatternPrint |> Print.lineSpread)
+
+        namePrint : Print
+        namePrint =
+            Print.exactly (syntaxAs.aliasNameNode |> Elm.Syntax.Node.value)
     in
     aliasedPatternPrint
         |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
@@ -2585,7 +2579,7 @@ patternAs syntaxComments syntaxAs =
                     |> Print.followedBy
                         (case commentsBeforeAliasName of
                             [] ->
-                                Print.empty
+                                namePrint
 
                             _ :: _ ->
                                 commentsCollapsibleBeforeAliasName.print
@@ -2593,9 +2587,8 @@ patternAs syntaxComments syntaxAs =
                                         (Print.spaceOrLinebreakIndented
                                             commentsCollapsibleBeforeAliasName.lineSpread
                                         )
+                                    |> Print.followedBy namePrint
                         )
-                    |> Print.followedBy
-                        (Print.exactly (syntaxAs.aliasNameNode |> Elm.Syntax.Node.value))
                 )
             )
 
@@ -2614,7 +2607,7 @@ patternRecord syntaxComments syntaxRecord =
                 |> Print.followedBy
                     (case commentsInRange syntaxRecord.fullRange syntaxComments of
                         [] ->
-                            Print.empty
+                            printExactlyCurlyClosing
 
                         comment0 :: comment1Up ->
                             let
@@ -2628,8 +2621,8 @@ patternRecord syntaxComments syntaxRecord =
                                     (Print.emptyOrLinebreakIndented
                                         commentsCollapsed.lineSpread
                                     )
+                                |> Print.followedBy printExactlyCurlyClosing
                     )
-                |> Print.followedBy printExactlyCurlyClosing
 
         field0 :: field1Up ->
             let
@@ -2643,9 +2636,9 @@ patternRecord syntaxComments syntaxRecord =
                             (\(Elm.Syntax.Node.Node elementRange fieldName) soFar ->
                                 { end = elementRange.end
                                 , reverse =
-                                    ((case commentsInRange { start = soFar.end, end = elementRange.start } syntaxComments of
+                                    (case commentsInRange { start = soFar.end, end = elementRange.start } syntaxComments of
                                         [] ->
-                                            Print.empty
+                                            Print.exactly fieldName
 
                                         comment0 :: comment1Up ->
                                             let
@@ -2656,8 +2649,7 @@ patternRecord syntaxComments syntaxRecord =
                                             commentsBefore.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented commentsBefore.lineSpread)
-                                     )
-                                        |> Print.followedBy (Print.exactly fieldName)
+                                                |> Print.followedBy (Print.exactly fieldName)
                                     )
                                         :: soFar.reverse
                                 }
@@ -2705,7 +2697,7 @@ patternRecord syntaxComments syntaxRecord =
                 |> Print.followedBy
                     (case maybeCommentsAfterFields of
                         Nothing ->
-                            Print.empty
+                            Print.spaceOrLinebreakIndented lineSpread
 
                         Just commentsAfterFields ->
                             -- yes, in record patterns trailing comments
@@ -2714,8 +2706,8 @@ patternRecord syntaxComments syntaxRecord =
                                 (Print.spaceOrLinebreakIndented lineSpread
                                     |> Print.followedBy commentsAfterFields.print
                                 )
+                                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                     )
-                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                 |> Print.followedBy printExactlyCurlyClosing
 
 
@@ -2858,13 +2850,18 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                             _ :: _ ->
                                 Print.MultipleLines
                     )
+
+        recordVariablePrint : Print
+        recordVariablePrint =
+            Print.exactly
+                (syntaxRecordExtension.recordVariable |> Elm.Syntax.Node.value)
     in
     printExactlyCurlyOpeningSpace
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
                 (case commentsBeforeRecordVariable of
                     [] ->
-                        Print.empty
+                        recordVariablePrint
 
                     _ :: _ ->
                         commentsCollapsibleBeforeRecordVariable.print
@@ -2872,13 +2869,8 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                 (Print.spaceOrLinebreakIndented
                                     commentsCollapsibleBeforeRecordVariable.lineSpread
                                 )
+                            |> Print.followedBy recordVariablePrint
                 )
-                |> Print.followedBy
-                    (Print.exactly
-                        (syntaxRecordExtension.recordVariable
-                            |> Elm.Syntax.Node.value
-                        )
-                    )
             )
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
@@ -2902,9 +2894,9 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                                     (\() -> field.valuePrint |> Print.lineSpread)
                                     in
                                     Print.withIndentIncreasedBy 2
-                                        (case field.maybeCommentsBeforeName of
+                                        ((case field.maybeCommentsBeforeName of
                                             Nothing ->
-                                                Print.empty
+                                                Print.exactly (fieldName ++ " :")
 
                                             Just commentsBeforeName ->
                                                 commentsBeforeName.print
@@ -2912,10 +2904,9 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                                         (Print.spaceOrLinebreakIndented
                                                             commentsBeforeName.lineSpread
                                                         )
-                                        )
-                                        |> Print.followedBy (Print.exactly (fieldName ++ " :"))
-                                        |> Print.followedBy
-                                            (Print.withIndentIncreasedBy 2
+                                                    |> Print.followedBy (Print.exactly (fieldName ++ " :"))
+                                         )
+                                            |> Print.followedBy
                                                 (Print.withIndentAtNextMultipleOf4
                                                     ((case field.maybeCommentsBetweenNameAndValue of
                                                         Nothing ->
@@ -2940,14 +2931,14 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                                         |> Print.followedBy field.valuePrint
                                                     )
                                                 )
-                                            )
+                                        )
                                 )
                                 (Print.emptyOrLinebreakIndented lineSpread
                                     |> Print.followedBy printExactlyCommaSpace
                                 )
                         )
-                    -- yes, elm-format indents trailing comments
-                    |> Print.followedBy
+                    |> -- yes, elm-format indents trailing comments
+                       Print.followedBy
                         (case commentsAfterFields of
                             [] ->
                                 Print.empty
@@ -2989,15 +2980,15 @@ construct specific syntaxComments syntaxConstruct =
                                     argument
                         in
                         { resultReverse =
-                            ((case
+                            (case
                                 commentsInRange
                                     { start = soFar.previousEnd
                                     , end = argument |> Elm.Syntax.Node.range |> .start
                                     }
                                     syntaxComments
-                              of
+                             of
                                 [] ->
-                                    Print.empty
+                                    print
 
                                 comment0 :: comment1Up ->
                                     let
@@ -3013,8 +3004,7 @@ construct specific syntaxComments syntaxConstruct =
                                                         (\() -> print |> Print.lineSpread)
                                                 )
                                             )
-                             )
-                                |> Print.followedBy print
+                                        |> Print.followedBy print
                             )
                                 :: soFar.resultReverse
                         , previousEnd = argument |> Elm.Syntax.Node.range |> .end
@@ -3120,9 +3110,9 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
     printExactlyParensOpeningSpace
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
-                ((case beforePart0Comments of
+                (case beforePart0Comments of
                     [] ->
-                        Print.empty
+                        part0Print
 
                     _ :: _ ->
                         beforePart0CommentsCollapsible.print
@@ -3133,8 +3123,7 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                                             (\() -> part0Print |> Print.lineSpread)
                                     )
                                 )
-                 )
-                    |> Print.followedBy part0Print
+                            |> Print.followedBy part0Print
                 )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
@@ -3143,7 +3132,7 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
             (Print.withIndentIncreasedBy 2
                 ((case beforePart1Comments of
                     [] ->
-                        Print.empty
+                        part1Print
 
                     _ :: _ ->
                         beforePart1CommentsCollapsible.print
@@ -3154,8 +3143,8 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
                                             (\() -> part1Print |> Print.lineSpread)
                                     )
                                 )
+                            |> Print.followedBy part1Print
                  )
-                    |> Print.followedBy part1Print
                     |> Print.followedBy
                         (case afterPart1Comments of
                             [] ->
@@ -3261,9 +3250,9 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
     printExactlyParensOpeningSpace
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
-                ((case beforePart0Comments of
+                (case beforePart0Comments of
                     [] ->
-                        Print.empty
+                        part0Print
 
                     _ :: _ ->
                         beforePart0CommentsCollapsible.print
@@ -3274,17 +3263,16 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                                             (\() -> part0Print |> Print.lineSpread)
                                     )
                                 )
-                 )
-                    |> Print.followedBy part0Print
+                            |> Print.followedBy part0Print
                 )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
         |> Print.followedBy printExactlyCommaSpace
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
-                ((case beforePart1Comments of
+                (case beforePart1Comments of
                     [] ->
-                        Print.empty
+                        part1Print
 
                     _ :: _ ->
                         beforePart1CommentsCollapsible.print
@@ -3295,8 +3283,7 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                                             (\() -> part1Print |> Print.lineSpread)
                                     )
                                 )
-                 )
-                    |> Print.followedBy part1Print
+                            |> Print.followedBy part1Print
                 )
             )
         |> Print.followedBy (Print.emptyOrLinebreakIndented lineSpread)
@@ -3305,7 +3292,7 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
             (Print.withIndentIncreasedBy 2
                 ((case beforePart2Comments of
                     [] ->
-                        Print.empty
+                        part2Print
 
                     _ :: _ ->
                         beforePart2CommentsCollapsible.print
@@ -3316,8 +3303,8 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
                                             (\() -> part2Print |> Print.lineSpread)
                                     )
                                 )
+                            |> Print.followedBy part2Print
                  )
-                    |> Print.followedBy part2Print
                     |> Print.followedBy
                         (case afterPart2Comments of
                             [] ->
@@ -3391,7 +3378,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                 |> Print.followedBy
                     (case commentsInRange syntaxRecord.fullRange syntaxComments of
                         [] ->
-                            Print.empty
+                            printExactlyCurlyClosing
 
                         comment0 :: comment1Up ->
                             let
@@ -3405,8 +3392,8 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                     (Print.emptyOrLinebreakIndented
                                         commentsCollapsed.lineSpread
                                     )
+                                |> Print.followedBy printExactlyCurlyClosing
                     )
-                |> Print.followedBy printExactlyCurlyClosing
 
         field0 :: field1Up ->
             let
@@ -3534,11 +3521,40 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                             }
                                             |> Print.lineSpreadMergeWith
                                                 (\() -> field.valuePrint |> Print.lineSpread)
+
+                                    nameSeparatorValuePrint : Print
+                                    nameSeparatorValuePrint =
+                                        Print.exactly (fieldName ++ " " ++ fieldSpecific.nameValueSeparator)
+                                            |> Print.followedBy
+                                                (Print.withIndentAtNextMultipleOf4
+                                                    ((case field.commentsBetweenNameAndValue of
+                                                        Nothing ->
+                                                            Print.spaceOrLinebreakIndented
+                                                                (lineSpreadBetweenNameAndValueNotConsideringComments ())
+
+                                                        Just commentsBetweenNameAndValue ->
+                                                            Print.spaceOrLinebreakIndented
+                                                                (commentsBetweenNameAndValue.lineSpread
+                                                                    |> Print.lineSpreadMergeWith
+                                                                        lineSpreadBetweenNameAndValueNotConsideringComments
+                                                                )
+                                                                |> Print.followedBy commentsBetweenNameAndValue.print
+                                                                |> Print.followedBy
+                                                                    (Print.spaceOrLinebreakIndented
+                                                                        (commentsBetweenNameAndValue.lineSpread
+                                                                            |> Print.lineSpreadMergeWith
+                                                                                (\() -> field.valuePrint |> Print.lineSpread)
+                                                                        )
+                                                                    )
+                                                     )
+                                                        |> Print.followedBy field.valuePrint
+                                                    )
+                                                )
                                 in
                                 Print.withIndentIncreasedBy 2
                                     (case field.commentsBeforeName of
                                         Nothing ->
-                                            Print.empty
+                                            nameSeparatorValuePrint
 
                                         Just commentsBeforeName ->
                                             commentsBeforeName.print
@@ -3546,35 +3562,8 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                                     (Print.spaceOrLinebreakIndented
                                                         commentsBeforeName.lineSpread
                                                     )
+                                                |> Print.followedBy nameSeparatorValuePrint
                                     )
-                                    |> Print.followedBy (Print.exactly (fieldName ++ " " ++ fieldSpecific.nameValueSeparator))
-                                    |> Print.followedBy
-                                        (Print.withIndentIncreasedBy 2
-                                            (Print.withIndentAtNextMultipleOf4
-                                                ((case field.commentsBetweenNameAndValue of
-                                                    Nothing ->
-                                                        Print.spaceOrLinebreakIndented
-                                                            (lineSpreadBetweenNameAndValueNotConsideringComments ())
-
-                                                    Just commentsBetweenNameAndValue ->
-                                                        Print.spaceOrLinebreakIndented
-                                                            (commentsBetweenNameAndValue.lineSpread
-                                                                |> Print.lineSpreadMergeWith
-                                                                    lineSpreadBetweenNameAndValueNotConsideringComments
-                                                            )
-                                                            |> Print.followedBy commentsBetweenNameAndValue.print
-                                                            |> Print.followedBy
-                                                                (Print.spaceOrLinebreakIndented
-                                                                    (commentsBetweenNameAndValue.lineSpread
-                                                                        |> Print.lineSpreadMergeWith
-                                                                            (\() -> field.valuePrint |> Print.lineSpread)
-                                                                    )
-                                                                )
-                                                 )
-                                                    |> Print.followedBy field.valuePrint
-                                                )
-                                            )
-                                        )
                             )
                             (Print.emptyOrLinebreakIndented lineSpread
                                 |> Print.followedBy printExactlyCommaSpace
@@ -3583,14 +3572,14 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                 |> Print.followedBy
                     (case commentsAfterFields of
                         [] ->
-                            Print.empty
+                            Print.spaceOrLinebreakIndented lineSpread
 
                         comment0 :: comment1Up ->
                             Print.linebreak
                                 |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                                 |> Print.followedBy (comments (comment0 :: comment1Up))
+                                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                     )
-                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                 |> Print.followedBy printExactlyCurlyClosing
 
 
@@ -3999,27 +3988,27 @@ parenthesized printNotParenthesized syntax syntaxComments =
             (Print.withIndentIncreasedBy 1
                 ((case commentsBeforeInner of
                     [] ->
-                        Print.empty
+                        notParenthesizedPrint
 
                     _ :: _ ->
                         commentsBeforeInnerCollapsible.print
                             |> Print.followedBy
                                 (Print.spaceOrLinebreakIndented lineSpread)
+                            |> Print.followedBy notParenthesizedPrint
                  )
-                    |> Print.followedBy notParenthesizedPrint
                     |> Print.followedBy
                         (case commentsAfterInner of
                             [] ->
-                                Print.empty
+                                Print.emptyOrLinebreakIndented lineSpread
 
                             _ :: _ ->
                                 Print.spaceOrLinebreakIndented lineSpread
                                     |> Print.followedBy
                                         commentsAfterInnerCollapsible.print
+                                    |> Print.followedBy
+                                        (Print.emptyOrLinebreakIndented lineSpread)
                         )
                 )
-                |> Print.followedBy
-                    (Print.emptyOrLinebreakIndented lineSpread)
             )
         |> Print.followedBy printExactlyParensClosing
 
@@ -4465,7 +4454,7 @@ declarationPort :
 declarationPort syntaxComments signature =
     (case syntaxComments.documentationComment of
         Nothing ->
-            Print.empty
+            printExactlyPortSpace
 
         Just (Elm.Syntax.Node.Node documentationRange documentation) ->
             Print.exactly documentation
@@ -4482,8 +4471,8 @@ declarationPort syntaxComments signature =
                             syntaxComments.comments
                         )
                     )
+                |> Print.followedBy printExactlyPortSpace
     )
-        |> Print.followedBy printExactlyPortSpace
         |> Print.followedBy (declarationSignature syntaxComments.comments signature)
 
 
@@ -4504,15 +4493,18 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                             parameterPrintedRange : Elm.Syntax.Range.Range
                             parameterPrintedRange =
                                 parameterName |> Elm.Syntax.Node.range
+
+                            parameterNamePrint =
+                                Print.exactly (parameterName |> Elm.Syntax.Node.value)
                         in
                         { prints =
-                            ((case
+                            (case
                                 commentsInRange
                                     { start = soFar.end, end = parameterPrintedRange.start }
                                     syntaxComments
-                              of
+                             of
                                 [] ->
-                                    Print.empty
+                                    parameterNamePrint
 
                                 comment0 :: comment1Up ->
                                     let
@@ -4525,9 +4517,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                                             (Print.spaceOrLinebreakIndented
                                                 commentsCollapsible.lineSpread
                                             )
-                             )
-                                |> Print.followedBy
-                                    (Print.exactly (parameterName |> Elm.Syntax.Node.value))
+                                        |> Print.followedBy parameterNamePrint
                             )
                                 :: soFar.prints
                         , end = parameterPrintedRange.end
@@ -4563,10 +4553,15 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                             |> .end
                     , end = syntaxTypeAliasDeclaration.typeAnnotation |> Elm.Syntax.Node.range |> .start
                     }
+
+        aliasedTypePrint : Print
+        aliasedTypePrint =
+            typeNotParenthesized syntaxComments
+                syntaxTypeAliasDeclaration.typeAnnotation
     in
     (case syntaxTypeAliasDeclaration.documentation of
         Nothing ->
-            Print.empty
+            printExactlyTypeSpaceAlias
 
         Just (Elm.Syntax.Node.Node documentationRange documentation) ->
             Print.exactly documentation
@@ -4583,8 +4578,8 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                             syntaxComments
                         )
                     )
+                |> Print.followedBy printExactlyTypeSpaceAlias
     )
-        |> Print.followedBy printExactlyTypeSpaceAlias
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented parametersLineSpread
@@ -4607,15 +4602,12 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                             |> Print.followedBy
                                 (case commentsInRange rangeBetweenParametersAndType syntaxComments of
                                     [] ->
-                                        Print.empty
+                                        aliasedTypePrint
 
                                     comment0 :: comment1Up ->
                                         comments (comment0 :: comment1Up)
                                             |> Print.followedBy Print.linebreakIndented
-                                )
-                            |> Print.followedBy
-                                (typeNotParenthesized syntaxComments
-                                    syntaxTypeAliasDeclaration.typeAnnotation
+                                            |> Print.followedBy aliasedTypePrint
                                 )
                         )
                 )
@@ -4637,20 +4629,24 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
         parameterPrints =
             syntaxChoiceTypeDeclaration.generics
                 |> List.foldl
-                    (\parameterPattern soFar ->
+                    (\parameterName soFar ->
                         let
                             parameterPrintedRange : Elm.Syntax.Range.Range
                             parameterPrintedRange =
-                                parameterPattern |> Elm.Syntax.Node.range
+                                parameterName |> Elm.Syntax.Node.range
+
+                            parameterNamePrint : Print
+                            parameterNamePrint =
+                                Print.exactly (parameterName |> Elm.Syntax.Node.value)
                         in
                         { reverse =
-                            ((case
+                            (case
                                 commentsInRange
                                     { start = soFar.end, end = parameterPrintedRange.start }
                                     syntaxComments
-                              of
+                             of
                                 [] ->
-                                    Print.empty
+                                    parameterNamePrint
 
                                 comment0 :: comment1Up ->
                                     let
@@ -4663,9 +4659,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                             (Print.spaceOrLinebreakIndented
                                                 commentsCollapsible.lineSpread
                                             )
-                             )
-                                |> Print.followedBy
-                                    (Print.exactly (parameterPattern |> Elm.Syntax.Node.value))
+                                        |> Print.followedBy parameterNamePrint
                             )
                                 :: soFar.reverse
                         , end = parameterPrintedRange.end
@@ -4703,9 +4697,9 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
 
                             commentsVariantPrint : Print
                             commentsVariantPrint =
-                                (case commentsInRange { start = soFar.end, end = variant.name |> Elm.Syntax.Node.range |> .start } syntaxComments of
+                                case commentsInRange { start = soFar.end, end = variant.name |> Elm.Syntax.Node.range |> .start } syntaxComments of
                                     [] ->
-                                        Print.empty
+                                        variantPrint
 
                                     comment0 :: comment1Up ->
                                         let
@@ -4721,8 +4715,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                                             (\() -> variantPrint |> Print.lineSpread)
                                                     )
                                                 )
-                                )
-                                    |> Print.followedBy variantPrint
+                                            |> Print.followedBy variantPrint
                         in
                         { prints = commentsVariantPrint :: soFar.prints
                         , end = variantRange.end
@@ -4735,7 +4728,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
     in
     (case syntaxChoiceTypeDeclaration.documentation of
         Nothing ->
-            Print.empty
+            printExactlyType
 
         Just (Elm.Syntax.Node.Node documentationRange documentation) ->
             Print.exactly documentation
@@ -4752,8 +4745,8 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                             syntaxComments
                         )
                     )
+                |> Print.followedBy printExactlyType
     )
-        |> Print.followedBy printExactlyType
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
                 (Print.spaceOrLinebreakIndented parametersLineSpread
@@ -4836,13 +4829,13 @@ declarationExpressionImplementation syntaxComments implementation =
                                 patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
                         in
                         { reverse =
-                            ((case
+                            (case
                                 commentsInRange
                                     { start = soFar.end, end = parameterRange.start }
                                     syntaxComments
-                              of
+                             of
                                 [] ->
-                                    Print.empty
+                                    parameterPrint
 
                                 comment0 :: comment1Up ->
                                     let
@@ -4858,8 +4851,7 @@ declarationExpressionImplementation syntaxComments implementation =
                                                         (\() -> parameterPrint |> Print.lineSpread)
                                                 )
                                             )
-                             )
-                                |> Print.followedBy parameterPrint
+                                        |> Print.followedBy parameterPrint
                             )
                                 :: soFar.reverse
                         , end = parameterRange.end
@@ -4888,6 +4880,11 @@ declarationExpressionImplementation syntaxComments implementation =
                         |> .start
                 }
                 syntaxComments
+
+        expressionPrint : Print
+        expressionPrint =
+            expressionNotParenthesized syntaxComments
+                implementation.expression
     in
     Print.exactly (implementation.name |> Elm.Syntax.Node.value)
         |> Print.followedBy
@@ -4905,15 +4902,12 @@ declarationExpressionImplementation syntaxComments implementation =
                             |> Print.followedBy
                                 (case commentsBetweenParametersAndResult of
                                     [] ->
-                                        Print.empty
+                                        expressionPrint
 
                                     comment0 :: comment1Up ->
                                         comments (comment0 :: comment1Up)
                                             |> Print.followedBy Print.linebreakIndented
-                                )
-                            |> Print.followedBy
-                                (expressionNotParenthesized syntaxComments
-                                    implementation.expression
+                                            |> Print.followedBy expressionPrint
                                 )
                         )
                 )
@@ -4940,33 +4934,18 @@ declarationExpression :
     -> Elm.Syntax.Expression.Function
     -> Print
 declarationExpression syntaxComments syntaxExpressionDeclaration =
-    (case syntaxExpressionDeclaration.documentation of
-        Nothing ->
-            Print.empty
+    let
+        implementationPrint : Print
+        implementationPrint =
+            declarationExpressionImplementation
+                syntaxComments
+                (syntaxExpressionDeclaration.declaration |> Elm.Syntax.Node.value)
 
-        Just (Elm.Syntax.Node.Node documentationRange documentation) ->
-            Print.exactly documentation
-                |> Print.followedBy Print.linebreak
-                |> Print.followedBy
-                    (commentsBetweenDocumentationAndDeclaration
-                        (commentsInRange
-                            { start = documentationRange.start
-                            , end =
-                                case syntaxExpressionDeclaration.signature of
-                                    Nothing ->
-                                        syntaxExpressionDeclaration.declaration |> Elm.Syntax.Node.range |> .start
-
-                                    Just (Elm.Syntax.Node.Node signatureRange _) ->
-                                        signatureRange.start
-                            }
-                            syntaxComments
-                        )
-                    )
-    )
-        |> Print.followedBy
-            (case syntaxExpressionDeclaration.signature of
+        withoutDocumentationPrint : Print
+        withoutDocumentationPrint =
+            case syntaxExpressionDeclaration.signature of
                 Nothing ->
-                    Print.empty
+                    implementationPrint
 
                 Just (Elm.Syntax.Node.Node signatureRange signature) ->
                     let
@@ -4986,20 +4965,39 @@ declarationExpression syntaxComments syntaxExpressionDeclaration =
                         |> Print.followedBy
                             (case commentsBetweenSignatureAndImplementationName of
                                 [] ->
-                                    Print.empty
+                                    implementationPrint
 
                                 comment0 :: comment1Up ->
                                     printLinebreakLinebreakLinebreak
                                         |> Print.followedBy
                                             (moduleLevelComments (comment0 :: comment1Up))
                                         |> Print.followedBy printLinebreakLinebreak
+                                        |> Print.followedBy implementationPrint
                             )
-            )
-        |> Print.followedBy
-            (declarationExpressionImplementation
-                syntaxComments
-                (syntaxExpressionDeclaration.declaration |> Elm.Syntax.Node.value)
-            )
+    in
+    case syntaxExpressionDeclaration.documentation of
+        Nothing ->
+            withoutDocumentationPrint
+
+        Just (Elm.Syntax.Node.Node documentationRange documentation) ->
+            Print.exactly documentation
+                |> Print.followedBy Print.linebreak
+                |> Print.followedBy
+                    (commentsBetweenDocumentationAndDeclaration
+                        (commentsInRange
+                            { start = documentationRange.start
+                            , end =
+                                case syntaxExpressionDeclaration.signature of
+                                    Nothing ->
+                                        syntaxExpressionDeclaration.declaration |> Elm.Syntax.Node.range |> .start
+
+                                    Just (Elm.Syntax.Node.Node signatureRange _) ->
+                                        signatureRange.start
+                            }
+                            syntaxComments
+                        )
+                    )
+                |> Print.followedBy withoutDocumentationPrint
 
 
 expressionParenthesized :
@@ -5401,15 +5399,15 @@ expressionCall syntaxComments syntaxCall =
                                 expressionParenthesizedIfSpaceSeparated syntaxComments argument
                         in
                         { resultReverse =
-                            ((case
+                            (case
                                 commentsInRange
                                     { start = soFar.previousEnd
                                     , end = argument |> Elm.Syntax.Node.range |> .start
                                     }
                                     syntaxComments
-                              of
+                             of
                                 [] ->
-                                    Print.empty
+                                    print
 
                                 comment0 :: comment1Up ->
                                     let
@@ -5425,8 +5423,7 @@ expressionCall syntaxComments syntaxCall =
                                                         (\() -> print |> Print.lineSpread)
                                                 )
                                             )
-                             )
-                                |> Print.followedBy print
+                                        |> Print.followedBy print
                             )
                                 :: soFar.resultReverse
                         , previousEnd = argument |> Elm.Syntax.Node.range |> .end
@@ -5472,7 +5469,7 @@ expressionCall syntaxComments syntaxCall =
                     |> Print.followedBy
                         (case commentsBeforeArgument0 of
                             [] ->
-                                Print.empty
+                                argument0Print
 
                             _ :: _ ->
                                 collapsibleCommentsBeforeArgument0.print
@@ -5483,8 +5480,8 @@ expressionCall syntaxComments syntaxCall =
                                                     (\() -> argument0Print |> Print.lineSpread)
                                             )
                                         )
+                                    |> Print.followedBy argument0Print
                         )
-                    |> Print.followedBy argument0Print
                     |> Print.followedBy
                         (argument1UpPrintsWithCommentsBeforeReverse
                             |> Print.listReverseAndMapAndFlatten
@@ -5659,7 +5656,7 @@ expressionOperation syntaxComments syntaxOperation =
                                     |> Print.followedBy
                                         (case commentsBeforeRightestExpression of
                                             [] ->
-                                                Print.empty
+                                                expressionPrint
 
                                             _ :: _ ->
                                                 commentsCollapsibleBeforeRightestExpression.print
@@ -5670,8 +5667,8 @@ expressionOperation syntaxComments syntaxOperation =
                                                                     (\() -> expressionPrint |> Print.lineSpread)
                                                             )
                                                         )
+                                                    |> Print.followedBy expressionPrint
                                         )
-                                    |> Print.followedBy expressionPrint
                                 )
                             )
 
@@ -5679,24 +5676,20 @@ expressionOperation syntaxComments syntaxOperation =
                     let
                         expressionPrint : Print
                         expressionPrint =
-                            if operationExpanded.rightestExpression |> expressionIsSpaceSeparatedExceptApplication then
-                                Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
-                                    (expressionParenthesized syntaxComments operationExpanded.rightestExpression)
-
-                            else
-                                expressionNotParenthesized syntaxComments operationExpanded.rightestExpression
+                            expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
+                                operationExpanded.rightestExpression
                     in
                     Print.withIndentAtNextMultipleOf4
                         (Print.spaceOrLinebreakIndented lineSpread
                             |> Print.followedBy (Print.exactly (nonApLOperator ++ " "))
                             |> Print.followedBy
-                                (case commentsBeforeRightestExpression of
-                                    [] ->
-                                        Print.empty
+                                (Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
+                                    (case commentsBeforeRightestExpression of
+                                        [] ->
+                                            expressionPrint
 
-                                    _ :: _ ->
-                                        Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
-                                            (commentsCollapsibleBeforeRightestExpression.print
+                                        _ :: _ ->
+                                            commentsCollapsibleBeforeRightestExpression.print
                                                 |> Print.followedBy
                                                     (Print.spaceOrLinebreakIndented
                                                         (commentsCollapsibleBeforeRightestExpression.lineSpread
@@ -5704,9 +5697,9 @@ expressionOperation syntaxComments syntaxOperation =
                                                                 (\() -> expressionPrint |> Print.lineSpread)
                                                         )
                                                     )
-                                            )
+                                                |> Print.followedBy expressionPrint
+                                    )
                                 )
-                            |> Print.followedBy expressionPrint
                         )
     in
     leftestPrint
@@ -5724,7 +5717,7 @@ expressionOperation syntaxComments syntaxOperation =
                                                 |> Print.followedBy
                                                     (case operatorExpression.maybeCommentsBeforeExpression of
                                                         Nothing ->
-                                                            Print.empty
+                                                            operatorExpression.expressionPrint
 
                                                         Just commentsBeforeExpression ->
                                                             commentsBeforeExpression.print
@@ -5735,8 +5728,8 @@ expressionOperation syntaxComments syntaxOperation =
                                                                                 (\() -> operatorExpression.expressionPrint |> Print.lineSpread)
                                                                         )
                                                                     )
+                                                                |> Print.followedBy operatorExpression.expressionPrint
                                                     )
-                                                |> Print.followedBy operatorExpression.expressionPrint
                                                 |> Print.followedBy chainRightPrint
                                             )
                                         )
@@ -5746,13 +5739,13 @@ expressionOperation syntaxComments syntaxOperation =
                                     (Print.spaceOrLinebreakIndented lineSpread
                                         |> Print.followedBy (Print.exactly (nonApLOperator ++ " "))
                                         |> Print.followedBy
-                                            (case operatorExpression.maybeCommentsBeforeExpression of
-                                                Nothing ->
-                                                    Print.empty
+                                            (Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
+                                                (case operatorExpression.maybeCommentsBeforeExpression of
+                                                    Nothing ->
+                                                        operatorExpression.expressionPrint
 
-                                                Just commentsBeforeExpression ->
-                                                    Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
-                                                        (commentsBeforeExpression.print
+                                                    Just commentsBeforeExpression ->
+                                                        commentsBeforeExpression.print
                                                             |> Print.followedBy
                                                                 (Print.spaceOrLinebreakIndented
                                                                     (commentsBeforeExpression.lineSpread
@@ -5760,15 +5753,9 @@ expressionOperation syntaxComments syntaxOperation =
                                                                             (\() -> operatorExpression.expressionPrint |> Print.lineSpread)
                                                                     )
                                                                 )
-                                                        )
-                                            )
-                                        |> Print.followedBy
-                                            (if operatorExpression.expression |> expressionIsSpaceSeparatedExceptApplication then
-                                                Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
-                                                    operatorExpression.expressionPrint
-
-                                             else
-                                                operatorExpression.expressionPrint
+                                                            |> Print.followedBy
+                                                                operatorExpression.expressionPrint
+                                                )
                                             )
                                     )
                                     |> Print.followedBy chainRightPrint
@@ -5925,7 +5912,7 @@ expressionList syntaxComments syntaxList =
                 |> Print.followedBy
                     (case commentsInRange syntaxList.fullRange syntaxComments of
                         [] ->
-                            Print.empty
+                            printExactlySquareClosing
 
                         comment0 :: comment1Up ->
                             let
@@ -5939,8 +5926,8 @@ expressionList syntaxComments syntaxList =
                                     (Print.emptyOrLinebreakIndented
                                         commentsCollapsed.lineSpread
                                     )
+                                |> Print.followedBy printExactlySquareClosing
                     )
-                |> Print.followedBy printExactlySquareClosing
 
         element0 :: element1Up ->
             let
@@ -5963,12 +5950,12 @@ expressionList syntaxComments syntaxList =
                                 in
                                 { end = elementRange.end
                                 , reverse =
-                                    ((case
+                                    (case
                                         commentsInRange { start = soFar.end, end = elementRange.start }
                                             syntaxComments
-                                      of
+                                     of
                                         [] ->
-                                            Print.empty
+                                            print
 
                                         comment0 :: comment1Up ->
                                             let
@@ -5984,8 +5971,7 @@ expressionList syntaxComments syntaxList =
                                                                 (\() -> print |> Print.lineSpread)
                                                         )
                                                     )
-                                     )
-                                        |> Print.followedBy print
+                                                |> Print.followedBy print
                                     )
                                         :: soFar.reverse
                                 }
@@ -6031,14 +6017,14 @@ expressionList syntaxComments syntaxList =
                 |> Print.followedBy
                     (case commentsAfterElements of
                         [] ->
-                            Print.empty
+                            Print.spaceOrLinebreakIndented lineSpread
 
                         comment0 :: comment1Up ->
                             Print.linebreak
                                 |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                                 |> Print.followedBy (comments (comment0 :: comment1Up))
+                                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                     )
-                |> Print.followedBy (Print.spaceOrLinebreakIndented lineSpread)
                 |> Print.followedBy printExactlySquareClosing
 
 
@@ -6086,7 +6072,7 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                                         syntaxComments
                                  of
                                     [] ->
-                                        Print.empty
+                                        Print.exactly (fieldName ++ " =")
 
                                     comment0 :: comment1Up ->
                                         let
@@ -6097,8 +6083,8 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                                         commentsBeforeName.print
                                             |> Print.followedBy
                                                 (Print.spaceOrLinebreakIndented commentsBeforeName.lineSpread)
+                                            |> Print.followedBy (Print.exactly (fieldName ++ " ="))
                                 )
-                                |> Print.followedBy (Print.exactly (fieldName ++ " ="))
                                 |> Print.followedBy
                                     (Print.withIndentAtNextMultipleOf4
                                         ((case
@@ -6193,25 +6179,25 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                         fieldPrintsWithCommentsBefore.reverse
                             |> Print.lineSpreadListMapAndCombine Print.lineSpread
                     )
+
+        recordVariablePrint : Print
+        recordVariablePrint =
+            Print.exactly
+                (syntaxRecordUpdate.recordVariable |> Elm.Syntax.Node.value)
     in
     printExactlyCurlyOpeningSpace
         |> Print.followedBy
             (Print.withIndentIncreasedBy 2
                 (case maybeCommentsBeforeRecordVariable of
                     Nothing ->
-                        Print.empty
+                        recordVariablePrint
 
                     Just commentsCollapsibleBeforeRecordVariable ->
                         commentsCollapsibleBeforeRecordVariable.print
                             |> Print.followedBy
                                 (Print.spaceOrLinebreakIndented commentsCollapsibleBeforeRecordVariable.lineSpread)
+                            |> Print.followedBy recordVariablePrint
                 )
-                |> Print.followedBy
-                    (Print.exactly
-                        (syntaxRecordUpdate.recordVariable
-                            |> Elm.Syntax.Node.value
-                        )
-                    )
             )
         |> Print.followedBy
             (Print.withIndentAtNextMultipleOf4
@@ -6224,8 +6210,8 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                                     |> Print.followedBy printExactlyCommaSpace
                                 )
                         )
-                    -- yes, elm-format indents trailing comments
-                    |> Print.followedBy
+                    |> -- yes, elm-format indents trailing comments
+                       Print.followedBy
                         (case commentsAfterFields of
                             [] ->
                                 Print.empty
@@ -6265,13 +6251,13 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                                 patternParenthesizedIfSpaceSeparated syntaxComments parameterPattern
                         in
                         { reverse =
-                            ((case
+                            (case
                                 commentsInRange
                                     { start = soFar.end, end = parameterRange.start }
                                     syntaxComments
-                              of
+                             of
                                 [] ->
-                                    Print.empty
+                                    print
 
                                 comment0 :: comment1Up ->
                                     let
@@ -6287,8 +6273,7 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                                                         (\() -> print |> Print.lineSpread)
                                                 )
                                             )
-                             )
-                                |> Print.followedBy print
+                                        |> Print.followedBy print
                             )
                                 :: soFar.reverse
                         , end = parameterRange.end
@@ -6426,13 +6411,13 @@ expressionIfThenElse syntaxComments syntaxIfThenElse =
                     |> Print.followedBy
                         (case commentsBeforeCondition of
                             [] ->
-                                Print.empty
+                                conditionPrint
 
                             comment0 :: comment1Up ->
                                 comments (comment0 :: comment1Up)
                                     |> Print.followedBy Print.linebreakIndented
+                                    |> Print.followedBy conditionPrint
                         )
-                    |> Print.followedBy conditionPrint
                 )
             )
         |> Print.followedBy (Print.spaceOrLinebreakIndented conditionLineSpread)
@@ -6443,13 +6428,13 @@ expressionIfThenElse syntaxComments syntaxIfThenElse =
                     |> Print.followedBy
                         (case commentsBeforeOnTrue of
                             [] ->
-                                Print.empty
+                                onTruePrint
 
                             comment0 :: comment1Up ->
                                 comments (comment0 :: comment1Up)
                                     |> Print.followedBy Print.linebreakIndented
+                                    |> Print.followedBy onTruePrint
                         )
-                    |> Print.followedBy onTruePrint
                     |> Print.followedBy Print.linebreak
                 )
             )
@@ -6489,19 +6474,23 @@ expressionIfThenElse syntaxComments syntaxIfThenElse =
                                     )
 
                 _ ->
+                    let
+                        onFalsePrint : Print
+                        onFalsePrint =
+                            expressionNotParenthesized syntaxComments syntaxIfThenElse.onFalse
+                    in
                     Print.withIndentAtNextMultipleOf4
                         (Print.linebreakIndented
                             |> Print.followedBy
                                 (case commentsBeforeOnFalse of
                                     [] ->
-                                        Print.empty
+                                        onFalsePrint
 
                                     comment0 :: comment1Up ->
                                         comments (comment0 :: comment1Up)
                                             |> Print.followedBy Print.linebreakIndented
+                                            |> Print.followedBy onFalsePrint
                                 )
-                            |> Print.followedBy
-                                (expressionNotParenthesized syntaxComments syntaxIfThenElse.onFalse)
                         )
             )
 
@@ -6532,6 +6521,11 @@ expressionCaseOf syntaxComments syntaxCaseOf =
 
                 [] ->
                     lineSpreadInNode syntaxCaseOf.expression
+
+        casedExpressionPrint : Print
+        casedExpressionPrint =
+            expressionNotParenthesized syntaxComments
+                syntaxCaseOf.expression
     in
     printExactlyCase
         |> Print.followedBy
@@ -6540,15 +6534,12 @@ expressionCaseOf syntaxComments syntaxCaseOf =
                     |> Print.followedBy
                         (case commentsBeforeCasedExpression of
                             [] ->
-                                Print.empty
+                                casedExpressionPrint
 
                             comment0 :: comment1Up ->
                                 comments (comment0 :: comment1Up)
                                     |> Print.followedBy Print.linebreakIndented
-                        )
-                    |> Print.followedBy
-                        (expressionNotParenthesized syntaxComments
-                            syntaxCaseOf.expression
+                                    |> Print.followedBy casedExpressionPrint
                         )
                 )
             )
@@ -6571,19 +6562,20 @@ expressionCaseOf syntaxComments syntaxCaseOf =
                                                 }
                                                 syntaxComments
 
+                                        casePrint : Print
+                                        casePrint =
+                                            case_ syntaxComments ( casePattern, caseResult )
+
                                         commentsAndCasePrint : Print
                                         commentsAndCasePrint =
-                                            (case commentsBeforeCasePattern of
+                                            case commentsBeforeCasePattern of
                                                 [] ->
-                                                    Print.empty
+                                                    casePrint
 
                                                 comment0 :: comment1Up ->
                                                     comments (comment0 :: comment1Up)
-                                                        |> Print.followedBy
-                                                            Print.linebreakIndented
-                                            )
-                                                |> Print.followedBy
-                                                    (case_ syntaxComments ( casePattern, caseResult ))
+                                                        |> Print.followedBy Print.linebreakIndented
+                                                        |> Print.followedBy casePrint
                                     in
                                     { end = caseResult |> Elm.Syntax.Node.range |> .end
                                     , reverse = commentsAndCasePrint :: soFar.reverse
@@ -6627,20 +6619,22 @@ expressionLetIn syntaxComments syntaxLetIn =
 
                             letDeclarationPrint : Print
                             letDeclarationPrint =
-                                (case commentsBefore of
+                                expressionLetDeclaration syntaxComments letDeclaration
+
+                            letDeclarationWithCommentsBeforePrint : Print
+                            letDeclarationWithCommentsBeforePrint =
+                                case commentsBefore of
                                     [] ->
-                                        Print.empty
+                                        letDeclarationPrint
 
                                     comment0 :: comment1Up ->
                                         comments (comment0 :: comment1Up)
                                             |> Print.followedBy Print.linebreakIndented
-                                )
-                                    |> Print.followedBy
-                                        (expressionLetDeclaration syntaxComments letDeclaration)
+                                            |> Print.followedBy letDeclarationPrint
                         in
                         { end = letDeclarationRange.end
                         , reverse =
-                            letDeclarationPrint :: soFar.reverse
+                            letDeclarationWithCommentsBeforePrint :: soFar.reverse
                         }
                     )
                     { end = syntaxLetIn.fullRange.start
@@ -6657,6 +6651,10 @@ expressionLetIn syntaxComments syntaxLetIn =
                         |> .start
                 }
                 syntaxComments
+
+        letInResultPrint : Print
+        letInResultPrint =
+            expressionNotParenthesized syntaxComments syntaxLetIn.result
     in
     printExactlyLet
         |> Print.followedBy
@@ -6673,14 +6671,13 @@ expressionLetIn syntaxComments syntaxLetIn =
         |> Print.followedBy
             (case commentsBeforeResult of
                 [] ->
-                    Print.empty
+                    letInResultPrint
 
                 comment0 :: comment1Up ->
                     comments (comment0 :: comment1Up)
                         |> Print.followedBy Print.linebreakIndented
+                        |> Print.followedBy letInResultPrint
             )
-        |> Print.followedBy
-            (expressionNotParenthesized syntaxComments syntaxLetIn.result)
 
 
 expressionLetDeclaration :
@@ -6690,9 +6687,15 @@ expressionLetDeclaration :
 expressionLetDeclaration syntaxComments letDeclaration =
     case letDeclaration of
         Elm.Syntax.Expression.LetFunction letDeclarationExpression ->
-            (case letDeclarationExpression.signature of
+            let
+                implementationPrint : Print
+                implementationPrint =
+                    declarationExpressionImplementation syntaxComments
+                        (letDeclarationExpression.declaration |> Elm.Syntax.Node.value)
+            in
+            case letDeclarationExpression.signature of
                 Nothing ->
-                    Print.empty
+                    implementationPrint
 
                 Just (Elm.Syntax.Node.Node signatureRange signature) ->
                     let
@@ -6711,19 +6714,15 @@ expressionLetDeclaration syntaxComments letDeclaration =
                         |> Print.followedBy
                             (case commentsBetweenSignatureAndImplementationName of
                                 [] ->
-                                    Print.empty
+                                    Print.linebreakIndented
 
                                 comment0 :: comment1Up ->
                                     Print.linebreakIndented
                                         |> Print.followedBy
                                             (comments (comment0 :: comment1Up))
+                                        |> Print.followedBy Print.linebreakIndented
                             )
-                        |> Print.followedBy Print.linebreakIndented
-            )
-                |> Print.followedBy
-                    (declarationExpressionImplementation syntaxComments
-                        (letDeclarationExpression.declaration |> Elm.Syntax.Node.value)
-                    )
+                        |> Print.followedBy implementationPrint
 
         Elm.Syntax.Expression.LetDestructuring destructuringPattern destructuredExpression ->
             let
@@ -6738,6 +6737,11 @@ expressionLetDeclaration syntaxComments letDeclaration =
                 destructuringPatternPrint : Print
                 destructuringPatternPrint =
                     patternParenthesizedIfSpaceSeparated syntaxComments destructuringPattern
+
+                destructuredExpressionPrint : Print
+                destructuredExpressionPrint =
+                    expressionNotParenthesized syntaxComments
+                        destructuredExpression
             in
             destructuringPatternPrint
                 |> Print.followedBy
@@ -6748,16 +6752,13 @@ expressionLetDeclaration syntaxComments letDeclaration =
                             |> Print.followedBy
                                 (case commentsBeforeDestructuredExpression of
                                     [] ->
-                                        Print.empty
+                                        destructuredExpressionPrint
 
                                     comment0 :: comment1Up ->
                                         comments (comment0 :: comment1Up)
                                             |> Print.followedBy
                                                 Print.linebreakIndented
-                                )
-                            |> Print.followedBy
-                                (expressionNotParenthesized syntaxComments
-                                    destructuredExpression
+                                            |> Print.followedBy destructuredExpressionPrint
                                 )
                         )
                     )
@@ -6814,6 +6815,10 @@ case_ syntaxComments ( casePattern, caseResult ) =
                 , end = caseResult |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
+
+        caseResultPrint : Print
+        caseResultPrint =
+            expressionNotParenthesized syntaxComments caseResult
     in
     patternPrint
         |> Print.followedBy
@@ -6825,14 +6830,13 @@ case_ syntaxComments ( casePattern, caseResult ) =
                     |> Print.followedBy
                         (case commentsBeforeExpression of
                             [] ->
-                                Print.empty
+                                caseResultPrint
 
                             comment0 :: comment1Up ->
                                 comments (comment0 :: comment1Up)
                                     |> Print.followedBy Print.linebreakIndented
+                                    |> Print.followedBy caseResultPrint
                         )
-                    |> Print.followedBy
-                        (expressionNotParenthesized syntaxComments caseResult)
                 )
             )
 

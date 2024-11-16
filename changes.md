@@ -1,6 +1,8 @@
 #### 1.1.6
   - in module `ElmSyntaxParserLenient`
       - actually corrects `(...)` in all places
+  - in module `ElmSyntaxPrint`
+      - faster
 
 #### 1.1.5
   - in module `ElmSyntaxParserLenient`
