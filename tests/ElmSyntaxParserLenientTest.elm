@@ -32,22 +32,7 @@ all =
                 )
                 ElmSyntaxParserLenientTestFullModules.allSamples
             )
-        , -- , describe "Error messages" <|
-          --     [ test "failure on module name" <|
-          --         \() ->
-          --             Parser.parse "module foo exposing (..)\nx = 1"
-          --                 |> Result.toMaybe
-          --                 |> Expect.equal Nothing
-          --     , test "failure on declaration" <|
-          --         \() ->
-          --             Parser.parse "module Foo exposing (..)\n\ntype x = \n  1"
-          --                 |> Expect.equal (Err [ "Could not continue parsing on location (2,0)" ])
-          --     , test "failure on declaration expression" <|
-          --         \() ->
-          --             Parser.parse "module Foo exposing (..) \nx = \n  x + _"
-          --                 |> Expect.equal (Err [ "Could not continue parsing on location (2,6)" ])
-          --     ]
-          Test.test "moduleName"
+        , Test.test "moduleName"
             (\() ->
                 "Foo"
                     |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.moduleName
@@ -257,7 +242,7 @@ Foo
                         |> Maybe.map (\_ -> ())
                         |> Expect.equal (Just ())
                 )
-            , Test.test "exposing all"
+            , Test.test "exposing .."
                 (\() ->
                     "module Foo exposing (..)"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.moduleHeader
@@ -267,6 +252,20 @@ Foo
                                     , exposingList =
                                         Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 25 } }
                                             (Elm.Syntax.Exposing.All { start = { row = 1, column = 22 }, end = { row = 1, column = 24 } })
+                                    }
+                                )
+                            )
+                )
+            , Test.test "exposing ..."
+                (\() ->
+                    "module Foo exposing (...)"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.moduleHeader
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 26 } }
+                                (Elm.Syntax.Module.NormalModule
+                                    { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
+                                    , exposingList =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 26 } }
+                                            (Elm.Syntax.Exposing.All { start = { row = 1, column = 22 }, end = { row = 1, column = 25 } })
                                     }
                                 )
                             )
@@ -438,31 +437,35 @@ Foo
                                 , comments = [ Elm.Syntax.Node.Node { start = { row = 2, column = 6 }, end = { row = 2, column = 12 } } "-- foo" ]
                                 }
                     )
-                , Test.test "should fail to parse multi-line exposing all when closing parens is at the end of a line"
+                , Test.test "allow multi-line exposing all when closing parens is top indented"
                     (\() ->
-                        """exposing (
+                        """(
   ..
 )"""
-                            |> expectFailsToParse ElmSyntaxParserLenient.exposing_
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.exposing_
+                            |> Maybe.map (\_ -> ())
+                            |> Expect.equal (Just ())
                     )
                 , Test.test "should fail to parse empty with just 1 `.`"
                     (\() ->
-                        "exposing ( . )"
+                        "( . )"
                             |> expectFailsToParse ElmSyntaxParserLenient.exposing_
                     )
                 , Test.test "should allow `...`"
                     (\() ->
-                        "exposing ( ... )"
-                            |> expectFailsToParse ElmSyntaxParserLenient.exposing_
+                        "( ... )"
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.exposing_
+                            |> Maybe.map (\_ -> ())
+                            |> Expect.equal (Just ())
                     )
                 , Test.test "should fail to parse empty with 2 spaced `.`"
                     (\() ->
-                        "exposing (. .)"
+                        "(. .)"
                             |> expectFailsToParse ElmSyntaxParserLenient.exposing_
                     )
                 , Test.test "should fail to parse empty exposing list"
                     (\() ->
-                        "exposing ()"
+                        "()"
                             |> expectFailsToParse ElmSyntaxParserLenient.exposing_
                     )
                 , Test.test "Explicit exposing list"
@@ -528,7 +531,7 @@ Foo
                     (\() ->
                         """(
       A
-    , B(..)
+    , B(...)
     , Info (..)
          , init    ,
  (::)
@@ -536,10 +539,10 @@ Foo
                             |> expectSyntaxWithoutComments ElmSyntaxParserLenient.exposing_
                                 (Elm.Syntax.Exposing.Explicit
                                     [ Elm.Syntax.Node.Node { start = { row = 2, column = 7 }, end = { row = 2, column = 8 } } (Elm.Syntax.Exposing.TypeOrAliasExpose "A")
-                                    , Elm.Syntax.Node.Node { start = { row = 3, column = 7 }, end = { row = 3, column = 12 } }
+                                    , Elm.Syntax.Node.Node { start = { row = 3, column = 7 }, end = { row = 3, column = 13 } }
                                         (Elm.Syntax.Exposing.TypeExpose
                                             { name = "B"
-                                            , open = Just { start = { row = 3, column = 8 }, end = { row = 3, column = 12 } }
+                                            , open = Just { start = { row = 3, column = 8 }, end = { row = 3, column = 13 } }
                                             }
                                         )
                                     , Elm.Syntax.Node.Node { start = { row = 4, column = 7 }, end = { row = 4, column = 16 } }
@@ -1191,7 +1194,7 @@ fun2 n =
                                 }
                             )
                 )
-            , Test.test "import with alias and exposing all"
+            , Test.test "import with alias and exposing .."
                 (\() ->
                     "import Foo as Bar exposing (..)"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.import_
@@ -1202,6 +1205,21 @@ fun2 n =
                                     Just
                                         (Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 32 } }
                                             (Elm.Syntax.Exposing.All { start = { row = 1, column = 29 }, end = { row = 1, column = 31 } })
+                                        )
+                                }
+                            )
+                )
+            , Test.test "import with alias and exposing ..."
+                (\() ->
+                    "import Foo as Bar exposing (...)"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.import_
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 33 } }
+                                { moduleName = Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 11 } } [ "Foo" ]
+                                , moduleAlias = Just (Elm.Syntax.Node.Node { start = { row = 1, column = 15 }, end = { row = 1, column = 18 } } [ "Bar" ])
+                                , exposingList =
+                                    Just
+                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 19 }, end = { row = 1, column = 33 } }
+                                            (Elm.Syntax.Exposing.All { start = { row = 1, column = 29 }, end = { row = 1, column = 32 } })
                                         )
                                 }
                             )

@@ -1,3 +1,7 @@
+#### 1.1.6
+  - in module `ElmSyntaxPrint`
+      - actually corrects `(...)` in all places
+
 #### 1.1.5
   - in module `ElmSyntaxParserLenient`
       - fix bug where multi-line expressions after an infix operator were sometimes indented to little

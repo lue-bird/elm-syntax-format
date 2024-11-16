@@ -6,9 +6,10 @@ import ElmSyntaxPrint
 import ElmSyntaxParserLenient
 
 """
-module   Sample  exposing(..)
+module   Sample  exposing(...)
 plus2 (n)= {- this adds 2-} n
-    + 2
++
+2
 """
     |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
     |> Maybe.map

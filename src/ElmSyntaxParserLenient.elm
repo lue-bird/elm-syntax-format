@@ -48,7 +48,7 @@ Some additional lenient parsing:
 
   - corrects `port module` to `module` if no ports exist and the other way round
 
-  - corrects exposing `(...)` → `(..)`
+  - corrects `(...)` → `(..)` in exposing and type expose that includes its variants
 
   - removes empty `exposing ()` after import
 
@@ -359,7 +359,7 @@ exposing_ =
                         , syntax = Elm.Syntax.Exposing.All range
                         }
                     )
-                    (ParserFast.symbolFollowedBy ".." whitespaceAndComments)
+                    (ParserFast.symbolFollowedBy "..." whitespaceAndComments)
                 )
                 (ParserFast.mapWithRange
                     (\range comments ->
@@ -367,7 +367,7 @@ exposing_ =
                         , syntax = Elm.Syntax.Exposing.All range
                         }
                     )
-                    (ParserFast.symbolFollowedBy "..." whitespaceAndComments)
+                    (ParserFast.symbolFollowedBy ".." whitespaceAndComments)
                 )
                 (exposingWithinParensExplicitFollowedByWhitespaceAndCommentsMap identity)
             )
@@ -475,7 +475,9 @@ typeExpose =
                 Just { comments = left |> ropePrependTo right, syntax = range }
             )
             (ParserFast.symbolFollowedBy "(" whitespaceAndComments)
-            (ParserFast.symbolFollowedBy ".." whitespaceAndComments
+            (ParserFast.oneOf2
+                (ParserFast.symbolFollowedBy "..." whitespaceAndComments)
+                (ParserFast.symbolFollowedBy ".." whitespaceAndComments)
                 |> ParserFast.followedBySymbol ")"
             )
             Nothing
@@ -824,7 +826,7 @@ import_ =
                                     , syntax = Just (Elm.Syntax.Exposing.All range)
                                     }
                                 )
-                                (ParserFast.symbolFollowedBy ".." whitespaceAndComments)
+                                (ParserFast.symbolFollowedBy "..." whitespaceAndComments)
                                 |> ParserFast.followedBySymbol ")"
                             )
                             (ParserFast.mapWithRange
@@ -833,7 +835,7 @@ import_ =
                                     , syntax = Just (Elm.Syntax.Exposing.All range)
                                     }
                                 )
-                                (ParserFast.symbolFollowedBy "..." whitespaceAndComments)
+                                (ParserFast.symbolFollowedBy ".." whitespaceAndComments)
                                 |> ParserFast.followedBySymbol ")"
                             )
                             (ParserFast.symbol ")" { comments = ropeEmpty, syntax = Nothing })
