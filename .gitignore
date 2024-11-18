@@ -9,6 +9,7 @@ compare-with-elm-format/post
 elm.js
 main.js
 elmMain.js
+dist
 
 # Editors
 .idea/
