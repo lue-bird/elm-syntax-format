@@ -29,6 +29,9 @@ plus2 n =
 """
 ```
 
+To try it out, you can
+run [this node script](https://github.com/lue-bird/elm-syntax-format/tree/main/node-elm-syntax-format).
+
 If you want to _generate_ code, better bets are [`mdgriffith/elm-codegen`](https://dark.elm.dmy.fr/packages/mdgriffith/elm-codegen/latest/) or [`the-sett/elm-syntax-dsl`](https://dark.elm.dmy.fr/packages/the-sett/elm-syntax-dsl/latest/).
 
 ## known deviations in printing
