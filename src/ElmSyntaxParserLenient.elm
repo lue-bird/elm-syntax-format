@@ -2445,10 +2445,70 @@ expression =
 
 expressionFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 expressionFollowedByWhitespaceAndComments =
-    extendedSubExpressionFollowedByWhitespaceAndComments
-        { afterCommitting = .extensionRightParser
-        , validateRightPrecedence = Just
-        }
+    ParserFast.map2
+        (\expressionResult maybeCases ->
+            case maybeCases of
+                Nothing ->
+                    expressionResult
+
+                Just cases ->
+                    { comments =
+                        expressionResult.comments
+                            |> ropePrependTo cases.comments
+                    , syntax =
+                        Elm.Syntax.Node.Node
+                            { start =
+                                expressionResult.syntax
+                                    |> Elm.Syntax.Node.range
+                                    |> .start
+                            , end = cases.end
+                            }
+                            (Elm.Syntax.Expression.CaseExpression
+                                { expression = expressionResult.syntax
+                                , cases = cases.cases
+                                }
+                            )
+                    }
+        )
+        (extendedSubExpressionFollowedByWhitespaceAndComments
+            { afterCommitting = .extensionRightParser
+            , validateRightPrecedence = Just
+            }
+        )
+        (ParserFast.orSucceed
+            (ParserFast.keywordFollowedBy "case"
+                (ParserFast.map2
+                    (\commentsAfterCase casesResult ->
+                        let
+                            ( firstCase, lastToSecondCase ) =
+                                casesResult.syntax
+                        in
+                        Just
+                            { comments =
+                                commentsAfterCase
+                                    |> ropePrependTo casesResult.comments
+                            , end =
+                                case lastToSecondCase of
+                                    ( _, Elm.Syntax.Node.Node lastCaseExpressionRange _ ) :: _ ->
+                                        lastCaseExpressionRange.end
+
+                                    [] ->
+                                        let
+                                            ( _, Elm.Syntax.Node.Node firstCaseExpressionRange _ ) =
+                                                firstCase
+                                        in
+                                        firstCaseExpressionRange.end
+                            , cases = firstCase :: List.reverse lastToSecondCase
+                            }
+                    )
+                    whitespaceAndComments
+                    (ParserFast.withIndentSetToColumn
+                        (ParserFast.lazy (\() -> caseStatementsFollowedByWhitespaceAndComments))
+                    )
+                )
+            )
+            Nothing
+        )
 
 
 glslExpressionAfterOpeningSquareBracket : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
@@ -3493,79 +3553,19 @@ extendedSubExpressionFollowedByWhitespaceAndComments :
     }
     -> Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 extendedSubExpressionFollowedByWhitespaceAndComments info =
-    ParserFast.map2
-        (\expressionResult maybeCases ->
-            case maybeCases of
-                Nothing ->
-                    expressionResult
-
-                Just cases ->
-                    { comments =
-                        expressionResult.comments
-                            |> ropePrependTo cases.comments
-                    , syntax =
-                        Elm.Syntax.Node.Node
-                            { start =
-                                expressionResult.syntax
-                                    |> Elm.Syntax.Node.range
-                                    |> .start
-                            , end = cases.end
-                            }
-                            (Elm.Syntax.Expression.CaseExpression
-                                { expression = expressionResult.syntax
-                                , cases = cases.cases
-                                }
-                            )
-                    }
+    ParserFast.loopWhileSucceedsOntoResultFromParser
+        (infixOperatorAndThen info)
+        subExpressionMaybeAppliedFollowedByWhitespaceAndComments
+        (\extensionRightResult leftNodeWithComments ->
+            { comments =
+                leftNodeWithComments.comments
+                    |> ropePrependTo extensionRightResult.comments
+            , syntax =
+                leftNodeWithComments.syntax
+                    |> applyExtensionRight extensionRightResult.syntax
+            }
         )
-        (ParserFast.loopWhileSucceedsOntoResultFromParser
-            (infixOperatorAndThen info)
-            subExpressionMaybeAppliedFollowedByWhitespaceAndComments
-            (\extensionRightResult leftNodeWithComments ->
-                { comments =
-                    leftNodeWithComments.comments
-                        |> ropePrependTo extensionRightResult.comments
-                , syntax =
-                    leftNodeWithComments.syntax
-                        |> applyExtensionRight extensionRightResult.syntax
-                }
-            )
-            Basics.identity
-        )
-        (ParserFast.orSucceed
-            (ParserFast.keywordFollowedBy "case"
-                (ParserFast.map2
-                    (\commentsAfterCase casesResult ->
-                        let
-                            ( firstCase, lastToSecondCase ) =
-                                casesResult.syntax
-                        in
-                        Just
-                            { comments =
-                                commentsAfterCase
-                                    |> ropePrependTo casesResult.comments
-                            , end =
-                                case lastToSecondCase of
-                                    ( _, Elm.Syntax.Node.Node lastCaseExpressionRange _ ) :: _ ->
-                                        lastCaseExpressionRange.end
-
-                                    [] ->
-                                        let
-                                            ( _, Elm.Syntax.Node.Node firstCaseExpressionRange _ ) =
-                                                firstCase
-                                        in
-                                        firstCaseExpressionRange.end
-                            , cases = firstCase :: List.reverse lastToSecondCase
-                            }
-                    )
-                    whitespaceAndComments
-                    (ParserFast.withIndentSetToColumn
-                        (ParserFast.lazy (\() -> caseStatementsFollowedByWhitespaceAndComments))
-                    )
-                )
-            )
-            Nothing
-        )
+        Basics.identity
 
 
 extensionRightParser :

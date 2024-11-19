@@ -1,6 +1,7 @@
 #### 1.1.6
   - in module `ElmSyntaxParserLenient`
       - actually corrects `(...)` in all places
+      - correct `a |> b case ...` being parsed as `a |> (case b of ...)` instead of `case a |> b of ...`
   - in module `ElmSyntaxPrint`
       - faster
 

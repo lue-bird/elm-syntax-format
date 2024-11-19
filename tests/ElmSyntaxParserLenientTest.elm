@@ -5208,7 +5208,7 @@ True -> 1"""
                                     )
                                 )
                     )
-                , Test.test "case expression with `case` after cased expression"
+                , Test.test "case expression with `case` after simple cased expression"
                     (\() ->
                         """f case
   True -> 1
@@ -5219,6 +5219,41 @@ True -> 1"""
                                         { expression =
                                             Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } }
                                                 (Elm.Syntax.Expression.FunctionOrValue [] "f")
+                                        , cases =
+                                            [ ( Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 7 } }
+                                                    (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "True" } [])
+                                              , Elm.Syntax.Node.Node { start = { row = 2, column = 11 }, end = { row = 2, column = 12 } }
+                                                    (Elm.Syntax.Expression.Integer 1)
+                                              )
+                                            , ( Elm.Syntax.Node.Node { start = { row = 3, column = 3 }, end = { row = 3, column = 8 } }
+                                                    (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "False" } [])
+                                              , Elm.Syntax.Node.Node { start = { row = 3, column = 12 }, end = { row = 3, column = 13 } }
+                                                    (Elm.Syntax.Expression.Integer 2)
+                                              )
+                                            ]
+                                        }
+                                    )
+                                )
+                    )
+                , Test.test "case expression with `case` after cased expression infix operation"
+                    (\() ->
+                        """f |> g case
+  True -> 1
+  False -> 2"""
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 3, column = 13 } }
+                                    (Elm.Syntax.Expression.CaseExpression
+                                        { expression =
+                                            Elm.Syntax.Node.Node { end = { column = 7, row = 1 }, start = { column = 1, row = 1 } }
+                                                (Elm.Syntax.Expression.OperatorApplication "|>"
+                                                    Elm.Syntax.Infix.Left
+                                                    (Elm.Syntax.Node.Node { end = { column = 2, row = 1 }, start = { column = 1, row = 1 } }
+                                                        (Elm.Syntax.Expression.FunctionOrValue [] "f")
+                                                    )
+                                                    (Elm.Syntax.Node.Node { end = { column = 7, row = 1 }, start = { column = 6, row = 1 } }
+                                                        (Elm.Syntax.Expression.FunctionOrValue [] "g")
+                                                    )
+                                                )
                                         , cases =
                                             [ ( Elm.Syntax.Node.Node { start = { row = 2, column = 3 }, end = { row = 2, column = 7 } }
                                                     (Elm.Syntax.Pattern.NamedPattern { moduleName = [], name = "True" } [])
