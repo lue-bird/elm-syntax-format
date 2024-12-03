@@ -2919,6 +2919,36 @@ Nothing"""
                                 )
                             )
                 )
+            , Test.test "type record with field name colliding with keyword"
+                (\() ->
+                    "{  as : Int, b : Int }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.type_
+                            (Elm.Syntax.Node.Node { end = { column = 23, row = 1 }, start = { column = 1, row = 1 } }
+                                (Elm.Syntax.TypeAnnotation.Record
+                                    [ Elm.Syntax.Node.Node { end = { column = 12, row = 1 }, start = { column = 4, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 6, row = 1 }, start = { column = 4, row = 1 } } "as_"
+                                        , Elm.Syntax.Node.Node { end = { column = 12, row = 1 }, start = { column = 9, row = 1 } }
+                                            (Elm.Syntax.TypeAnnotation.Typed
+                                                (Elm.Syntax.Node.Node { end = { column = 12, row = 1 }, start = { column = 9, row = 1 } }
+                                                    ( [], "Int" )
+                                                )
+                                                []
+                                            )
+                                        )
+                                    , Elm.Syntax.Node.Node { end = { column = 22, row = 1 }, start = { column = 14, row = 1 } }
+                                        ( Elm.Syntax.Node.Node { end = { column = 15, row = 1 }, start = { column = 14, row = 1 } } "b"
+                                        , Elm.Syntax.Node.Node { end = { column = 21, row = 1 }, start = { column = 18, row = 1 } }
+                                            (Elm.Syntax.TypeAnnotation.Typed
+                                                (Elm.Syntax.Node.Node { end = { column = 21, row = 1 }, start = { column = 18, row = 1 } }
+                                                    ( [], "Int" )
+                                                )
+                                                []
+                                            )
+                                        )
+                                    ]
+                                )
+                            )
+                )
             , Test.test "type record with prefixed comma"
                 (\() ->
                     "{ , a : Int, b : Int }"
@@ -3975,7 +4005,18 @@ Nothing"""
             , Test.test "qualified expression"
                 (\() ->
                     "Html.text"
-                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } } (Elm.Syntax.Expression.FunctionOrValue [ "Html" ] "text"))
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 10 } }
+                                (Elm.Syntax.Expression.FunctionOrValue [ "Html" ] "text")
+                            )
+                )
+            , Test.test "qualified expression with name colliding with keyword"
+                (\() ->
+                    "Html.Attributes.type"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 21 } }
+                                (Elm.Syntax.Expression.FunctionOrValue [ "Html", "Attributes" ] "type_")
+                            )
                 )
             , Test.test "record access"
                 (\() ->
@@ -3985,6 +4026,17 @@ Nothing"""
                                 (Elm.Syntax.Expression.RecordAccess
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
                                     (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 8 } } "bar")
+                                )
+                            )
+                )
+            , Test.test "record access with field name colliding with keyword"
+                (\() ->
+                    "foo.exposing"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
+                                (Elm.Syntax.Expression.RecordAccess
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 13 } } "exposing_")
                                 )
                             )
                 )
@@ -5847,6 +5899,18 @@ True -> 1"""
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
                                 (Elm.Syntax.Pattern.RecordPattern
                                     [ Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } } "a"
+                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } "b"
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "Record pattern with field name colliding with keyword"
+                (\() ->
+                    "{ ,as , b }"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.pattern
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 12 } }
+                                (Elm.Syntax.Pattern.RecordPattern
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 6 } } "as_"
                                     , Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } } "b"
                                     ]
                                 )

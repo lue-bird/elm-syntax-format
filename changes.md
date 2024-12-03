@@ -1,4 +1,6 @@
 #### 1.1.7
+  - in module `ElmSyntaxParserLenient`
+      - adds an -`_` suffix to names that collide with keywords
   - in module `ElmSyntaxPrint`
       - fix bug where pattern tuple and triple gets printed as multi-line too eagerly
       - fix bug where lambda multi-line result didn't get printed on the next line

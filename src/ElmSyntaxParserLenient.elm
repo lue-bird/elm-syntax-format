@@ -74,6 +74,10 @@ Some additional lenient parsing:
 
     → `function parameters = result`
 
+  - corrects names that collide with keywords
+
+    `Html.Attributes.type` → `Html.Attributes.type_`
+
   - allows omitting the name before the type in an expression declaration or let expression declaration
 
         : Type
@@ -514,7 +518,7 @@ effectWhereClause =
             , syntax = ( fnName, fnTypeName )
             }
         )
-        nameLowercase
+        nameLowercaseUnderscoreSuffixingKeywords
         whitespaceAndComments
         (ParserFast.symbolFollowedBy "=" whitespaceAndComments)
         nameUppercaseNode
@@ -1461,7 +1465,7 @@ portDeclarationAfterDocumentation =
             }
         )
         (ParserFast.keywordFollowedBy "port" whitespaceAndComments)
-        nameLowercaseNode
+        nameLowercaseNodeUnderscoreSuffixingKeywords
         whitespaceAndComments
         (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
         type_
@@ -1496,7 +1500,7 @@ portDeclarationWithoutDocumentation =
             }
         )
         (ParserFast.keywordFollowedBy "port" whitespaceAndComments)
-        nameLowercaseNode
+        nameLowercaseNodeUnderscoreSuffixingKeywords
         whitespaceAndComments
         (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
         type_
@@ -1787,7 +1791,7 @@ typeGenericListEquals =
                 , syntax = name
                 }
             )
-            nameLowercaseNode
+            nameLowercaseNodeUnderscoreSuffixingKeywords
             whitespaceAndComments
         )
 
@@ -2007,7 +2011,7 @@ recordTypeAnnotation =
                     (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                     ropeEmpty
                 )
-                nameLowercaseNode
+                nameLowercaseNodeUnderscoreSuffixingKeywords
                 whitespaceAndComments
                 (ParserFast.oneOf2
                     (ParserFast.symbolFollowedBy "|"
@@ -2140,7 +2144,7 @@ typeRecordFieldDefinitionFollowedByWhitespaceAndComments =
             , syntax = Elm.Syntax.Node.Node range ( name, value.syntax )
             }
         )
-        nameLowercaseNode
+        nameLowercaseNodeUnderscoreSuffixingKeywords
         whitespaceAndComments
         (ParserFast.oneOf2OrSucceed
             (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
@@ -2297,7 +2301,9 @@ referenceOrNumberExpression =
 followedByMultiRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression)) -> Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 followedByMultiRecordAccess beforeRecordAccesses =
     ParserFast.loopWhileSucceedsOntoResultFromParser
-        (ParserFast.symbolFollowedBy "." nameLowercaseNode)
+        (ParserFast.symbolFollowedBy "."
+            nameLowercaseNodeUnderscoreSuffixingKeywords
+        )
         beforeRecordAccesses
         (\fieldNode leftResult ->
             let
@@ -2668,7 +2674,7 @@ recordContentsFollowedByCurlyEnd =
                                 )
                 }
             )
-            nameLowercaseNode
+            nameLowercaseNodeUnderscoreSuffixingKeywords
             whitespaceAndComments
             (ParserFast.oneOf2
                 (ParserFast.symbolFollowedBy "|"
@@ -2793,7 +2799,7 @@ recordSetterNodeFollowedByWhitespaceAndComments =
                             )
                     }
         )
-        nameLowercaseNode
+        nameLowercaseNodeUnderscoreSuffixingKeywords
         whitespaceAndComments
         (ParserFast.oneOf2OrSucceed
             (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
@@ -3130,7 +3136,7 @@ letFunctionFollowedByOptimisticLayout =
                                 )
                         }
             )
-            nameLowercaseNode
+            nameLowercaseNodeUnderscoreSuffixingKeywords
             whitespaceAndComments
             (ParserFast.map4OrSucceed
                 (\commentsBeforeTypeAnnotation typeAnnotationResult implementationName afterImplementationName ->
@@ -3147,7 +3153,7 @@ letFunctionFollowedByOptimisticLayout =
                 (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
                 type_
                 (whitespaceAndCommentsEndsTopIndentedFollowedBy
-                    nameLowercaseNode
+                    nameLowercaseNodeUnderscoreSuffixingKeywords
                 )
                 whitespaceAndComments
                 Nothing
@@ -3231,7 +3237,7 @@ letFunctionFollowedByOptimisticLayout =
             (ParserFast.symbolFollowedBy ":" whitespaceAndComments)
             type_
             whitespaceAndCommentsEndsTopIndented
-            nameLowercaseNode
+            nameLowercaseNodeUnderscoreSuffixingKeywords
             whitespaceAndComments
             parameterPatternsEqual
             whitespaceAndComments
@@ -3390,7 +3396,7 @@ maybeDotReferenceExpressionTuple =
                     (ParserFast.lazy (\() -> maybeDotReferenceExpressionTuple))
                 )
                 (\name -> Just ( [], name ))
-                nameLowercase
+                nameLowercaseUnderscoreSuffixingKeywords
             )
         )
         Nothing
@@ -4133,7 +4139,7 @@ pattern =
                             }
                     )
                     whitespaceAndComments
-                    nameLowercaseNode
+                    nameLowercaseNodeUnderscoreSuffixingKeywords
                 )
             )
             Nothing
@@ -4465,7 +4471,7 @@ recordPattern =
                     (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                     ropeEmpty
                 )
-                nameLowercaseNode
+                nameLowercaseNodeUnderscoreSuffixingKeywords
                 whitespaceAndComments
                 (manyWithComments
                     (ParserFast.symbolFollowedBy ","
@@ -4483,7 +4489,7 @@ recordPattern =
                                 (ParserFast.symbolFollowedBy "," whitespaceAndComments)
                                 ropeEmpty
                             )
-                            nameLowercaseNode
+                            nameLowercaseNodeUnderscoreSuffixingKeywords
                             whitespaceAndComments
                         )
                     )
@@ -4544,6 +4550,59 @@ isNotReserved name =
 
         _ ->
             True
+
+
+ifKeywordUnderscoreSuffix : String -> String
+ifKeywordUnderscoreSuffix name =
+    case name of
+        "module" ->
+            "module_"
+
+        "exposing" ->
+            "exposing_"
+
+        "import" ->
+            "import_"
+
+        "as" ->
+            "as_"
+
+        "if" ->
+            "if_"
+
+        "then" ->
+            "then_"
+
+        "else" ->
+            "else_"
+
+        "let" ->
+            "let_"
+
+        "in" ->
+            "in_"
+
+        "case" ->
+            "case_"
+
+        "of" ->
+            "of_"
+
+        "port" ->
+            "port_"
+
+        --"infixr"
+        --"infixl"
+        "type" ->
+            "type_"
+
+        -- "infix" Apparently this is not a reserved keyword
+        -- "alias" Apparently this is not a reserved keyword
+        "where" ->
+            "where_"
+
+        _ ->
+            name
 
 
 escapedCharValueMap : (Char -> res) -> Parser res
@@ -4741,12 +4800,31 @@ nameLowercase =
         isNotReserved
 
 
+nameLowercaseUnderscoreSuffixingKeywords : Parser String
+nameLowercaseUnderscoreSuffixingKeywords =
+    ParserFast.ifFollowedByWhileMapWithoutLinebreak
+        ifKeywordUnderscoreSuffix
+        Char.Extra.unicodeIsLowerFast
+        Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
+
+
 nameLowercaseNode : Parser (Elm.Syntax.Node.Node String)
 nameLowercaseNode =
     ParserFast.ifFollowedByWhileValidateMapWithRangeWithoutLinebreak Elm.Syntax.Node.Node
         Char.Extra.unicodeIsLowerFast
         Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
         isNotReserved
+
+
+nameLowercaseNodeUnderscoreSuffixingKeywords : Parser (Elm.Syntax.Node.Node String)
+nameLowercaseNodeUnderscoreSuffixingKeywords =
+    ParserFast.ifFollowedByWhileMapWithRangeWithoutLinebreak
+        (\range name ->
+            Elm.Syntax.Node.Node range
+                (name |> ifKeywordUnderscoreSuffix)
+        )
+        Char.Extra.unicodeIsLowerFast
+        Char.Extra.unicodeIsAlphaNumOrUnderscoreFast
 
 
 nameLowercaseMapWithRange : (Elm.Syntax.Range.Range -> String -> res) -> Parser res
