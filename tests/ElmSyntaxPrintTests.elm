@@ -2199,6 +2199,40 @@ a =
         b
 """
                 )
+            , Test.test "lambda, consecutive {- -} comments before result do not get collapsed"
+                (\() ->
+                    """module A exposing (..)
+a =
+    \\b -> {- 0 -} {- 1 -} b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \\b ->
+        {- 0 -}
+        {- 1 -}
+        b
+"""
+                )
+            , Test.test "lambda, multi-line result in single line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    \\b -> if True then 0 else b"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \\b ->
+        if True then
+            0
+
+        else
+            b
+"""
+                )
             , Test.test "lambda, consecutive comments before first parameter"
                 (\() ->
                     """module A exposing (..)
@@ -4233,6 +4267,32 @@ a (_ as {- argument -}
 
 a (_ as {- argument -} argument) =
     0
+"""
+                )
+            , Test.test "tuple written as multi-line with comments collapsed before parts"
+                (\() ->
+                    """module A exposing (..)
+a ( {- 0 -} a0, {- 1 -} a1
+  ) = a0 + a1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a ( {- 0 -} a0, {- 1 -} a1 ) =
+    a0 + a1
+"""
+                )
+            , Test.test "triple written as multi-line with comments collapsed before parts"
+                (\() ->
+                    """module A exposing (..)
+a ( {- 0 -} a0, {- 1 -} a1, {- 2 -} a2
+  ) = a0 + a1 + a2"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a ( {- 0 -} a0, {- 1 -} a1, {- 2 -} a2 ) =
+    a0 + a1 + a2
 """
                 )
             , Test.test "as with multi-line pattern"

@@ -2164,11 +2164,19 @@ patternNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxPat
             case parts of
                 [ part0, part1 ] ->
                     { part0 = part0, part1 = part1, fullRange = fullRange }
-                        |> tuple patternNotParenthesized syntaxComments
+                        |> tuple
+                            { printPartNotParenthesized = patternNotParenthesized
+                            , lineSpreadMinimum = Print.SingleLine
+                            }
+                            syntaxComments
 
                 [ part0, part1, part2 ] ->
                     { part0 = part0, part1 = part1, part2 = part2, fullRange = fullRange }
-                        |> triple patternNotParenthesized syntaxComments
+                        |> triple
+                            { printPartNotParenthesized = patternNotParenthesized
+                            , lineSpreadMinimum = Print.SingleLine
+                            }
+                            syntaxComments
 
                 [] ->
                     -- should be covered by UnitPattern
@@ -3040,7 +3048,10 @@ construct specific syntaxComments syntaxConstruct =
 
 
 tuple :
-    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node part -> Print)
+    { printPartNotParenthesized :
+        List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node part -> Print
+    , lineSpreadMinimum : Print.LineSpread
+    }
     -> List (Elm.Syntax.Node.Node String)
     ->
         { fullRange : Elm.Syntax.Range.Range
@@ -3048,7 +3059,7 @@ tuple :
         , part1 : Elm.Syntax.Node.Node part
         }
     -> Print
-tuple printPartNotParenthesized syntaxComments syntaxTuple =
+tuple config syntaxComments syntaxTuple =
     let
         beforePart0Comments : List String
         beforePart0Comments =
@@ -3084,7 +3095,7 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            lineSpreadInRange syntaxTuple.fullRange
+            config.lineSpreadMinimum
                 |> Print.lineSpreadMergeWithStrict
                     beforePart0CommentsCollapsible.lineSpread
                 |> Print.lineSpreadMergeWithStrict
@@ -3101,11 +3112,11 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
 
         part0Print : Print
         part0Print =
-            printPartNotParenthesized syntaxComments syntaxTuple.part0
+            config.printPartNotParenthesized syntaxComments syntaxTuple.part0
 
         part1Print : Print
         part1Print =
-            printPartNotParenthesized syntaxComments syntaxTuple.part1
+            config.printPartNotParenthesized syntaxComments syntaxTuple.part1
     in
     printExactlyParensOpeningSpace
         |> Print.followedBy
@@ -3161,7 +3172,10 @@ tuple printPartNotParenthesized syntaxComments syntaxTuple =
 
 
 triple :
-    (List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node part -> Print)
+    { printPartNotParenthesized :
+        List (Elm.Syntax.Node.Node String) -> Elm.Syntax.Node.Node part -> Print
+    , lineSpreadMinimum : Print.LineSpread
+    }
     -> List (Elm.Syntax.Node.Node String)
     ->
         { fullRange : Elm.Syntax.Range.Range
@@ -3170,7 +3184,7 @@ triple :
         , part2 : Elm.Syntax.Node.Node part
         }
     -> Print
-triple printPartNotParenthesized syntaxComments syntaxTriple =
+triple config syntaxComments syntaxTriple =
     let
         beforePart0Comments : List String
         beforePart0Comments =
@@ -3218,7 +3232,7 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
 
         lineSpread : Print.LineSpread
         lineSpread =
-            lineSpreadInRange syntaxTriple.fullRange
+            config.lineSpreadMinimum
                 |> Print.lineSpreadMergeWithStrict
                     beforePart0CommentsCollapsible.lineSpread
                 |> Print.lineSpreadMergeWithStrict
@@ -3237,15 +3251,15 @@ triple printPartNotParenthesized syntaxComments syntaxTriple =
 
         part0Print : Print
         part0Print =
-            printPartNotParenthesized syntaxComments syntaxTriple.part0
+            config.printPartNotParenthesized syntaxComments syntaxTriple.part0
 
         part1Print : Print
         part1Print =
-            printPartNotParenthesized syntaxComments syntaxTriple.part1
+            config.printPartNotParenthesized syntaxComments syntaxTriple.part1
 
         part2Print : Print
         part2Print =
-            printPartNotParenthesized syntaxComments syntaxTriple.part2
+            config.printPartNotParenthesized syntaxComments syntaxTriple.part2
     in
     printExactlyParensOpeningSpace
         |> Print.followedBy
@@ -4117,7 +4131,10 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                                 syntaxComments
 
                 [ part0, part1 ] ->
-                    tuple typeNotParenthesized
+                    tuple
+                        { printPartNotParenthesized = typeNotParenthesized
+                        , lineSpreadMinimum = lineSpreadInRange fullRange
+                        }
                         syntaxComments
                         { part0 = part0
                         , part1 = part1
@@ -4125,7 +4142,10 @@ typeNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntaxType) 
                         }
 
                 [ part0, part1, part2 ] ->
-                    triple typeNotParenthesized
+                    triple
+                        { printPartNotParenthesized = typeNotParenthesized
+                        , lineSpreadMinimum = lineSpreadInRange fullRange
+                        }
                         syntaxComments
                         { part0 = part0
                         , part1 = part1
@@ -5237,12 +5257,18 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
                                 syntaxComments
 
                 [ part0, part1 ] ->
-                    tuple expressionNotParenthesized
+                    tuple
+                        { printPartNotParenthesized = expressionNotParenthesized
+                        , lineSpreadMinimum = lineSpreadInRange fullRange
+                        }
                         syntaxComments
                         { fullRange = fullRange, part0 = part0, part1 = part1 }
 
                 [ part0, part1, part2 ] ->
-                    triple expressionNotParenthesized
+                    triple
+                        { printPartNotParenthesized = expressionNotParenthesized
+                        , lineSpreadMinimum = lineSpreadInRange fullRange
+                        }
                         syntaxComments
                         { fullRange = fullRange
                         , part0 = part0
@@ -6295,6 +6321,11 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
         parametersLineSpread =
             parameterPrintsWithCommentsBefore.reverse
                 |> Print.lineSpreadListMapAndCombine Print.lineSpread
+
+        resultPrint : Print
+        resultPrint =
+            expressionNotParenthesized syntaxComments
+                syntaxLambda.expression
     in
     printExactlyBackSlash
         |> Print.followedBy
@@ -6315,7 +6346,11 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                                 Print.spaceOrLinebreakIndented
                                     (parametersLineSpread
                                         |> Print.lineSpreadMergeWith
-                                            (\() -> lineSpreadInRange fullRange)
+                                            (\() ->
+                                                lineSpreadInRange fullRange
+                                            )
+                                        |> Print.lineSpreadMergeWith
+                                            (\() -> resultPrint |> Print.lineSpread)
                                     )
 
                             comment0 :: comment1Up ->
@@ -6324,9 +6359,7 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                                     |> Print.followedBy Print.linebreakIndented
                          )
                             |> Print.followedBy
-                                (expressionNotParenthesized syntaxComments
-                                    syntaxLambda.expression
-                                )
+                                resultPrint
                         )
                     )
             )
