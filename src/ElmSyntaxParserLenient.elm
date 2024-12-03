@@ -36,6 +36,8 @@ Some additional lenient parsing:
 
   - `\a => b` or `\a. b` → `\a -> b`
 
+  - `case ... of a. b` or `case ... of a b` → `case ... of a -> b`
+
   - merges consecutive `,` in record, list or explicit exposing
 
   - removes extra `,` before first record field, list element or expose
@@ -46,19 +48,19 @@ Some additional lenient parsing:
 
   - merges consecutive `->` in function type
 
-  - corrects `port module` to `module` if no ports exist and the other way round
+  - `port module` to `module` if no ports exist and the other way round
 
-  - corrects `(...)` → `(..)` in exposing and type expose that includes its variants
+  - `(...)` → `(..)` in exposing and type expose that includes its variants
 
   - removes empty `exposing ()` after import
 
-  - corrects expression record field name-value separators
+  - expression record field name-value separators
 
     `{ name : value }` or `{ name value }`
 
     → `{ name = value }`
 
-  - corrects type record field name-value separators
+  - type record field name-value separators
 
     `{ name = value }` or `{ name value }`
 
@@ -68,7 +70,7 @@ Some additional lenient parsing:
 
     `{ field }` → `{ field = field }`
 
-  - corrects `->` to `=` in an expression declaration and let expression declaration
+  - `->` to `=` in an expression declaration and let expression declaration
 
     `function parameters -> result`
 
@@ -2885,8 +2887,8 @@ lambdaExpressionFollowedByWhitespaceAndComments =
         expressionFollowedByWhitespaceAndComments
 
 
-caseExpressionFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-caseExpressionFollowedByOptimisticLayout =
+expressionCaseOfFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionCaseOfFollowedByOptimisticLayout =
     ParserFast.map4WithStartLocation
         (\start commentsAfterCase casedExpressionResult commentsAfterOf casesResult ->
             let
@@ -2923,7 +2925,9 @@ caseExpressionFollowedByOptimisticLayout =
         (ParserFast.keywordFollowedBy "case" whitespaceAndComments)
         expressionFollowedByWhitespaceAndComments
         (ParserFast.keywordFollowedBy "of" whitespaceAndComments)
-        (ParserFast.withIndentSetToColumn caseStatementsFollowedByWhitespaceAndComments)
+        (ParserFast.withIndentSetToColumn
+            caseStatementsFollowedByWhitespaceAndComments
+        )
 
 
 caseStatementsFollowedByWhitespaceAndComments : Parser (WithComments ( Elm.Syntax.Expression.Case, List Elm.Syntax.Expression.Case ))
@@ -2944,7 +2948,11 @@ caseStatementsFollowedByWhitespaceAndComments =
         )
         pattern
         whitespaceAndComments
-        (ParserFast.symbolFollowedBy "->" whitespaceAndComments)
+        (ParserFast.oneOf2OrSucceed
+            (ParserFast.symbolFollowedBy "->" whitespaceAndComments)
+            (ParserFast.symbolFollowedBy "." whitespaceAndComments)
+            ropeEmpty
+        )
         expressionFollowedByWhitespaceAndComments
         (manyWithCommentsReverse caseStatementFollowedByWhitespaceAndComments)
 
@@ -3904,7 +3912,7 @@ tupledExpressionIfNecessaryFollowedByRecordAccessMaybeApplied =
 caseOrUnqualifiedReferenceExpressionMaybeApplied : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 caseOrUnqualifiedReferenceExpressionMaybeApplied =
     ParserFast.oneOf2
-        caseExpressionFollowedByOptimisticLayout
+        expressionCaseOfFollowedByOptimisticLayout
         (unqualifiedFunctionReferenceExpressionFollowedByRecordAccess
             |> followedByMultiArgumentApplication
         )

@@ -5260,6 +5260,48 @@ True -> 1"""
                                     )
                                 )
                     )
+                , Test.test "allow . between case pattern and result"
+                    (\() ->
+                        """case [] of
+    _ .  1"""
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { end = { column = 11, row = 2 }, start = { column = 1, row = 1 } }
+                                    (Elm.Syntax.Expression.CaseExpression
+                                        { cases =
+                                            [ ( Elm.Syntax.Node.Node { end = { column = 6, row = 2 }, start = { column = 5, row = 2 } }
+                                                    Elm.Syntax.Pattern.AllPattern
+                                              , Elm.Syntax.Node.Node { end = { column = 11, row = 2 }, start = { column = 10, row = 2 } }
+                                                    (Elm.Syntax.Expression.Integer 1)
+                                              )
+                                            ]
+                                        , expression =
+                                            Elm.Syntax.Node.Node { end = { column = 8, row = 1 }, start = { column = 6, row = 1 } }
+                                                (Elm.Syntax.Expression.ListExpr [])
+                                        }
+                                    )
+                                )
+                    )
+                , Test.test "allow no symbol at all between case pattern and result"
+                    (\() ->
+                        """case [] of
+    _    1"""
+                            |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                                (Elm.Syntax.Node.Node { end = { column = 11, row = 2 }, start = { column = 1, row = 1 } }
+                                    (Elm.Syntax.Expression.CaseExpression
+                                        { cases =
+                                            [ ( Elm.Syntax.Node.Node { end = { column = 6, row = 2 }, start = { column = 5, row = 2 } }
+                                                    Elm.Syntax.Pattern.AllPattern
+                                              , Elm.Syntax.Node.Node { end = { column = 11, row = 2 }, start = { column = 10, row = 2 } }
+                                                    (Elm.Syntax.Expression.Integer 1)
+                                              )
+                                            ]
+                                        , expression =
+                                            Elm.Syntax.Node.Node { end = { column = 8, row = 1 }, start = { column = 6, row = 1 } }
+                                                (Elm.Syntax.Expression.ListExpr [])
+                                        }
+                                    )
+                                )
+                    )
                 , Test.test "case expression with `case` after simple cased expression"
                     (\() ->
                         """f case
