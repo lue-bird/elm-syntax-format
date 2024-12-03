@@ -7,8 +7,9 @@ import Elm.Parser
 import Elm.Syntax.File
 import Elm.Syntax.Range
 import ElmSyntaxParserLenient
+import ElmSyntaxParserLenientLastPublished
 import ElmSyntaxPrintDefunctionalized
-import ElmSyntaxPrintDefunctionalizedAttemptFaster
+import ElmSyntaxPrintDefunctionalizedLastPublished
 import Print
 import Random
 
@@ -21,30 +22,30 @@ benchmarks =
                 [ Benchmark.describe "sample didn't parse" [] ]
 
             Just sample ->
-                [ Benchmark.Alternative.rank "printing"
+                [ {-Benchmark.Alternative.rank "printing"
                     (\f -> f sample)
                     [ ( "current package implementation"
                       , moduleToStringCurrentPackage
                       )
-                    , ( "attempt to make it faster"
-                      , moduleToStringAttemptFaster
+                    , ( "last published"
+                      , moduleToStringLastPublished
                       )
-                    ]
-
-                {- },, Benchmark.Alternative.rank "elm-syntax Location compare"
+                    ]-}
                    Benchmark.Alternative.rank "parsing"
-                       (\f -> f sampleModuleSource)
+                       (\f -> f sample1ModuleSource)
                        [ --( "attempt at faster"
                          --, moduleToStringFasterIndent
                          --),
-                         ( "current elm-syntax implementation"
-                         , parseModuleElmSyntax
-                         )
-                       , ( "current package implementation"
+                        -- ( "current elm-syntax implementation"
+                       --  , parseModuleElmSyntax
+                       --  ),
+                         ( "current package implementation"
                          , parseModuleCurrentPackage
+                         ),
+                         ( "last published implementation"
+                         , parseModuleLastPublished
                          )
-                      ]
-                -}
+                      ] 
                 ]
         )
 
@@ -93,10 +94,10 @@ moduleToStringCurrentPackage syntaxModule =
         |> Print.toString
 
 
-moduleToStringAttemptFaster : Elm.Syntax.File.File -> String
-moduleToStringAttemptFaster syntaxModule =
+moduleToStringLastPublished : Elm.Syntax.File.File -> String
+moduleToStringLastPublished syntaxModule =
     syntaxModule
-        |> ElmSyntaxPrintDefunctionalizedAttemptFaster.module_
+        |> ElmSyntaxPrintDefunctionalizedLastPublished.module_
         |> Print.toString
 
 
@@ -104,6 +105,13 @@ parseModuleCurrentPackage : String -> Maybe Elm.Syntax.File.File
 parseModuleCurrentPackage moduleSource =
     moduleSource
         |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+
+
+parseModuleLastPublished : String -> Maybe Elm.Syntax.File.File
+parseModuleLastPublished moduleSource =
+    moduleSource
+        |> ElmSyntaxParserLenientLastPublished.run
+            ElmSyntaxParserLenientLastPublished.module_
 
 
 parseModuleElmSyntax : String -> Maybe Elm.Syntax.File.File
