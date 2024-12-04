@@ -1154,7 +1154,7 @@ functionAfterDocumentation =
                 whitespaceAndComments
                 { comments = ropeEmpty, syntax = Nothing }
             )
-            parameterPatternsEqual
+            parameterPatternsEquals
             whitespaceAndComments
             expressionFollowedByWhitespaceAndComments
         )
@@ -1190,7 +1190,7 @@ functionAfterDocumentation =
             whitespaceAndCommentsEndsTopIndented
             nameLowercaseNode
             whitespaceAndComments
-            parameterPatternsEqual
+            parameterPatternsEquals
             whitespaceAndComments
             expressionFollowedByWhitespaceAndComments
         )
@@ -1279,7 +1279,7 @@ functionDeclarationWithoutDocumentation =
                 whitespaceAndComments
                 Nothing
             )
-            parameterPatternsEqual
+            parameterPatternsEquals
             whitespaceAndComments
             expressionFollowedByWhitespaceAndComments
             |> ParserFast.validate
@@ -1372,14 +1372,14 @@ functionDeclarationWithoutDocumentation =
             whitespaceAndCommentsEndsTopIndented
             nameLowercaseNode
             whitespaceAndComments
-            parameterPatternsEqual
+            parameterPatternsEquals
             whitespaceAndComments
             expressionFollowedByWhitespaceAndComments
         )
 
 
-parameterPatternsEqual : Parser (WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern)))
-parameterPatternsEqual =
+parameterPatternsEquals : Parser (WithComments (List (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern)))
+parameterPatternsEquals =
     untilWithComments
         (ParserFast.oneOf2
             (ParserFast.symbol "=" ())
@@ -1519,7 +1519,7 @@ typeOrTypeAliasDefinitionAfterDocumentation =
         (ParserFast.keywordFollowedBy "type" whitespaceAndComments)
         (ParserFast.oneOf2
             typeAliasDefinitionAfterDocumentationAfterTypePrefix
-            customTypeDefinitionAfterDocumentationAfterTypePrefix
+            choiceTypeDefinitionAfterDocumentationAfterTypePrefix
         )
 
 
@@ -1549,8 +1549,8 @@ typeAliasDefinitionAfterDocumentationAfterTypePrefix =
         type_
 
 
-customTypeDefinitionAfterDocumentationAfterTypePrefix : Parser (WithComments DeclarationAfterDocumentation)
-customTypeDefinitionAfterDocumentationAfterTypePrefix =
+choiceTypeDefinitionAfterDocumentationAfterTypePrefix : Parser (WithComments DeclarationAfterDocumentation)
+choiceTypeDefinitionAfterDocumentationAfterTypePrefix =
     ParserFast.map7
         (\name commentsAfterName parameters commentsAfterEqual commentsBeforeHeadVariant headVariant tailVariantsReverse ->
             { comments =
@@ -1659,7 +1659,7 @@ typeOrTypeAliasDefinitionWithoutDocumentation =
         (ParserFast.keywordFollowedBy "type" whitespaceAndComments)
         (ParserFast.oneOf2
             typeAliasDefinitionWithoutDocumentationAfterTypePrefix
-            customTypeDefinitionWithoutDocumentationAfterTypePrefix
+            choiceTypeDefinitionWithoutDocumentationAfterTypePrefix
         )
 
 
@@ -1689,8 +1689,8 @@ typeAliasDefinitionWithoutDocumentationAfterTypePrefix =
         type_
 
 
-customTypeDefinitionWithoutDocumentationAfterTypePrefix : Parser (WithComments TypeOrTypeAliasDeclarationWithoutDocumentation)
-customTypeDefinitionWithoutDocumentationAfterTypePrefix =
+choiceTypeDefinitionWithoutDocumentationAfterTypePrefix : Parser (WithComments TypeOrTypeAliasDeclarationWithoutDocumentation)
+choiceTypeDefinitionWithoutDocumentationAfterTypePrefix =
     ParserFast.map7
         (\name commentsAfterName parameters commentsAfterEqual commentsBeforeHeadVariant headVariant tailVariantsReverse ->
             { comments =
@@ -1811,7 +1811,7 @@ type_ =
                 , syntax = startType.syntax
                 }
             )
-            (ParserFast.lazy (\() -> typeAnnotationNotFunction))
+            (ParserFast.lazy (\() -> typeNotFunction))
             whitespaceAndComments
         )
         (ParserFast.symbolFollowedBy "->"
@@ -1830,7 +1830,7 @@ type_ =
                     (ParserFast.symbolFollowedBy "->" whitespaceAndComments)
                     ropeEmpty
                 )
-                (ParserFast.lazy (\() -> typeAnnotationNotFunction))
+                (ParserFast.lazy (\() -> typeNotFunction))
                 whitespaceAndComments
             )
         )
@@ -1839,7 +1839,9 @@ type_ =
                 inType.comments
                     |> ropePrependTo outType.comments
             , syntax =
-                Elm.Syntax.Node.combine Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation inType.syntax outType.syntax
+                Elm.Syntax.Node.combine Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
+                    inType.syntax
+                    outType.syntax
             }
         )
 
@@ -1847,23 +1849,23 @@ type_ =
 typeNotSpaceSeparated : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
 typeNotSpaceSeparated =
     ParserFast.oneOf4
-        parensTypeAnnotation
-        typedTypeAnnotationWithoutArguments
-        genericTypeAnnotation
-        recordTypeAnnotation
+        typeParenthesizedOrTupleOrTriple
+        typeConstructWithoutArguments
+        typeVariable
+        typeRecordOrRecordExtension
 
 
-typeAnnotationNotFunction : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
-typeAnnotationNotFunction =
+typeNotFunction : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
+typeNotFunction =
     ParserFast.oneOf4
-        parensTypeAnnotation
-        typedTypeAnnotationWithArgumentsFollowedByWhitespaceAndComments
-        genericTypeAnnotation
-        recordTypeAnnotation
+        typeParenthesizedOrTupleOrTriple
+        typeConstructWithArgumentsFollowedByWhitespaceAndComments
+        typeVariable
+        typeRecordOrRecordExtension
 
 
-parensTypeAnnotation : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
-parensTypeAnnotation =
+typeParenthesizedOrTupleOrTriple : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
+typeParenthesizedOrTupleOrTriple =
     ParserFast.symbolFollowedBy "("
         (ParserFast.oneOf2
             (ParserFast.symbolWithEndLocation ")"
@@ -1960,8 +1962,8 @@ parensTypeAnnotation =
         )
 
 
-genericTypeAnnotation : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
-genericTypeAnnotation =
+typeVariable : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
+typeVariable =
     nameLowercaseMapWithRange
         (\range var ->
             { comments = ropeEmpty
@@ -1971,15 +1973,15 @@ genericTypeAnnotation =
         )
 
 
-recordTypeAnnotation : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
-recordTypeAnnotation =
+typeRecordOrRecordExtension : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
+typeRecordOrRecordExtension =
     ParserFast.map2WithRange
         (\range commentsBefore afterCurly ->
             case afterCurly of
                 Nothing ->
                     { comments = commentsBefore
                     , syntax =
-                        Elm.Syntax.Node.Node range typeAnnotationRecordEmpty
+                        Elm.Syntax.Node.Node range typeRecordEmpty
                     }
 
                 Just afterCurlyResult ->
@@ -2084,8 +2086,8 @@ recordTypeAnnotation =
         )
 
 
-typeAnnotationRecordEmpty : Elm.Syntax.TypeAnnotation.TypeAnnotation
-typeAnnotationRecordEmpty =
+typeRecordEmpty : Elm.Syntax.TypeAnnotation.TypeAnnotation
+typeRecordEmpty =
     Elm.Syntax.TypeAnnotation.Record []
 
 
@@ -2159,8 +2161,8 @@ typeRecordFieldDefinitionFollowedByWhitespaceAndComments =
         whitespaceAndComments
 
 
-typedTypeAnnotationWithoutArguments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
-typedTypeAnnotationWithoutArguments =
+typeConstructWithoutArguments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
+typeConstructWithoutArguments =
     ParserFast.map2WithRange
         (\range startName afterStartName ->
             let
@@ -2199,8 +2201,8 @@ maybeDotNamesUppercaseTuple =
         Nothing
 
 
-typedTypeAnnotationWithArgumentsFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
-typedTypeAnnotationWithArgumentsFollowedByWhitespaceAndComments =
+typeConstructWithArgumentsFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation))
+typeConstructWithArgumentsFollowedByWhitespaceAndComments =
     ParserFast.map3
         (\nameNode commentsAfterName argsReverse ->
             let
@@ -2267,25 +2269,25 @@ subExpression =
         (\offset source ->
             case String.slice offset (offset + 1) source of
                 "\"" ->
-                    literalExpression
+                    expressionString
 
                 "(" ->
-                    tupledExpressionIfNecessaryFollowedByRecordAccess
+                    expressionStartingWithParensOpeningIfNecessaryFollowedByRecordAccess
 
                 "[" ->
-                    listOrGlslExpression
+                    expressionListOrGlsl
 
                 "{" ->
-                    recordExpressionFollowedByRecordAccess
+                    expressionRecordFollowedByRecordAccess
 
                 "." ->
-                    recordAccessFunctionExpression
+                    expressionRecordAccessFunction
 
                 "-" ->
-                    negationOperation
+                    expressionNegation
 
                 "'" ->
-                    charLiteralExpression
+                    expressionChar
 
                 _ ->
                     referenceOrNumberExpression
@@ -2295,9 +2297,9 @@ subExpression =
 referenceOrNumberExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 referenceOrNumberExpression =
     ParserFast.oneOf3
-        qualifiedOrVariantOrRecordConstructorReferenceExpressionFollowedByRecordAccess
-        unqualifiedFunctionReferenceExpressionFollowedByRecordAccess
-        numberExpression
+        expressionQualifiedOrVariantOrRecordConstructorReferenceFollowedByRecordAccess
+        expressionUnqualifiedFunctionReferenceFollowedByRecordAccess
+        expressionNumber
 
 
 followedByMultiRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression)) -> Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
@@ -2558,8 +2560,8 @@ glslExpressionAfterOpeningSquareBracket =
         )
 
 
-listOrGlslExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-listOrGlslExpression =
+expressionListOrGlsl : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionListOrGlsl =
     ParserFast.symbolFollowedBy "[" expressionAfterOpeningSquareBracket
 
 
@@ -2621,8 +2623,8 @@ expressionAfterOpeningSquareBracket =
         )
 
 
-recordExpressionFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-recordExpressionFollowedByRecordAccess =
+expressionRecordFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionRecordFollowedByRecordAccess =
     ParserFast.symbolFollowedBy "{"
         (ParserFast.map2WithRange
             (\range commentsBefore afterCurly ->
@@ -2815,28 +2817,32 @@ recordSetterNodeFollowedByWhitespaceAndComments =
         )
 
 
-literalExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-literalExpression =
+expressionString : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionString =
     singleOrTripleQuotedStringLiteralMapWithRange
         (\range string ->
             { comments = ropeEmpty
-            , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Expression.Literal string)
+            , syntax =
+                Elm.Syntax.Node.Node range
+                    (Elm.Syntax.Expression.Literal string)
             }
         )
 
 
-charLiteralExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-charLiteralExpression =
+expressionChar : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionChar =
     characterLiteralMapWithRange
         (\range char ->
             { comments = ropeEmpty
-            , syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Expression.CharLiteral char)
+            , syntax =
+                Elm.Syntax.Node.Node range
+                    (Elm.Syntax.Expression.CharLiteral char)
             }
         )
 
 
-lambdaExpressionFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-lambdaExpressionFollowedByWhitespaceAndComments =
+expressionLambdaFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionLambdaFollowedByWhitespaceAndComments =
     ParserFast.map6WithStartLocation
         (\start commentsAfterBackslash firstArg commentsAfterFirstArg secondUpArgs commentsAfterArrow expressionResult ->
             let
@@ -3166,7 +3172,7 @@ letFunctionFollowedByOptimisticLayout =
                 whitespaceAndComments
                 Nothing
             )
-            parameterPatternsEqual
+            parameterPatternsEquals
             whitespaceAndComments
             expressionFollowedByWhitespaceAndComments
             |> ParserFast.validate
@@ -3247,14 +3253,14 @@ letFunctionFollowedByOptimisticLayout =
             whitespaceAndCommentsEndsTopIndented
             nameLowercaseNodeUnderscoreSuffixingKeywords
             whitespaceAndComments
-            parameterPatternsEqual
+            parameterPatternsEquals
             whitespaceAndComments
             expressionFollowedByWhitespaceAndComments
         )
 
 
-numberExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-numberExpression =
+expressionNumber : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionNumber =
     ParserFast.floatOrIntegerDecimalOrHexadecimalMapWithRange
         (\range n ->
             { comments = ropeEmpty
@@ -3273,8 +3279,8 @@ numberExpression =
         )
 
 
-ifBlockExpressionFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-ifBlockExpressionFollowedByOptimisticLayout =
+expressionIfThenElseFollowedByOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionIfThenElseFollowedByOptimisticLayout =
     ParserFast.map6WithStartLocation
         (\start commentsAfterIf condition commentsAfterThen ifTrue commentsAfterElse ifFalse ->
             let
@@ -3311,8 +3317,8 @@ ifBlockExpressionFollowedByOptimisticLayout =
         expressionFollowedByWhitespaceAndComments
 
 
-negationOperation : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-negationOperation =
+expressionNegation : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionNegation =
     ParserFast.symbolBacktrackableFollowedBy "-"
         (ParserFast.offsetSourceAndThen
             (\offset source ->
@@ -3364,8 +3370,8 @@ negationAfterMinus =
         subExpression
 
 
-qualifiedOrVariantOrRecordConstructorReferenceExpressionFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-qualifiedOrVariantOrRecordConstructorReferenceExpressionFollowedByRecordAccess =
+expressionQualifiedOrVariantOrRecordConstructorReferenceFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionQualifiedOrVariantOrRecordConstructorReferenceFollowedByRecordAccess =
     ParserFast.map2WithRange
         (\range firstName after ->
             { comments = ropeEmpty
@@ -3410,8 +3416,8 @@ maybeDotReferenceExpressionTuple =
         Nothing
 
 
-unqualifiedFunctionReferenceExpressionFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-unqualifiedFunctionReferenceExpressionFollowedByRecordAccess =
+expressionUnqualifiedFunctionReferenceFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionUnqualifiedFunctionReferenceFollowedByRecordAccess =
     nameLowercaseMapWithRange
         (\range unqualified ->
             { comments = ropeEmpty
@@ -3422,8 +3428,8 @@ unqualifiedFunctionReferenceExpressionFollowedByRecordAccess =
         |> followedByMultiRecordAccess
 
 
-recordAccessFunctionExpression : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-recordAccessFunctionExpression =
+expressionRecordAccessFunction : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionRecordAccessFunction =
     ParserFast.symbolFollowedBy "."
         (nameLowercaseMapWithRange
             (\range field ->
@@ -3443,8 +3449,8 @@ rangeMoveStartLeftByOneColumn range =
     }
 
 
-tupledExpressionIfNecessaryFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-tupledExpressionIfNecessaryFollowedByRecordAccess =
+expressionStartingWithParensOpeningIfNecessaryFollowedByRecordAccess : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionStartingWithParensOpeningIfNecessaryFollowedByRecordAccess =
     ParserFast.symbolFollowedBy "("
         (ParserFast.oneOf3
             (ParserFast.symbolWithEndLocation ")"
@@ -3457,7 +3463,7 @@ tupledExpressionIfNecessaryFollowedByRecordAccess =
                 )
             )
             allowedPrefixOperatorFollowedByClosingParensOneOf
-            tupledExpressionInnerAfterOpeningParens
+            expressionParenthesizedOrTupleOrTripleAfterOpeningParens
         )
 
 
@@ -3479,8 +3485,8 @@ allowedPrefixOperatorFollowedByClosingParensOneOf =
         ")"
 
 
-tupledExpressionInnerAfterOpeningParens : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
-tupledExpressionInnerAfterOpeningParens =
+expressionParenthesizedOrTupleOrTripleAfterOpeningParens : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
+expressionParenthesizedOrTupleOrTripleAfterOpeningParens =
     ParserFast.map3WithRange
         (\rangeAfterOpeningParens commentsBeforeFirstPart firstPart tailParts ->
             { comments =
@@ -3836,7 +3842,7 @@ subExpressionMaybeAppliedFollowedByWhitespaceAndComments =
                     caseOrUnqualifiedReferenceExpressionMaybeApplied
 
                 "\\" ->
-                    lambdaExpressionFollowedByWhitespaceAndComments
+                    expressionLambdaFollowedByWhitespaceAndComments
 
                 "l" ->
                     letOrUnqualifiedReferenceExpressionMaybeApplied
@@ -3860,22 +3866,22 @@ subExpressionMaybeAppliedFollowedByWhitespaceAndComments =
 
 negationOperationOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 negationOperationOptimisticLayout =
-    negationOperation |> followedByOptimisticLayout
+    expressionNegation |> followedByOptimisticLayout
 
 
 charLiteralExpressionOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 charLiteralExpressionOptimisticLayout =
-    charLiteralExpression |> followedByOptimisticLayout
+    expressionChar |> followedByOptimisticLayout
 
 
 literalExpressionOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 literalExpressionOptimisticLayout =
-    literalExpression |> followedByOptimisticLayout
+    expressionString |> followedByOptimisticLayout
 
 
 listOrGlslExpressionOptimisticLayout : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 listOrGlslExpressionOptimisticLayout =
-    listOrGlslExpression |> followedByOptimisticLayout
+    expressionListOrGlsl |> followedByOptimisticLayout
 
 
 followedByOptimisticLayout : Parser (WithComments a) -> Parser (WithComments a)
@@ -3892,20 +3898,20 @@ followedByOptimisticLayout parser =
 
 recordAccessFunctionExpressionMaybeApplied : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 recordAccessFunctionExpressionMaybeApplied =
-    recordAccessFunctionExpression |> followedByMultiArgumentApplication
+    expressionRecordAccessFunction |> followedByMultiArgumentApplication
 
 
 recordExpressionFollowedByRecordAccessMaybeApplied : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 recordExpressionFollowedByRecordAccessMaybeApplied =
     -- TODO don't check for applied if record access
-    recordExpressionFollowedByRecordAccess
+    expressionRecordFollowedByRecordAccess
         |> followedByMultiArgumentApplication
 
 
 tupledExpressionIfNecessaryFollowedByRecordAccessMaybeApplied : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 tupledExpressionIfNecessaryFollowedByRecordAccessMaybeApplied =
     -- TODO don't check for applied if not parenthesized
-    tupledExpressionIfNecessaryFollowedByRecordAccess
+    expressionStartingWithParensOpeningIfNecessaryFollowedByRecordAccess
         |> followedByMultiArgumentApplication
 
 
@@ -3913,7 +3919,7 @@ caseOrUnqualifiedReferenceExpressionMaybeApplied : Parser (WithComments (Elm.Syn
 caseOrUnqualifiedReferenceExpressionMaybeApplied =
     ParserFast.oneOf2
         expressionCaseOfFollowedByOptimisticLayout
-        (unqualifiedFunctionReferenceExpressionFollowedByRecordAccess
+        (expressionUnqualifiedFunctionReferenceFollowedByRecordAccess
             |> followedByMultiArgumentApplication
         )
 
@@ -3922,7 +3928,7 @@ letOrUnqualifiedReferenceExpressionMaybeApplied : Parser (WithComments (Elm.Synt
 letOrUnqualifiedReferenceExpressionMaybeApplied =
     ParserFast.oneOf2
         letExpressionFollowedByOptimisticLayout
-        (unqualifiedFunctionReferenceExpressionFollowedByRecordAccess
+        (expressionUnqualifiedFunctionReferenceFollowedByRecordAccess
             |> followedByMultiArgumentApplication
         )
 
@@ -3930,8 +3936,8 @@ letOrUnqualifiedReferenceExpressionMaybeApplied =
 ifOrUnqualifiedReferenceExpressionMaybeApplied : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 ifOrUnqualifiedReferenceExpressionMaybeApplied =
     ParserFast.oneOf2
-        ifBlockExpressionFollowedByOptimisticLayout
-        (unqualifiedFunctionReferenceExpressionFollowedByRecordAccess
+        expressionIfThenElseFollowedByOptimisticLayout
+        (expressionUnqualifiedFunctionReferenceFollowedByRecordAccess
             |> followedByMultiArgumentApplication
         )
 
@@ -3939,13 +3945,13 @@ ifOrUnqualifiedReferenceExpressionMaybeApplied =
 referenceOrNumberExpressionMaybeApplied : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 referenceOrNumberExpressionMaybeApplied =
     ParserFast.oneOf3
-        (qualifiedOrVariantOrRecordConstructorReferenceExpressionFollowedByRecordAccess
+        (expressionQualifiedOrVariantOrRecordConstructorReferenceFollowedByRecordAccess
             |> followedByMultiArgumentApplication
         )
-        (unqualifiedFunctionReferenceExpressionFollowedByRecordAccess
+        (expressionUnqualifiedFunctionReferenceFollowedByRecordAccess
             |> followedByMultiArgumentApplication
         )
-        (numberExpression |> followedByOptimisticLayout)
+        (expressionNumber |> followedByOptimisticLayout)
 
 
 followedByMultiArgumentApplication : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression)) -> Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
