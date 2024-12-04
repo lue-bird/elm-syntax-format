@@ -925,12 +925,16 @@ declarationWithDocumentation =
                                         { documentation = Just documentation
                                         , signature =
                                             Just
-                                                (Elm.Syntax.Node.combine (\name value -> { name = name, typeAnnotation = value })
+                                                (Elm.Syntax.Node.combine
+                                                    (\name value -> { name = name, typeAnnotation = value })
                                                     functionDeclarationAfterDocumentation.startName
                                                     signature.typeAnnotation
                                                 )
                                         , declaration =
-                                            Elm.Syntax.Node.Node { start = implementationNameRange.start, end = expressionRange.end }
+                                            Elm.Syntax.Node.Node
+                                                { start = implementationNameRange.start
+                                                , end = expressionRange.end
+                                                }
                                                 { name = signature.implementationName
                                                 , arguments = functionDeclarationAfterDocumentation.arguments
                                                 , expression = functionDeclarationAfterDocumentation.expression
@@ -1243,12 +1247,16 @@ functionDeclarationWithoutDocumentation =
                                     { documentation = Nothing
                                     , signature =
                                         Just
-                                            (Elm.Syntax.Node.combine (\name typeAnnotation -> { name = name, typeAnnotation = typeAnnotation })
+                                            (Elm.Syntax.Node.combine
+                                                (\name typeAnnotation -> { name = name, typeAnnotation = typeAnnotation })
                                                 startNameNode
                                                 signature.typeAnnotation
                                             )
                                     , declaration =
-                                        Elm.Syntax.Node.Node { start = implementationNameRange.start, end = expressionRange.end }
+                                        Elm.Syntax.Node.Node
+                                            { start = implementationNameRange.start
+                                            , end = expressionRange.end
+                                            }
                                             { name = signature.implementationName
                                             , arguments = arguments.syntax
                                             , expression = result.syntax
@@ -1839,7 +1847,8 @@ type_ =
                 inType.comments
                     |> ropePrependTo outType.comments
             , syntax =
-                Elm.Syntax.Node.combine Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
+                Elm.Syntax.Node.combine
+                    Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation
                     inType.syntax
                     outType.syntax
             }
@@ -2008,7 +2017,12 @@ typeRecordOrRecordExtension =
                                     Elm.Syntax.TypeAnnotation.GenericRecord firstNameNode fields
 
                                 FieldsAfterName fieldsAfterName ->
-                                    Elm.Syntax.TypeAnnotation.Record (Elm.Syntax.Node.combine Tuple.pair firstNameNode fieldsAfterName.firstFieldValue :: fieldsAfterName.tailFields)
+                                    Elm.Syntax.TypeAnnotation.Record
+                                        (Elm.Syntax.Node.combine Tuple.pair
+                                            firstNameNode
+                                            fieldsAfterName.firstFieldValue
+                                            :: fieldsAfterName.tailFields
+                                        )
                         }
                 )
                 (ParserFast.orSucceed
@@ -2657,7 +2671,9 @@ recordContentsFollowedByCurlyEnd =
 
                         FieldsFirstValue firstFieldValue ->
                             Elm.Syntax.Expression.RecordExpr
-                                (Elm.Syntax.Node.combine Tuple.pair nameNode firstFieldValue
+                                (Elm.Syntax.Node.combine Tuple.pair
+                                    nameNode
+                                    firstFieldValue
                                     :: tailFields.syntax
                                 )
 
@@ -3136,7 +3152,8 @@ letFunctionFollowedByOptimisticLayout =
                                     { documentation = Nothing
                                     , signature =
                                         Just
-                                            (Elm.Syntax.Node.combine (\name value -> { name = name, typeAnnotation = value })
+                                            (Elm.Syntax.Node.combine
+                                                (\name value -> { name = name, typeAnnotation = value })
                                                 startNameNode
                                                 signature.typeAnnotation
                                             )
@@ -4108,7 +4125,9 @@ pattern =
                         leftMaybeConsed.comments
                             |> ropePrependTo asExtension.comments
                     , syntax =
-                        Elm.Syntax.Node.combine Elm.Syntax.Pattern.AsPattern leftMaybeConsed.syntax asExtension.syntax
+                        Elm.Syntax.Node.combine Elm.Syntax.Pattern.AsPattern
+                            leftMaybeConsed.syntax
+                            asExtension.syntax
                     }
         )
         (ParserFast.loopWhileSucceedsOntoResultFromParserRightToLeftStackUnsafe
@@ -4139,7 +4158,9 @@ pattern =
             (\consed afterCons ->
                 { comments = consed.comments |> ropePrependTo afterCons.comments
                 , syntax =
-                    Elm.Syntax.Node.combine Elm.Syntax.Pattern.UnConsPattern consed.syntax afterCons.syntax
+                    Elm.Syntax.Node.combine Elm.Syntax.Pattern.UnConsPattern
+                        consed.syntax
+                        afterCons.syntax
                 }
             )
         )
