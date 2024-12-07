@@ -1,3 +1,7 @@
+#### 1.1.8
+  - in module `ElmSyntaxParserLenient`
+      - much, much faster for use outside of elm-optimize-level-2, following https://github.com/stil4m/elm-syntax/pull/268
+
 #### 1.1.7
   - in module `ElmSyntaxParserLenient`
       - adds an -`_` suffix to names that collide with keywords

@@ -446,8 +446,34 @@ infixExpose =
         )
         (ParserFast.symbolFollowedBy "("
             (ParserFast.ifFollowedByWhileWithoutLinebreak
-                (\c -> c /= ')' && c /= '\n' && c /= ' ')
-                (\c -> c /= ')' && c /= '\n' && c /= ' ')
+                (\c ->
+                    case c of
+                        ')' ->
+                            False
+
+                        '\n' ->
+                            False
+
+                        ' ' ->
+                            False
+
+                        _ ->
+                            True
+                )
+                (\c ->
+                    case c of
+                        ')' ->
+                            False
+
+                        '\n' ->
+                            False
+
+                        ' ' ->
+                            False
+
+                        _ ->
+                            True
+                )
             )
         )
         (ParserFast.symbol ")" ())
@@ -4799,7 +4825,19 @@ singleQuotedStringLiteralAfterDoubleQuote : Parser String
 singleQuotedStringLiteralAfterDoubleQuote =
     ParserFast.loopUntil (ParserFast.symbol "\"" ())
         (ParserFast.oneOf2
-            (ParserFast.whileAtLeast1WithoutLinebreak (\c -> c /= '"' && c /= '\\' && not (Char.Extra.isUtf16Surrogate c)))
+            (ParserFast.whileAtLeast1WithoutLinebreak
+                (\c ->
+                    case c of
+                        '"' ->
+                            False
+
+                        '\\' ->
+                            False
+
+                        _ ->
+                            not (Char.Extra.isUtf16Surrogate c)
+                )
+            )
             (ParserFast.symbolFollowedBy "\\" (escapedCharValueMap String.fromChar))
         )
         ""
@@ -4815,7 +4853,19 @@ tripleQuotedStringLiteralOfterTripleDoubleQuote =
         (ParserFast.oneOf3
             (ParserFast.symbol "\"" "\"")
             (ParserFast.symbolFollowedBy "\\" (escapedCharValueMap String.fromChar))
-            (ParserFast.while (\c -> c /= '"' && c /= '\\' && not (Char.Extra.isUtf16Surrogate c)))
+            (ParserFast.while
+                (\c ->
+                    case c of
+                        '"' ->
+                            False
+
+                        '\\' ->
+                            False
+
+                        _ ->
+                            not (Char.Extra.isUtf16Surrogate c)
+                )
+            )
         )
         ""
         (\extension soFar ->
@@ -5045,7 +5095,17 @@ singleLineComment : Parser (Elm.Syntax.Node.Node String)
 singleLineComment =
     ParserFast.symbolFollowedBy "--"
         (ParserFast.whileMapWithRange
-            (\c -> c /= '\u{000D}' && c /= '\n' && not (Char.Extra.isUtf16Surrogate c))
+            (\c ->
+                case c of
+                    '\u{000D}' ->
+                        False
+
+                    '\n' ->
+                        False
+
+                    _ ->
+                        not (Char.Extra.isUtf16Surrogate c)
+            )
             (\range content ->
                 Elm.Syntax.Node.Node
                     { start = { row = range.start.row, column = range.start.column - 2 }
