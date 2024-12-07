@@ -252,7 +252,7 @@ linebreak =
 To append more than 2, use [`Print.listMapAndFlatten`](#listMapAndFlatten)
 
 -}
-followedBy : Print -> (Print -> Print)
+followedBy : Print -> Print -> Print
 followedBy =
     FollowedBy
 
@@ -418,7 +418,7 @@ listReverseAndMapAndIntersperseAndFlatten elementToPrint inBetweenPrint elements
 and [`Print.emptyOrLinebreakIndented`](#emptyOrLinebreakIndented)
 to the current indent + a given number.
 -}
-withIndentIncreasedBy : Int -> (Print -> Print)
+withIndentIncreasedBy : Int -> Print -> Print
 withIndentIncreasedBy =
     WithIndentIncreasedBy
 
@@ -479,7 +479,7 @@ If all are [`SingleLine`](#LineSpread), gives [`SingleLine`](#LineSpread).
 To only combine 2, use [`Print.lineSpreadMergeWith`](#lineSpreadMergeWith)
 
 -}
-lineSpreadListMapAndCombine : (a -> LineSpread) -> (List a -> LineSpread)
+lineSpreadListMapAndCombine : (a -> LineSpread) -> List a -> LineSpread
 lineSpreadListMapAndCombine elementLineSpread lineSpreads =
     case lineSpreads of
         [] ->
