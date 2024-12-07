@@ -4345,10 +4345,26 @@ Nothing"""
                 )
             , Test.test "negated expression for value"
                 (\() ->
-                    "-x"
-                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
-                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } }
-                                (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.FunctionOrValue [] "x")))
+                    "a = -x"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
+                                (Elm.Syntax.Declaration.FunctionDeclaration
+                                    { signature = Nothing
+                                    , documentation = Nothing
+                                    , declaration =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
+                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } "a"
+                                            , arguments = []
+                                            , expression =
+                                                Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 7 } }
+                                                    (Elm.Syntax.Expression.Negation
+                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } }
+                                                            (Elm.Syntax.Expression.FunctionOrValue [] "x")
+                                                        )
+                                                    )
+                                            }
+                                    }
+                                )
                             )
                 )
             , Test.test "negated expression in application"
@@ -4366,61 +4382,105 @@ Nothing"""
                 )
             , Test.test "negated expression for parenthesized"
                 (\() ->
-                    "-(x - y)"
-                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
-                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } }
-                                (Elm.Syntax.Expression.Negation
-                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 9 } }
-                                        (Elm.Syntax.Expression.ParenthesizedExpression
-                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 8 } }
-                                                (Elm.Syntax.Expression.OperatorApplication "-"
-                                                    Elm.Syntax.Infix.Left
-                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 3 }, end = { row = 1, column = 4 } } (Elm.Syntax.Expression.FunctionOrValue [] "x"))
-                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "y"))
-                                                )
-                                            )
-                                        )
-                                    )
+                    "a = -(x - y)"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
+                                (Elm.Syntax.Declaration.FunctionDeclaration
+                                    { signature = Nothing
+                                    , documentation = Nothing
+                                    , declaration =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 13 } }
+                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } "a"
+                                            , arguments = []
+                                            , expression =
+                                                Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 13 } }
+                                                    (Elm.Syntax.Expression.Negation
+                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 13 } }
+                                                            (Elm.Syntax.Expression.ParenthesizedExpression
+                                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 12 } }
+                                                                    (Elm.Syntax.Expression.OperatorApplication "-"
+                                                                        Elm.Syntax.Infix.Left
+                                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 8 } }
+                                                                            (Elm.Syntax.Expression.FunctionOrValue [] "x")
+                                                                        )
+                                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 12 } }
+                                                                            (Elm.Syntax.Expression.FunctionOrValue [] "y")
+                                                                        )
+                                                                    )
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                            }
+                                    }
                                 )
                             )
                 )
             , Test.test "negated expression with other operations"
                 (\() ->
-                    "-1 + -10 * -100^2 == -100001"
-                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
-                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 29 } }
-                                (Elm.Syntax.Expression.OperatorApplication "=="
-                                    Elm.Syntax.Infix.Non
-                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 18 } }
-                                        (Elm.Syntax.Expression.OperatorApplication "+"
-                                            Elm.Syntax.Infix.Left
-                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 3 } }
-                                                (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } (Elm.Syntax.Expression.Integer 1)))
-                                            )
-                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 18 } }
-                                                (Elm.Syntax.Expression.OperatorApplication "*"
-                                                    Elm.Syntax.Infix.Left
-                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 9 } }
-                                                        (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 9 } } (Elm.Syntax.Expression.Integer 10)))
-                                                    )
-                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 18 } }
-                                                        (Elm.Syntax.Expression.OperatorApplication "^"
-                                                            Elm.Syntax.Infix.Right
-                                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 12 }, end = { row = 1, column = 16 } }
-                                                                (Elm.Syntax.Expression.Negation
-                                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 16 } } (Elm.Syntax.Expression.Integer 100))
+                    "a = -1 + -10 * -100^2 == -100001"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 33 } }
+                                (Elm.Syntax.Declaration.FunctionDeclaration
+                                    { signature = Nothing
+                                    , documentation = Nothing
+                                    , declaration =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 33 } }
+                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } "a"
+                                            , arguments = []
+                                            , expression =
+                                                Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 33 } }
+                                                    (Elm.Syntax.Expression.OperatorApplication "=="
+                                                        Elm.Syntax.Infix.Non
+                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 22 } }
+                                                            (Elm.Syntax.Expression.OperatorApplication "+"
+                                                                Elm.Syntax.Infix.Left
+                                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 7 } }
+                                                                    (Elm.Syntax.Expression.Negation
+                                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } }
+                                                                            (Elm.Syntax.Expression.Integer 1)
+                                                                        )
+                                                                    )
+                                                                )
+                                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 22 } }
+                                                                    (Elm.Syntax.Expression.OperatorApplication "*"
+                                                                        Elm.Syntax.Infix.Left
+                                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 13 } }
+                                                                            (Elm.Syntax.Expression.Negation
+                                                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 13 } }
+                                                                                    (Elm.Syntax.Expression.Integer 10)
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 22 } }
+                                                                            (Elm.Syntax.Expression.OperatorApplication "^"
+                                                                                Elm.Syntax.Infix.Right
+                                                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 20 } }
+                                                                                    (Elm.Syntax.Expression.Negation
+                                                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 20 } }
+                                                                                            (Elm.Syntax.Expression.Integer 100)
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 21 }, end = { row = 1, column = 22 } }
+                                                                                    (Elm.Syntax.Expression.Integer 2)
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                    )
                                                                 )
                                                             )
-                                                            (Elm.Syntax.Node.Node { start = { row = 1, column = 17 }, end = { row = 1, column = 18 } } (Elm.Syntax.Expression.Integer 2))
+                                                        )
+                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 26 }, end = { row = 1, column = 33 } }
+                                                            (Elm.Syntax.Expression.Negation
+                                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 27 }, end = { row = 1, column = 33 } }
+                                                                    (Elm.Syntax.Expression.Integer 100001)
+                                                                )
+                                                            )
                                                         )
                                                     )
-                                                )
-                                            )
-                                        )
-                                    )
-                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 22 }, end = { row = 1, column = 29 } }
-                                        (Elm.Syntax.Expression.Negation (Elm.Syntax.Node.Node { start = { row = 1, column = 23 }, end = { row = 1, column = 29 } } (Elm.Syntax.Expression.Integer 100001)))
-                                    )
+                                            }
+                                    }
                                 )
                             )
                 )
