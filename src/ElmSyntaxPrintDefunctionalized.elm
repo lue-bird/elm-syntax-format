@@ -5216,11 +5216,19 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
             Print.exactly (floatLiteral float)
 
         Elm.Syntax.Expression.Negation negated ->
-            printExactlyMinus
-                |> Print.followedBy
-                    (expressionParenthesizedIfSpaceSeparated syntaxComments
-                        negated
-                    )
+            case negated |> Elm.Syntax.Node.value of
+                Elm.Syntax.Expression.Integer 0 ->
+                    printExactlyZero
+
+                Elm.Syntax.Expression.Hex 0 ->
+                    printExactlyZeroXZeroZero
+
+                _ ->
+                    printExactlyMinus
+                        |> Print.followedBy
+                            (expressionParenthesizedIfSpaceSeparated syntaxComments
+                                negated
+                            )
 
         Elm.Syntax.Expression.Literal string ->
             stringLiteral (Elm.Syntax.Node.Node fullRange string)
@@ -7058,6 +7066,16 @@ printExactlyLessThanVerticalBar =
 printExactlyMinus : Print
 printExactlyMinus =
     Print.exactly "-"
+
+
+printExactlyZero : Print
+printExactlyZero =
+    Print.exactly "0"
+
+
+printExactlyZeroXZeroZero : Print
+printExactlyZeroXZeroZero =
+    Print.exactly "0x00"
 
 
 printExactlyCurlyOpeningMinus : Print

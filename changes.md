@@ -1,3 +1,7 @@
+#### 1.1.9
+  - in module `ElmSyntaxPrint`
+      - simplify negated integer zero to zero
+
 #### 1.1.8
   - in module `ElmSyntaxParserLenient`
       - much, much faster for use outside of elm-optimize-level-2, following https://github.com/stil4m/elm-syntax/pull/268
