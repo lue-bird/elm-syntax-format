@@ -1864,6 +1864,30 @@ a =
     0
 """
                 )
+            , Test.test "negate 0, parenthesized"
+                (\() ->
+                    """module A exposing (..)
+a = -((((((0))))))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    0
+"""
+                )
+            , Test.test "negate 0 multiple times, parenthesized"
+                (\() ->
+                    """module A exposing (..)
+a = -(((-(((-0))))))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    0
+"""
+                )
             , Test.test "negate 0x0"
                 (\() ->
                     """module A exposing (..)
@@ -1874,6 +1898,30 @@ a = -0x0"""
 
 a =
     0x00
+"""
+                )
+            , Test.test "doubly negated not literal-zero"
+                (\() ->
+                    """module A exposing (..)
+a = -(-1)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    -(-1)
+"""
+                )
+            , Test.test "doubly negated not literal-zero, parenthesized"
+                (\() ->
+                    """module A exposing (..)
+a = -((-((1))))"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    -(-1)
 """
                 )
             , Test.test "if-then-else with single-line condition"

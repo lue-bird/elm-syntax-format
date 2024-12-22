@@ -5216,19 +5216,7 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
             Print.exactly (floatLiteral float)
 
         Elm.Syntax.Expression.Negation negated ->
-            case negated |> Elm.Syntax.Node.value of
-                Elm.Syntax.Expression.Integer 0 ->
-                    printExactlyZero
-
-                Elm.Syntax.Expression.Hex 0 ->
-                    printExactlyZeroXZeroZero
-
-                _ ->
-                    printExactlyMinus
-                        |> Print.followedBy
-                            (expressionParenthesizedIfSpaceSeparated syntaxComments
-                                negated
-                            )
+            printExpressionNegation syntaxComments negated
 
         Elm.Syntax.Expression.Literal string ->
             stringLiteral (Elm.Syntax.Node.Node fullRange string)
@@ -5362,6 +5350,60 @@ expressionNotParenthesized syntaxComments (Elm.Syntax.Node.Node fullRange syntax
 
         Elm.Syntax.Expression.GLSLExpression glsl ->
             expressionGlsl glsl
+
+
+printExpressionNegation :
+    List (Elm.Syntax.Node.Node String)
+    -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+    -> Print
+printExpressionNegation syntaxComments negated =
+    if negated |> expressionIsBase10Zero then
+        printExactlyZero
+
+    else if negated |> expressionIsBase16Zero then
+        printExactlyZeroXZeroZero
+
+    else
+        case negated |> expressionToNotParenthesized of
+            Elm.Syntax.Node.Node doublyNegatedRange (Elm.Syntax.Expression.Negation doublyNegated) ->
+                printExactlyMinus
+                    |> Print.followedBy
+                        (expressionParenthesized syntaxComments
+                            (Elm.Syntax.Node.Node doublyNegatedRange (Elm.Syntax.Expression.Negation doublyNegated))
+                        )
+
+            negatedNotNegationOrIntegerZero ->
+                printExactlyMinus
+                    |> Print.followedBy
+                        (expressionParenthesizedIfSpaceSeparated syntaxComments
+                            negatedNotNegationOrIntegerZero
+                        )
+
+
+expressionIsBase10Zero : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Bool
+expressionIsBase10Zero expression =
+    case expression |> expressionToNotParenthesized |> Elm.Syntax.Node.value of
+        Elm.Syntax.Expression.Integer 0 ->
+            True
+
+        Elm.Syntax.Expression.Negation doublyNegated ->
+            expressionIsBase10Zero doublyNegated
+
+        _ ->
+            False
+
+
+expressionIsBase16Zero : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Bool
+expressionIsBase16Zero expression =
+    case expression |> expressionToNotParenthesized |> Elm.Syntax.Node.value of
+        Elm.Syntax.Expression.Hex 0 ->
+            True
+
+        Elm.Syntax.Expression.Negation doublyNegated ->
+            expressionIsBase16Zero doublyNegated
+
+        _ ->
+            False
 
 
 expressionGlsl : String -> Print

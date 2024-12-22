@@ -1,6 +1,7 @@
 #### 1.1.9
   - in module `ElmSyntaxPrint`
       - simplify negated integer zero to zero
+      - fix bug where duplicate negation was printed as single-line comment
 
 #### 1.1.8
   - in module `ElmSyntaxParserLenient`
