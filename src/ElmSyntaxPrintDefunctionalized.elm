@@ -2277,7 +2277,7 @@ patternList syntaxComments syntaxList =
         element0 :: element1Up ->
             let
                 elementPrintsWithCommentsBefore :
-                    { end : Elm.Syntax.Range.Location
+                    { endLocation : Elm.Syntax.Range.Location
                     , reverse : List Print
                     }
                 elementPrintsWithCommentsBefore =
@@ -2293,10 +2293,10 @@ patternList syntaxComments syntaxList =
                                         patternNotParenthesized syntaxComments
                                             elementNode
                                 in
-                                { end = elementRange.end
+                                { endLocation = elementRange.end
                                 , reverse =
                                     (case
-                                        commentsInRange { start = soFar.end, end = elementRange.start }
+                                        commentsInRange { start = soFar.endLocation, end = elementRange.start }
                                             syntaxComments
                                      of
                                         [] ->
@@ -2321,14 +2321,14 @@ patternList syntaxComments syntaxList =
                                         :: soFar.reverse
                                 }
                             )
-                            { end = syntaxList.fullRange.start
+                            { endLocation = syntaxList.fullRange.start
                             , reverse = []
                             }
 
                 commentsAfterElements : Maybe { print : Print, lineSpread : Print.LineSpread }
                 commentsAfterElements =
                     case
-                        commentsInRange { start = elementPrintsWithCommentsBefore.end, end = syntaxList.fullRange.end }
+                        commentsInRange { start = elementPrintsWithCommentsBefore.endLocation, end = syntaxList.fullRange.end }
                             syntaxComments
                     of
                         [] ->
@@ -2414,7 +2414,7 @@ patternCons syntaxComments syntaxCons =
                         in
                         { reverse =
                             (case
-                                commentsInRange { start = soFar.end, end = tailPatternRange.start }
+                                commentsInRange { start = soFar.endLocation, end = tailPatternRange.start }
                                     syntaxComments
                              of
                                 [] ->
@@ -2437,11 +2437,11 @@ patternCons syntaxComments syntaxCons =
                                         |> Print.followedBy print
                             )
                                 :: soFar.reverse
-                        , end = tailPatternRange.end
+                        , endLocation = tailPatternRange.end
                         }
                     )
                     { reverse = []
-                    , end = syntaxCons.head |> Elm.Syntax.Node.range |> .end
+                    , endLocation = syntaxCons.head |> Elm.Syntax.Node.range |> .end
                     }
                 |> .reverse
 
@@ -2635,16 +2635,16 @@ patternRecord syntaxComments syntaxRecord =
         field0 :: field1Up ->
             let
                 fieldPrintsWithCommentsBefore :
-                    { end : Elm.Syntax.Range.Location
+                    { endLocation : Elm.Syntax.Range.Location
                     , reverse : List Print
                     }
                 fieldPrintsWithCommentsBefore =
                     (field0 :: field1Up)
                         |> List.foldl
                             (\(Elm.Syntax.Node.Node elementRange fieldName) soFar ->
-                                { end = elementRange.end
+                                { endLocation = elementRange.end
                                 , reverse =
-                                    (case commentsInRange { start = soFar.end, end = elementRange.start } syntaxComments of
+                                    (case commentsInRange { start = soFar.endLocation, end = elementRange.start } syntaxComments of
                                         [] ->
                                             Print.exactly fieldName
 
@@ -2662,7 +2662,7 @@ patternRecord syntaxComments syntaxRecord =
                                         :: soFar.reverse
                                 }
                             )
-                            { end = syntaxRecord.fullRange.start
+                            { endLocation = syntaxRecord.fullRange.start
                             , reverse = []
                             }
 
@@ -2670,7 +2670,7 @@ patternRecord syntaxComments syntaxRecord =
                 maybeCommentsAfterFields =
                     case
                         commentsInRange
-                            { start = fieldPrintsWithCommentsBefore.end
+                            { start = fieldPrintsWithCommentsBefore.endLocation
                             , end = syntaxRecord.fullRange.end
                             }
                             syntaxComments
@@ -2748,7 +2748,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
             collapsibleComments commentsBeforeRecordVariable
 
         fieldPrintsAndComments :
-            { end : Elm.Syntax.Range.Location
+            { endLocation : Elm.Syntax.Range.Location
             , reverse :
                 List
                     { syntax :
@@ -2771,7 +2771,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                             commentsBeforeName : List String
                             commentsBeforeName =
                                 commentsInRange
-                                    { start = soFar.end, end = fieldNameRange.start }
+                                    { start = soFar.endLocation, end = fieldNameRange.start }
                                     syntaxComments
 
                             commentsBetweenNameAndValue : List String
@@ -2780,7 +2780,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                     { start = fieldNameRange.start, end = fieldValueRange.start }
                                     syntaxComments
                         in
-                        { end = fieldValueRange.end
+                        { endLocation = fieldValueRange.end
                         , reverse =
                             { syntax = ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValueNode )
                             , valuePrint = typeNotParenthesized syntaxComments fieldValueNode
@@ -2802,7 +2802,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
                                 :: soFar.reverse
                         }
                     )
-                    { end =
+                    { endLocation =
                         syntaxRecordExtension.recordVariable
                             |> Elm.Syntax.Node.range
                             |> .end
@@ -2812,7 +2812,7 @@ typeRecordExtension syntaxComments syntaxRecordExtension =
         commentsAfterFields : List String
         commentsAfterFields =
             commentsInRange
-                { start = fieldPrintsAndComments.end
+                { start = fieldPrintsAndComments.endLocation
                 , end = syntaxRecordExtension.fullRange.end
                 }
                 syntaxComments
@@ -2990,7 +2990,7 @@ construct specific syntaxComments syntaxConstruct =
                         { resultReverse =
                             (case
                                 commentsInRange
-                                    { start = soFar.previousEnd
+                                    { start = soFar.endLocation
                                     , end = argument |> Elm.Syntax.Node.range |> .start
                                     }
                                     syntaxComments
@@ -3015,11 +3015,11 @@ construct specific syntaxComments syntaxConstruct =
                                         |> Print.followedBy print
                             )
                                 :: soFar.resultReverse
-                        , previousEnd = argument |> Elm.Syntax.Node.range |> .end
+                        , endLocation = argument |> Elm.Syntax.Node.range |> .end
                         }
                     )
                     { resultReverse = []
-                    , previousEnd = syntaxConstruct.fullRange.start
+                    , endLocation = syntaxConstruct.fullRange.start
                     }
                 |> .resultReverse
 
@@ -3412,7 +3412,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
         field0 :: field1Up ->
             let
                 fieldPrintsAndComments :
-                    { end : Elm.Syntax.Range.Location
+                    { endLocation : Elm.Syntax.Range.Location
                     , reverse :
                         List
                             { syntax :
@@ -3435,7 +3435,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                     commentsBeforeName : List String
                                     commentsBeforeName =
                                         commentsInRange
-                                            { start = soFar.end, end = fieldNameRange.start }
+                                            { start = soFar.endLocation, end = fieldNameRange.start }
                                             syntaxComments
 
                                     commentsBetweenNameAndValue : List String
@@ -3444,7 +3444,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                             { start = fieldNameRange.start, end = fieldValueRange.start }
                                             syntaxComments
                                 in
-                                { end = fieldValueRange.end
+                                { endLocation = fieldValueRange.end
                                 , reverse =
                                     { syntax = ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValueNode )
                                     , valuePrint = fieldSpecific.printValueNotParenthesized syntaxComments fieldValueNode
@@ -3466,14 +3466,14 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                         :: soFar.reverse
                                 }
                             )
-                            { end = syntaxRecord.fullRange.start
+                            { endLocation = syntaxRecord.fullRange.start
                             , reverse = []
                             }
 
                 commentsAfterFields : List String
                 commentsAfterFields =
                     commentsInRange
-                        { start = fieldPrintsAndComments.end
+                        { start = fieldPrintsAndComments.endLocation
                         , end = syntaxRecord.fullRange.end
                         }
                         syntaxComments
@@ -3656,7 +3656,7 @@ typeFunctionNotParenthesized syntaxComments function =
             typeFunctionExpand function.outType
 
         afterArrowTypesBeforeRightestPrintsWithCommentsBefore :
-            { end : Elm.Syntax.Range.Location
+            { endLocation : Elm.Syntax.Range.Location
             , reverse : List Print
             }
         afterArrowTypesBeforeRightestPrintsWithCommentsBefore =
@@ -3672,11 +3672,11 @@ typeFunctionNotParenthesized syntaxComments function =
                                 typeParenthesizedIfFunction syntaxComments
                                     afterArrowTypeNode
                         in
-                        { end = afterArrowTypeRange.end
+                        { endLocation = afterArrowTypeRange.end
                         , reverse =
                             ((case
                                 commentsInRange
-                                    { start = soFar.end, end = afterArrowTypeRange.start }
+                                    { start = soFar.endLocation, end = afterArrowTypeRange.start }
                                     syntaxComments
                               of
                                 [] ->
@@ -3707,14 +3707,14 @@ typeFunctionNotParenthesized syntaxComments function =
                                 :: soFar.reverse
                         }
                     )
-                    { end = function.inType |> Elm.Syntax.Node.range |> .end
+                    { endLocation = function.inType |> Elm.Syntax.Node.range |> .end
                     , reverse = []
                     }
 
         commentsBeforeRightestAfterArrowType : List String
         commentsBeforeRightestAfterArrowType =
             commentsInRange
-                { start = afterArrowTypesBeforeRightestPrintsWithCommentsBefore.end
+                { start = afterArrowTypesBeforeRightestPrintsWithCommentsBefore.endLocation
                 , end = afterArrowTypes.rightest |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
@@ -4514,13 +4514,14 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                             parameterPrintedRange =
                                 parameterName |> Elm.Syntax.Node.range
 
+                            parameterNamePrint : Print
                             parameterNamePrint =
                                 Print.exactly (parameterName |> Elm.Syntax.Node.value)
                         in
                         { prints =
                             (case
                                 commentsInRange
-                                    { start = soFar.end, end = parameterPrintedRange.start }
+                                    { start = soFar.endLocation, end = parameterPrintedRange.start }
                                     syntaxComments
                              of
                                 [] ->
@@ -4540,11 +4541,11 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                                         |> Print.followedBy parameterNamePrint
                             )
                                 :: soFar.prints
-                        , end = parameterPrintedRange.end
+                        , endLocation = parameterPrintedRange.end
                         }
                     )
                     { prints = []
-                    , end =
+                    , endLocation =
                         syntaxTypeAliasDeclaration.name
                             |> Elm.Syntax.Node.range
                             |> .end
@@ -4643,7 +4644,7 @@ declarationChoiceType :
 declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
     let
         parameterPrints :
-            { end : Elm.Syntax.Range.Location
+            { endLocation : Elm.Syntax.Range.Location
             , reverse : List Print
             }
         parameterPrints =
@@ -4662,7 +4663,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                         { reverse =
                             (case
                                 commentsInRange
-                                    { start = soFar.end, end = parameterPrintedRange.start }
+                                    { start = soFar.endLocation, end = parameterPrintedRange.start }
                                     syntaxComments
                              of
                                 [] ->
@@ -4682,11 +4683,11 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                         |> Print.followedBy parameterNamePrint
                             )
                                 :: soFar.reverse
-                        , end = parameterPrintedRange.end
+                        , endLocation = parameterPrintedRange.end
                         }
                     )
                     { reverse = []
-                    , end =
+                    , endLocation =
                         syntaxChoiceTypeDeclaration.name
                             |> Elm.Syntax.Node.range
                             |> .end
@@ -4717,7 +4718,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
 
                             commentsVariantPrint : Print
                             commentsVariantPrint =
-                                case commentsInRange { start = soFar.end, end = variant.name |> Elm.Syntax.Node.range |> .start } syntaxComments of
+                                case commentsInRange { start = soFar.endLocation, end = variant.name |> Elm.Syntax.Node.range |> .start } syntaxComments of
                                     [] ->
                                         variantPrint
 
@@ -4738,11 +4739,11 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                             |> Print.followedBy variantPrint
                         in
                         { prints = commentsVariantPrint :: soFar.prints
-                        , end = variantRange.end
+                        , endLocation = variantRange.end
                         }
                     )
                     { prints = []
-                    , end = parameterPrints.end
+                    , endLocation = parameterPrints.endLocation
                     }
                 |> .prints
     in
@@ -4832,7 +4833,7 @@ declarationExpressionImplementation :
 declarationExpressionImplementation syntaxComments implementation =
     let
         parameterPrintsWithCommentsBefore :
-            { end : Elm.Syntax.Range.Location
+            { endLocation : Elm.Syntax.Range.Location
             , reverse : List Print
             }
         parameterPrintsWithCommentsBefore =
@@ -4851,7 +4852,7 @@ declarationExpressionImplementation syntaxComments implementation =
                         { reverse =
                             (case
                                 commentsInRange
-                                    { start = soFar.end, end = parameterRange.start }
+                                    { start = soFar.endLocation, end = parameterRange.start }
                                     syntaxComments
                              of
                                 [] ->
@@ -4874,11 +4875,11 @@ declarationExpressionImplementation syntaxComments implementation =
                                         |> Print.followedBy parameterPrint
                             )
                                 :: soFar.reverse
-                        , end = parameterRange.end
+                        , endLocation = parameterRange.end
                         }
                     )
                     { reverse = []
-                    , end =
+                    , endLocation =
                         implementation.name
                             |> Elm.Syntax.Node.range
                             |> .end
@@ -4893,7 +4894,7 @@ declarationExpressionImplementation syntaxComments implementation =
         commentsBetweenParametersAndResult : List String
         commentsBetweenParametersAndResult =
             commentsInRange
-                { start = parameterPrintsWithCommentsBefore.end
+                { start = parameterPrintsWithCommentsBefore.endLocation
                 , end =
                     implementation.expression
                         |> Elm.Syntax.Node.range
@@ -5477,7 +5478,7 @@ expressionCall syntaxComments syntaxCall =
                         { resultReverse =
                             (case
                                 commentsInRange
-                                    { start = soFar.previousEnd
+                                    { start = soFar.endLocation
                                     , end = argument |> Elm.Syntax.Node.range |> .start
                                     }
                                     syntaxComments
@@ -5502,11 +5503,11 @@ expressionCall syntaxComments syntaxCall =
                                         |> Print.followedBy print
                             )
                                 :: soFar.resultReverse
-                        , previousEnd = argument |> Elm.Syntax.Node.range |> .end
+                        , endLocation = argument |> Elm.Syntax.Node.range |> .end
                         }
                     )
                     { resultReverse = []
-                    , previousEnd =
+                    , endLocation =
                         syntaxCall.argument0
                             |> Elm.Syntax.Node.range
                             |> .end
@@ -5605,7 +5606,7 @@ expressionOperation syntaxComments syntaxOperation =
                     , maybeCommentsBeforeExpression :
                         Maybe { print : Print, lineSpread : Print.LineSpread }
                     }
-            , end : Elm.Syntax.Range.Location
+            , endLocation : Elm.Syntax.Range.Location
             }
         beforeRightestPrintsAndComments =
             operationExpanded.beforeRightestOperatorExpressionChain
@@ -5620,10 +5621,10 @@ expressionOperation syntaxComments syntaxOperation =
                             commentsBefore : List String
                             commentsBefore =
                                 commentsInRange
-                                    { start = soFar.end, end = expressionRange.start }
+                                    { start = soFar.endLocation, end = expressionRange.start }
                                     syntaxComments
                         in
-                        { end = expressionRange.end
+                        { endLocation = expressionRange.end
                         , reverse =
                             { operator = operatorAndExpressionBeforeRightest.operator
                             , expression = operatorAndExpressionBeforeRightest.expression
@@ -5638,14 +5639,15 @@ expressionOperation syntaxComments syntaxOperation =
                                 :: soFar.reverse
                         }
                     )
-                    { end = operationExpanded.leftest |> Elm.Syntax.Node.range |> .end
+                    { endLocation =
+                        operationExpanded.leftest |> Elm.Syntax.Node.range |> .end
                     , reverse = []
                     }
 
         commentsBeforeRightestExpression : List String
         commentsBeforeRightestExpression =
             commentsInRange
-                { start = beforeRightestPrintsAndComments.end
+                { start = beforeRightestPrintsAndComments.endLocation
                 , end =
                     operationExpanded.rightestExpression
                         |> Elm.Syntax.Node.range
@@ -6008,7 +6010,7 @@ expressionList syntaxComments syntaxList =
         element0 :: element1Up ->
             let
                 elementPrintsWithCommentsBefore :
-                    { end : Elm.Syntax.Range.Location
+                    { endLocation : Elm.Syntax.Range.Location
                     , reverse : List Print
                     }
                 elementPrintsWithCommentsBefore =
@@ -6024,10 +6026,10 @@ expressionList syntaxComments syntaxList =
                                         expressionNotParenthesized syntaxComments
                                             elementNode
                                 in
-                                { end = elementRange.end
+                                { endLocation = elementRange.end
                                 , reverse =
                                     (case
-                                        commentsInRange { start = soFar.end, end = elementRange.start }
+                                        commentsInRange { start = soFar.endLocation, end = elementRange.start }
                                             syntaxComments
                                      of
                                         [] ->
@@ -6052,13 +6054,13 @@ expressionList syntaxComments syntaxList =
                                         :: soFar.reverse
                                 }
                             )
-                            { end = syntaxList.fullRange.start
+                            { endLocation = syntaxList.fullRange.start
                             , reverse = []
                             }
 
                 commentsAfterElements : List String
                 commentsAfterElements =
-                    commentsInRange { start = elementPrintsWithCommentsBefore.end, end = syntaxList.fullRange.end } syntaxComments
+                    commentsInRange { start = elementPrintsWithCommentsBefore.endLocation, end = syntaxList.fullRange.end } syntaxComments
 
                 lineSpread : Print.LineSpread
                 lineSpread =
@@ -6121,7 +6123,7 @@ expressionRecordUpdate :
 expressionRecordUpdate syntaxComments syntaxRecordUpdate =
     let
         fieldPrintsWithCommentsBefore :
-            { end : Elm.Syntax.Range.Location
+            { endLocation : Elm.Syntax.Range.Location
             , reverse : List Print
             }
         fieldPrintsWithCommentsBefore =
@@ -6139,12 +6141,12 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                             (Elm.Syntax.Node.Node fieldValueRange _) =
                                 fieldValueNode
                         in
-                        { end = fieldValueRange.end
+                        { endLocation = fieldValueRange.end
                         , reverse =
                             (Print.withIndentIncreasedBy 2
                                 (case
                                     commentsInRange
-                                        { start = soFar.end, end = fieldNameRange.start }
+                                        { start = soFar.endLocation, end = fieldNameRange.start }
                                         syntaxComments
                                  of
                                     [] ->
@@ -6206,7 +6208,7 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
                                 :: soFar.reverse
                         }
                     )
-                    { end =
+                    { endLocation =
                         syntaxRecordUpdate.recordVariable
                             |> Elm.Syntax.Node.range
                             |> .end
@@ -6216,7 +6218,7 @@ expressionRecordUpdate syntaxComments syntaxRecordUpdate =
         commentsAfterFields : List String
         commentsAfterFields =
             commentsInRange
-                { start = fieldPrintsWithCommentsBefore.end
+                { start = fieldPrintsWithCommentsBefore.endLocation
                 , end = syntaxRecordUpdate.fullRange.end
                 }
                 syntaxComments
@@ -6310,7 +6312,7 @@ expressionLambda :
 expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
     let
         parameterPrintsWithCommentsBefore :
-            { end : Elm.Syntax.Range.Location
+            { endLocation : Elm.Syntax.Range.Location
             , reverse : List Print
             }
         parameterPrintsWithCommentsBefore =
@@ -6329,7 +6331,7 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                         { reverse =
                             (case
                                 commentsInRange
-                                    { start = soFar.end, end = parameterRange.start }
+                                    { start = soFar.endLocation, end = parameterRange.start }
                                     syntaxComments
                              of
                                 [] ->
@@ -6352,17 +6354,17 @@ expressionLambda syntaxComments (Elm.Syntax.Node.Node fullRange syntaxLambda) =
                                         |> Print.followedBy print
                             )
                                 :: soFar.reverse
-                        , end = parameterRange.end
+                        , endLocation = parameterRange.end
                         }
                     )
                     { reverse = []
-                    , end = fullRange.start
+                    , endLocation = fullRange.start
                     }
 
         commentsBeforeResult : List String
         commentsBeforeResult =
             commentsInRange
-                { start = parameterPrintsWithCommentsBefore.end
+                { start = parameterPrintsWithCommentsBefore.endLocation
                 , end = syntaxLambda.expression |> Elm.Syntax.Node.range |> .start
                 }
                 syntaxComments
@@ -6640,7 +6642,7 @@ expressionCaseOf syntaxComments syntaxCaseOf =
                                         commentsBeforeCasePattern : List String
                                         commentsBeforeCasePattern =
                                             commentsInRange
-                                                { start = soFar.end
+                                                { start = soFar.endLocation
                                                 , end = casePattern |> Elm.Syntax.Node.range |> .start
                                                 }
                                                 syntaxComments
@@ -6660,11 +6662,11 @@ expressionCaseOf syntaxComments syntaxCaseOf =
                                                         |> Print.followedBy Print.linebreakIndented
                                                         |> Print.followedBy casePrint
                                     in
-                                    { end = caseResult |> Elm.Syntax.Node.range |> .end
+                                    { endLocation = caseResult |> Elm.Syntax.Node.range |> .end
                                     , reverse = commentsAndCasePrint :: soFar.reverse
                                     }
                                 )
-                                { end = syntaxCaseOf.expression |> Elm.Syntax.Node.range |> .end
+                                { endLocation = syntaxCaseOf.expression |> Elm.Syntax.Node.range |> .end
                                 , reverse = []
                                 }
                             |> .reverse
@@ -6686,7 +6688,7 @@ expressionLetIn :
     -> Print
 expressionLetIn syntaxComments syntaxLetIn =
     let
-        letDeclarationPrints : { end : Elm.Syntax.Range.Location, reverse : List Print }
+        letDeclarationPrints : { endLocation : Elm.Syntax.Range.Location, reverse : List Print }
         letDeclarationPrints =
             (syntaxLetIn.letDeclaration0 :: syntaxLetIn.letDeclaration1Up)
                 |> List.foldl
@@ -6695,7 +6697,7 @@ expressionLetIn syntaxComments syntaxLetIn =
                             commentsBefore : List String
                             commentsBefore =
                                 commentsInRange
-                                    { start = soFar.end
+                                    { start = soFar.endLocation
                                     , end = letDeclarationRange.start
                                     }
                                     syntaxComments
@@ -6715,19 +6717,19 @@ expressionLetIn syntaxComments syntaxLetIn =
                                             |> Print.followedBy Print.linebreakIndented
                                             |> Print.followedBy letDeclarationPrint
                         in
-                        { end = letDeclarationRange.end
+                        { endLocation = letDeclarationRange.end
                         , reverse =
                             letDeclarationWithCommentsBeforePrint :: soFar.reverse
                         }
                     )
-                    { end = syntaxLetIn.fullRange.start
+                    { endLocation = syntaxLetIn.fullRange.start
                     , reverse = []
                     }
 
         commentsBeforeResult : List String
         commentsBeforeResult =
             commentsInRange
-                { start = letDeclarationPrints.end
+                { start = letDeclarationPrints.endLocation
                 , end =
                     syntaxLetIn.result
                         |> Elm.Syntax.Node.range
