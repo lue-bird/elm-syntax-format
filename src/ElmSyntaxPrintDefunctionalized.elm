@@ -46,7 +46,10 @@ module_ syntaxModule =
         maybeModuleDocumentation =
             moduleDocumentation syntaxModule
 
-        commentsAndPortDocumentationComments : { portDocumentationComments : List (Elm.Syntax.Node.Node String), comments : List (Elm.Syntax.Node.Node String) }
+        commentsAndPortDocumentationComments :
+            { portDocumentationComments : List (Elm.Syntax.Node.Node String)
+            , remainingComments : List (Elm.Syntax.Node.Node String)
+            }
         commentsAndPortDocumentationComments =
             (case maybeModuleDocumentation of
                 Nothing ->
@@ -93,11 +96,11 @@ module_ syntaxModule =
                         { start = lastSyntaxLocationBeforeDeclarations
                         , end = declaration0Range.start
                         }
-                        commentsAndPortDocumentationComments.comments
+                        commentsAndPortDocumentationComments.remainingComments
     in
     syntaxModule.moduleDefinition
         |> Elm.Syntax.Node.value
-        |> moduleHeader { atDocsLines = atDocsLines, comments = commentsAndPortDocumentationComments.comments }
+        |> moduleHeader { atDocsLines = atDocsLines, comments = commentsAndPortDocumentationComments.remainingComments }
         |> Print.followedBy
             (case maybeModuleDocumentation of
                 Nothing ->
@@ -131,7 +134,7 @@ module_ syntaxModule =
                                     |> .end
                             , end = import0Range.start
                             }
-                            commentsAndPortDocumentationComments.comments
+                            commentsAndPortDocumentationComments.remainingComments
                      of
                         [] ->
                             Print.linebreak
@@ -144,7 +147,7 @@ module_ syntaxModule =
                         |> Print.followedBy Print.linebreak
                         |> Print.followedBy
                             ((Elm.Syntax.Node.Node import0Range import0 :: import1Up)
-                                |> imports commentsAndPortDocumentationComments.comments
+                                |> imports commentsAndPortDocumentationComments.remainingComments
                             )
                         |> Print.followedBy printLinebreakLinebreak
             )
@@ -161,7 +164,7 @@ module_ syntaxModule =
         |> Print.followedBy
             (syntaxModule.declarations
                 |> declarations
-                    { comments = commentsAndPortDocumentationComments.comments
+                    { otherComments = commentsAndPortDocumentationComments.remainingComments
                     , portDocumentationComments = commentsAndPortDocumentationComments.portDocumentationComments
                     , previousEnd = lastSyntaxLocationBeforeDeclarations
                     }
@@ -180,7 +183,7 @@ module_ syntaxModule =
                                 |> Elm.Syntax.Node.range
                                 |> .end
                             )
-                            commentsAndPortDocumentationComments.comments
+                            commentsAndPortDocumentationComments.remainingComments
                     of
                         [] ->
                             Print.empty
@@ -198,28 +201,28 @@ splitOffPortDocumentationComments :
     List (Elm.Syntax.Node.Node String)
     ->
         { portDocumentationComments : List (Elm.Syntax.Node.Node String)
-        , comments : List (Elm.Syntax.Node.Node String)
+        , remainingComments : List (Elm.Syntax.Node.Node String)
         }
 splitOffPortDocumentationComments commentsAndPortDocumentationComments =
     commentsAndPortDocumentationComments
         |> List.foldr
             (\commentOrPortDocumentationComments soFar ->
                 if commentOrPortDocumentationComments |> Elm.Syntax.Node.value |> String.startsWith "{-|" then
-                    { comments = soFar.comments
+                    { remainingComments = soFar.remainingComments
                     , portDocumentationComments = commentOrPortDocumentationComments :: soFar.portDocumentationComments
                     }
 
                 else
-                    { comments = commentOrPortDocumentationComments :: soFar.comments
+                    { remainingComments = commentOrPortDocumentationComments :: soFar.remainingComments
                     , portDocumentationComments = soFar.portDocumentationComments
                     }
             )
-            commentsEmptyPortDocumentationCommentsEmpty
+            commentsEmptyPortDocumentationRemainingCommentsEmpty
 
 
-commentsEmptyPortDocumentationCommentsEmpty : { comments : List a_, portDocumentationComments : List b_ }
-commentsEmptyPortDocumentationCommentsEmpty =
-    { comments = [], portDocumentationComments = [] }
+commentsEmptyPortDocumentationRemainingCommentsEmpty : { remainingComments : List a_, portDocumentationComments : List b_ }
+commentsEmptyPortDocumentationRemainingCommentsEmpty =
+    { remainingComments = [], portDocumentationComments = [] }
 
 
 moduleDocumentation : Elm.Syntax.File.File -> Maybe (Elm.Syntax.Node.Node String)
@@ -566,8 +569,11 @@ exposesCombine syntaxExposes =
         [ _ ] as onlyExposeList ->
             onlyExposeList
 
-        expose0Node :: (((Elm.Syntax.Node.Node _ expose1) :: expose2Up) as expose1Up) ->
+        expose0Node :: (expose1Node :: expose2Up) ->
             let
+                (Elm.Syntax.Node.Node _ expose1) =
+                    expose1Node
+
                 (Elm.Syntax.Node.Node expose0Range expose0) =
                     expose0Node
             in
@@ -580,10 +586,10 @@ exposesCombine syntaxExposes =
                         )
 
                 LT ->
-                    expose0Node :: exposesCombine expose1Up
+                    expose0Node :: exposesCombine (expose1Node :: expose2Up)
 
                 GT ->
-                    expose0Node :: exposesCombine expose1Up
+                    expose0Node :: exposesCombine (expose1Node :: expose2Up)
 
 
 exposeMerge : Elm.Syntax.Exposing.TopLevelExpose -> Elm.Syntax.Exposing.TopLevelExpose -> Elm.Syntax.Exposing.TopLevelExpose
@@ -691,7 +697,7 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                             (\atDocsLine soFar ->
                                                 let
                                                     atDocsExposeLine :
-                                                        { remainingExposes : List Elm.Syntax.Exposing.TopLevelExpose
+                                                        { remaining : List Elm.Syntax.Exposing.TopLevelExpose
                                                         , exposes : List Elm.Syntax.Exposing.TopLevelExpose
                                                         }
                                                     atDocsExposeLine =
@@ -699,7 +705,7 @@ moduleExposing context (Elm.Syntax.Node.Node exposingRange syntaxExposing) =
                                                 in
                                                 { atDocsExposeLines =
                                                     atDocsExposeLine.exposes :: soFar.atDocsExposeLines
-                                                , remainingExposes = atDocsExposeLine.remainingExposes
+                                                , remainingExposes = atDocsExposeLine.remaining
                                                 }
                                             )
                                             { remainingExposes =
@@ -773,7 +779,7 @@ atDocsLineToExposesAndRemaining :
     List String
     -> List Elm.Syntax.Exposing.TopLevelExpose
     ->
-        { remainingExposes : List Elm.Syntax.Exposing.TopLevelExpose
+        { remaining : List Elm.Syntax.Exposing.TopLevelExpose
         , exposes : List Elm.Syntax.Exposing.TopLevelExpose
         }
 atDocsLineToExposesAndRemaining atDocsLine remainingExposes =
@@ -789,18 +795,18 @@ atDocsLineToExposesAndRemaining atDocsLine remainingExposes =
                         else
                             Nothing
                 in
-                case soFar.remainingExposes |> listFirstJustMap toExposeReferencedByAtDocsString of
+                case soFar.remaining |> listFirstJustMap toExposeReferencedByAtDocsString of
                     Nothing ->
                         soFar
 
                     Just exposeReferencedByAtDocsString ->
-                        { remainingExposes =
-                            soFar.remainingExposes
+                        { remaining =
+                            soFar.remaining
                                 |> List.filter (\ex -> ex /= exposeReferencedByAtDocsString)
                         , exposes = exposeReferencedByAtDocsString :: soFar.exposes
                         }
             )
-            { remainingExposes = remainingExposes
+            { remaining = remainingExposes
             , exposes = []
             }
 
@@ -953,16 +959,16 @@ imports syntaxComments syntaxImports =
                         |> List.foldl
                             (\(Elm.Syntax.Node.Node importRange _) soFar ->
                                 { previousImportRange = importRange
-                                , comments =
-                                    soFar.comments
+                                , commentsBetweenImports =
+                                    soFar.commentsBetweenImports
                                         ++ commentsInRange { start = soFar.previousImportRange.end, end = importRange.start }
                                             syntaxComments
                                 }
                             )
                             { previousImportRange = import0Range
-                            , comments = []
+                            , commentsBetweenImports = []
                             }
-                        |> .comments
+                        |> .commentsBetweenImports
             in
             (case commentsBetweenImports of
                 [] ->
@@ -2987,7 +2993,7 @@ construct specific syntaxComments syntaxConstruct =
                                 specific.printArgumentParenthesizedIfSpaceSeparated syntaxComments
                                     argument
                         in
-                        { resultReverse =
+                        { reverse =
                             (case
                                 commentsInRange
                                     { start = soFar.endLocation
@@ -3014,14 +3020,14 @@ construct specific syntaxComments syntaxConstruct =
                                             )
                                         |> Print.followedBy print
                             )
-                                :: soFar.resultReverse
+                                :: soFar.reverse
                         , endLocation = argument |> Elm.Syntax.Node.range |> .end
                         }
                     )
-                    { resultReverse = []
+                    { reverse = []
                     , endLocation = syntaxConstruct.fullRange.start
                     }
-                |> .resultReverse
+                |> .reverse
 
         lineSpread : Print.LineSpread
         lineSpread =
@@ -3420,8 +3426,8 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                 , Elm.Syntax.Node.Node fieldValue
                                 )
                             , valuePrint : Print
-                            , commentsBeforeName : Maybe { print : Print, lineSpread : Print.LineSpread }
-                            , commentsBetweenNameAndValue : Maybe { print : Print, lineSpread : Print.LineSpread }
+                            , maybeCommentsBeforeName : Maybe { print : Print, lineSpread : Print.LineSpread }
+                            , maybeCommentsBetweenNameAndValue : Maybe { print : Print, lineSpread : Print.LineSpread }
                             }
                     }
                 fieldPrintsAndComments =
@@ -3448,14 +3454,14 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                 , reverse =
                                     { syntax = ( Elm.Syntax.Node.Node fieldNameRange fieldName, fieldValueNode )
                                     , valuePrint = fieldSpecific.printValueNotParenthesized syntaxComments fieldValueNode
-                                    , commentsBeforeName =
+                                    , maybeCommentsBeforeName =
                                         case commentsBeforeName of
                                             [] ->
                                                 Nothing
 
                                             comment0 :: comment1Up ->
                                                 Just (collapsibleComments (comment0 :: comment1Up))
-                                    , commentsBetweenNameAndValue =
+                                    , maybeCommentsBetweenNameAndValue =
                                         case commentsBetweenNameAndValue of
                                             [] ->
                                                 Nothing
@@ -3490,7 +3496,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                                 |> Print.lineSpread
                                                 |> Print.lineSpreadMergeWith
                                                     (\() ->
-                                                        case field.commentsBeforeName of
+                                                        case field.maybeCommentsBeforeName of
                                                             Nothing ->
                                                                 Print.SingleLine
 
@@ -3499,7 +3505,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                                     )
                                                 |> Print.lineSpreadMergeWith
                                                     (\() ->
-                                                        case field.commentsBetweenNameAndValue of
+                                                        case field.maybeCommentsBetweenNameAndValue of
                                                             Nothing ->
                                                                 Print.SingleLine
 
@@ -3541,7 +3547,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                         Print.exactly (fieldName ++ " " ++ fieldSpecific.nameValueSeparator)
                                             |> Print.followedBy
                                                 (Print.withIndentAtNextMultipleOf4
-                                                    ((case field.commentsBetweenNameAndValue of
+                                                    ((case field.maybeCommentsBetweenNameAndValue of
                                                         Nothing ->
                                                             Print.spaceOrLinebreakIndented
                                                                 (lineSpreadBetweenNameAndValueNotConsideringComments ())
@@ -3566,7 +3572,7 @@ recordLiteral fieldSpecific syntaxComments syntaxRecord =
                                                 )
                                 in
                                 Print.withIndentIncreasedBy 2
-                                    (case field.commentsBeforeName of
+                                    (case field.maybeCommentsBeforeName of
                                         Nothing ->
                                             nameSeparatorValuePrint
 
@@ -4184,7 +4190,7 @@ and comments in between
 -}
 declarations :
     { portDocumentationComments : List (Elm.Syntax.Node.Node String)
-    , comments : List (Elm.Syntax.Node.Node String)
+    , otherComments : List (Elm.Syntax.Node.Node String)
     , previousEnd : Elm.Syntax.Range.Location
     }
     -> List (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration)
@@ -4197,7 +4203,7 @@ declarations context syntaxDeclarations =
 
         (Elm.Syntax.Node.Node declaration0Range declaration0) :: declarations1Up ->
             declaration
-                { comments = context.comments
+                { comments = context.otherComments
                 , portDocumentationComment =
                     case declaration0 of
                         Elm.Syntax.Declaration.PortDeclaration _ ->
@@ -4248,7 +4254,7 @@ declarations context syntaxDeclarations =
                                 { print =
                                     soFar.print
                                         |> Print.followedBy
-                                            (case commentsInRange { start = soFar.previousRange.end, end = declarationRange.start } context.comments of
+                                            (case commentsInRange { start = soFar.previousRange.end, end = declarationRange.start } context.otherComments of
                                                 comment0 :: comment1Up ->
                                                     printLinebreakLinebreakLinebreak
                                                         |> Print.followedBy
@@ -4257,7 +4263,7 @@ declarations context syntaxDeclarations =
                                                             )
                                                         |> Print.followedBy
                                                             (declaration
-                                                                { comments = commentNodesInRange declarationRange context.comments
+                                                                { comments = commentNodesInRange declarationRange context.otherComments
                                                                 , portDocumentationComment = maybeDeclarationPortDocumentationComment
                                                                 }
                                                                 syntaxDeclaration
@@ -4265,7 +4271,7 @@ declarations context syntaxDeclarations =
 
                                                 [] ->
                                                     linebreaksFollowedByDeclaration
-                                                        { comments = commentNodesInRange declarationRange context.comments
+                                                        { comments = commentNodesInRange declarationRange context.otherComments
                                                         , portDocumentationComment = maybeDeclarationPortDocumentationComment
                                                         }
                                                         syntaxDeclaration
@@ -4518,7 +4524,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                             parameterNamePrint =
                                 Print.exactly (parameterName |> Elm.Syntax.Node.value)
                         in
-                        { prints =
+                        { reverse =
                             (case
                                 commentsInRange
                                     { start = soFar.endLocation, end = parameterPrintedRange.start }
@@ -4540,17 +4546,17 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
                                             )
                                         |> Print.followedBy parameterNamePrint
                             )
-                                :: soFar.prints
+                                :: soFar.reverse
                         , endLocation = parameterPrintedRange.end
                         }
                     )
-                    { prints = []
+                    { reverse = []
                     , endLocation =
                         syntaxTypeAliasDeclaration.name
                             |> Elm.Syntax.Node.range
                             |> .end
                     }
-                |> .prints
+                |> .reverse
 
         parametersLineSpread : Print.LineSpread
         parametersLineSpread =
@@ -4738,14 +4744,14 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
                                                 )
                                             |> Print.followedBy variantPrint
                         in
-                        { prints = commentsVariantPrint :: soFar.prints
+                        { reverse = commentsVariantPrint :: soFar.reverse
                         , endLocation = variantRange.end
                         }
                     )
-                    { prints = []
+                    { reverse = []
                     , endLocation = parameterPrints.endLocation
                     }
-                |> .prints
+                |> .reverse
     in
     (case syntaxChoiceTypeDeclaration.documentation of
         Nothing ->
@@ -5475,7 +5481,7 @@ expressionCall syntaxComments syntaxCall =
                             print =
                                 expressionParenthesizedIfSpaceSeparated syntaxComments argument
                         in
-                        { resultReverse =
+                        { reverse =
                             (case
                                 commentsInRange
                                     { start = soFar.endLocation
@@ -5502,17 +5508,17 @@ expressionCall syntaxComments syntaxCall =
                                             )
                                         |> Print.followedBy print
                             )
-                                :: soFar.resultReverse
+                                :: soFar.reverse
                         , endLocation = argument |> Elm.Syntax.Node.range |> .end
                         }
                     )
-                    { resultReverse = []
+                    { reverse = []
                     , endLocation =
                         syntaxCall.argument0
                             |> Elm.Syntax.Node.range
                             |> .end
                     }
-                |> .resultReverse
+                |> .reverse
 
         argument0LineSpread : Print.LineSpread
         argument0LineSpread =

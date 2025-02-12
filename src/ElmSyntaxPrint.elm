@@ -217,7 +217,7 @@ and comments in between
 -}
 declarations :
     { portDocumentationComments : List (Elm.Syntax.Node.Node String)
-    , comments : List (Elm.Syntax.Node.Node String)
+    , otherComments : List (Elm.Syntax.Node.Node String)
     , previousEnd : Elm.Syntax.Range.Location
     }
     -> List (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration)
