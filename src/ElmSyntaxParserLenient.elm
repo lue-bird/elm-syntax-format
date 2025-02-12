@@ -3380,6 +3380,9 @@ expressionNegation =
                     "}" ->
                         negationAfterMinus
 
+                    "," ->
+                        negationAfterMinus
+
                     _ ->
                         ParserFast.problem
             )

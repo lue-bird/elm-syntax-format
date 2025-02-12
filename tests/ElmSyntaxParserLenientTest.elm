@@ -4343,6 +4343,36 @@ Nothing"""
                                 )
                             )
                 )
+            , Test.test "negated expression after comma"
+                (\() ->
+                    "a = (0,-x)"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
+                                (Elm.Syntax.Declaration.FunctionDeclaration
+                                    { signature = Nothing
+                                    , documentation = Nothing
+                                    , declaration =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 11 } }
+                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 2 } } "a"
+                                            , arguments = []
+                                            , expression =
+                                                Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 11 } }
+                                                    (Elm.Syntax.Expression.TupledExpression
+                                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } }
+                                                            (Elm.Syntax.Expression.Integer 0)
+                                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 10 } }
+                                                            (Elm.Syntax.Expression.Negation
+                                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 9 }, end = { row = 1, column = 10 } }
+                                                                    (Elm.Syntax.Expression.FunctionOrValue [] "x")
+                                                                )
+                                                            )
+                                                        ]
+                                                    )
+                                            }
+                                    }
+                                )
+                            )
+                )
             , Test.test "negated expression for value"
                 (\() ->
                     "a = -x"
