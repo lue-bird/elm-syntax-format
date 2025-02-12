@@ -4373,6 +4373,147 @@ Nothing"""
                                 )
                             )
                 )
+            , Test.test "negated expression after = in record"
+                (\() ->
+                    "{a=-x}"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
+                                (Elm.Syntax.Expression.RecordExpr
+                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 6 } }
+                                        ( Elm.Syntax.Node.Node { start = { row = 1, column = 2 }, end = { row = 1, column = 3 } } "a"
+                                        , Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 6 } }
+                                            (Elm.Syntax.Expression.Negation
+                                                (Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } }
+                                                    (Elm.Syntax.Expression.FunctionOrValue [] "x")
+                                                )
+                                            )
+                                        )
+                                    ]
+                                )
+                            )
+                )
+            , Test.test "negated expression after list"
+                (\() ->
+                    "List.sum [a,b]-x"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 17 } }
+                                (Elm.Syntax.Expression.OperatorApplication "-"
+                                    Elm.Syntax.Infix.Left
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 15 } }
+                                        (Elm.Syntax.Expression.Application
+                                            [ Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 9 } }
+                                                (Elm.Syntax.Expression.FunctionOrValue [ "List" ] "sum")
+                                            , Elm.Syntax.Node.Node { start = { row = 1, column = 10 }, end = { row = 1, column = 15 } }
+                                                (Elm.Syntax.Expression.ListExpr
+                                                    [ Elm.Syntax.Node.Node { start = { row = 1, column = 11 }, end = { row = 1, column = 12 } }
+                                                        (Elm.Syntax.Expression.FunctionOrValue [] "a")
+                                                    , Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 14 } }
+                                                        (Elm.Syntax.Expression.FunctionOrValue [] "b")
+                                                    ]
+                                                )
+                                            ]
+                                        )
+                                    )
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 16 }, end = { row = 1, column = 17 } }
+                                        (Elm.Syntax.Expression.FunctionOrValue [] "x")
+                                    )
+                                )
+                            )
+                )
+            , Test.test "negated expression after = in let declaration"
+                (\() ->
+                    "let a=-x in a"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 14 } }
+                                (Elm.Syntax.Expression.LetExpression
+                                    { declarations =
+                                        [ Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 9 } }
+                                            (Elm.Syntax.Expression.LetFunction
+                                                { documentation = Nothing
+                                                , signature = Nothing
+                                                , declaration =
+                                                    Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 9 } }
+                                                        { name = Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 6 } } "a"
+                                                        , arguments = []
+                                                        , expression =
+                                                            Elm.Syntax.Node.Node { start = { row = 1, column = 7 }, end = { row = 1, column = 9 } }
+                                                                (Elm.Syntax.Expression.Negation
+                                                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 8 }, end = { row = 1, column = 9 } }
+                                                                        (Elm.Syntax.Expression.FunctionOrValue [] "x")
+                                                                    )
+                                                                )
+                                                        }
+                                                }
+                                            )
+                                        ]
+                                    , expression =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 13 }, end = { row = 1, column = 14 } }
+                                            (Elm.Syntax.Expression.FunctionOrValue [] "a")
+                                    }
+                                )
+                            )
+                )
+            , Test.test "negated expression after -> in case branch"
+                (\() ->
+                    "case 1 of\n    _->-a"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 2, column = 10 } }
+                                (Elm.Syntax.Expression.CaseExpression
+                                    { expression =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } }
+                                            (Elm.Syntax.Expression.Integer 1)
+                                    , cases =
+                                        [ ( Elm.Syntax.Node.Node { start = { row = 2, column = 5 }, end = { row = 2, column = 6 } }
+                                                Elm.Syntax.Pattern.AllPattern
+                                          , Elm.Syntax.Node.Node { start = { row = 2, column = 8 }, end = { row = 2, column = 10 } }
+                                                (Elm.Syntax.Expression.Negation
+                                                    (Elm.Syntax.Node.Node { start = { row = 2, column = 9 }, end = { row = 2, column = 10 } }
+                                                        (Elm.Syntax.Expression.FunctionOrValue [] "a")
+                                                    )
+                                                )
+                                          )
+                                        ]
+                                    }
+                                )
+                            )
+                )
+            , Test.test "negated expression after `in` in let body"
+                (\() ->
+                    "let a=-x in-a"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { end = { column = 14, row = 1 }, start = { column = 1, row = 1 } }
+                                (Elm.Syntax.Expression.LetExpression
+                                    { declarations =
+                                        [ Elm.Syntax.Node.Node { end = { column = 9, row = 1 }, start = { column = 5, row = 1 } }
+                                            (Elm.Syntax.Expression.LetFunction
+                                                { declaration =
+                                                    Elm.Syntax.Node.Node { end = { column = 9, row = 1 }, start = { column = 5, row = 1 } }
+                                                        { arguments = []
+                                                        , expression =
+                                                            Elm.Syntax.Node.Node { end = { column = 9, row = 1 }, start = { column = 7, row = 1 } }
+                                                                (Elm.Syntax.Expression.Negation
+                                                                    (Elm.Syntax.Node.Node { end = { column = 9, row = 1 }, start = { column = 8, row = 1 } }
+                                                                        (Elm.Syntax.Expression.FunctionOrValue [] "x")
+                                                                    )
+                                                                )
+                                                        , name = Elm.Syntax.Node.Node { end = { column = 6, row = 1 }, start = { column = 5, row = 1 } } "a"
+                                                        }
+                                                , documentation = Nothing
+                                                , signature = Nothing
+                                                }
+                                            )
+                                        ]
+                                    , expression =
+                                        Elm.Syntax.Node.Node { end = { column = 14, row = 1 }, start = { column = 12, row = 1 } }
+                                            (Elm.Syntax.Expression.Negation
+                                                (Elm.Syntax.Node.Node { end = { column = 14, row = 1 }, start = { column = 13, row = 1 } }
+                                                    (Elm.Syntax.Expression.FunctionOrValue [] "a")
+                                                )
+                                            )
+                                    }
+                                )
+                            )
+                )
             , Test.test "negated expression for value"
                 (\() ->
                     "a = -x"
@@ -4397,6 +4538,29 @@ Nothing"""
                                 )
                             )
                 )
+            , Test.test "function declaration with negation sign after =" <|
+                \() ->
+                    "foo=-1"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
+                                (Elm.Syntax.Declaration.FunctionDeclaration
+                                    { documentation = Nothing
+                                    , signature = Nothing
+                                    , declaration =
+                                        Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
+                                            { name = Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 4 } } "foo"
+                                            , arguments = []
+                                            , expression =
+                                                Elm.Syntax.Node.Node { start = { row = 1, column = 5 }, end = { row = 1, column = 7 } }
+                                                    (Elm.Syntax.Expression.Negation
+                                                        (Elm.Syntax.Node.Node { start = { row = 1, column = 6 }, end = { row = 1, column = 7 } }
+                                                            (Elm.Syntax.Expression.Integer 1)
+                                                        )
+                                                    )
+                                            }
+                                    }
+                                )
+                            )
             , Test.test "negated expression in application"
                 (\() ->
                     "toFloat -5"

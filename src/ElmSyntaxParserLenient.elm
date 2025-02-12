@@ -3380,8 +3380,31 @@ expressionNegation =
                     "}" ->
                         negationAfterMinus
 
+                    -- from lambda arrow
+                    ">" ->
+                        negationAfterMinus
+
+                    -- from field or assignment
+                    "=" ->
+                        negationAfterMinus
+
+                    -- from list or tuple or triple
                     "," ->
                         negationAfterMinus
+
+                    -- from let...in
+                    "n" ->
+                        if
+                            (String.slice (offset - 3) (offset - 2) source == "i")
+                                && Basics.not
+                                    (String.all Char.Extra.isLatinAlphaNumOrUnderscoreFast
+                                        (String.slice (offset - 4) (offset - 3) source)
+                                    )
+                        then
+                            negationAfterMinus
+
+                        else
+                            ParserFast.problem
 
                     _ ->
                         ParserFast.problem
