@@ -1,11 +1,9 @@
-#### 1.1.9
+#### 1.1.8
   - in module `ElmSyntaxPrint`
       - format the module documentation comment (strip (..), strip empty @docs, move @docs off first line etc)
       - simplify negated integer zero to zero
       - fix bug where duplicate negation was printed as single-line comment
       - be less strict around possible symbols before negation
-
-#### 1.1.8
   - in module `ElmSyntaxParserLenient`
       - much, much faster for use outside of elm-optimize-level-2, following https://github.com/stil4m/elm-syntax/pull/268
 
