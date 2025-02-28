@@ -3632,9 +3632,8 @@ type Tupled
 
 
 extendedSubExpressionFollowedByWhitespaceAndComments :
-    { info_
-        | afterCommitting : InfixOperatorInfo -> Parser (WithComments ExtensionRight)
-        , validateRightPrecedence : InfixOperatorInfo -> Maybe InfixOperatorInfo
+    { afterCommitting : InfixOperatorInfo -> Parser (WithComments ExtensionRight)
+    , validateRightPrecedence : InfixOperatorInfo -> Maybe InfixOperatorInfo
     }
     -> Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 extendedSubExpressionFollowedByWhitespaceAndComments info =
@@ -3674,14 +3673,18 @@ extensionRightParser extensionRightInfo =
         )
         whitespaceAndComments
         (ParserFast.lazy
-            (\() -> extendedSubExpressionFollowedByWhitespaceAndComments extensionRightInfo)
+            (\() ->
+                extendedSubExpressionFollowedByWhitespaceAndComments
+                    { afterCommitting = extensionRightInfo.afterCommitting
+                    , validateRightPrecedence = extensionRightInfo.validateRightPrecedence
+                    }
+            )
         )
 
 
 infixOperatorAndThen :
-    { info_
-        | afterCommitting : InfixOperatorInfo -> Parser (WithComments ExtensionRight)
-        , validateRightPrecedence : InfixOperatorInfo -> Maybe InfixOperatorInfo
+    { afterCommitting : InfixOperatorInfo -> Parser (WithComments ExtensionRight)
+    , validateRightPrecedence : InfixOperatorInfo -> Maybe InfixOperatorInfo
     }
     -> Parser (WithComments ExtensionRight)
 infixOperatorAndThen extensionRightConstraints =
