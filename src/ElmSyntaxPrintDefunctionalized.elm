@@ -240,7 +240,13 @@ printModuleDocumentation moduleDocumentationBlocks =
                 |> String.trimRight
     in
     Print.exactly
-        ("{-| "
+        ("{-|"
+            ++ (if content |> String.startsWith "@docs " then
+                    "\n\n"
+
+                else
+                    " "
+               )
             ++ content
             ++ (if content |> String.contains "\n" then
                     "\n\n-}"
