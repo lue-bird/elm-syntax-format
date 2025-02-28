@@ -61,16 +61,30 @@ module_ syntaxModule =
             )
                 |> splitOffPortDocumentationComments
 
+        maybeModuleDocumentationParsed :
+            Maybe
+                { whileAtDocsLines : List { rawBefore : String, atDocsLine : List String }
+                , rawAfterAtDocsLines : String
+                }
+        maybeModuleDocumentationParsed =
+            case maybeModuleDocumentation of
+                Nothing ->
+                    Nothing
+
+                Just (Elm.Syntax.Node.Node _ syntaxModuleDocumentation) ->
+                    Just
+                        (syntaxModuleDocumentation
+                            |> moduleDocumentationParse
+                        )
+
         atDocsLines : List (List String)
         atDocsLines =
-            case maybeModuleDocumentation of
+            case maybeModuleDocumentationParsed of
                 Nothing ->
                     []
 
-                Just (Elm.Syntax.Node.Node _ syntaxModuleDocumentation) ->
-                    syntaxModuleDocumentation
-                        |> moduleDocumentationParse
-                        |> .whileAtDocsLines
+                Just moduleDocumentationParsed ->
+                    moduleDocumentationParsed.whileAtDocsLines
                         |> List.map .atDocsLine
 
         lastSyntaxLocationBeforeDeclarations : Elm.Syntax.Range.Location
@@ -102,13 +116,13 @@ module_ syntaxModule =
         |> Elm.Syntax.Node.value
         |> moduleHeader { atDocsLines = atDocsLines, comments = commentsAndPortDocumentationComments.remainingComments }
         |> Print.followedBy
-            (case maybeModuleDocumentation of
+            (case maybeModuleDocumentationParsed of
                 Nothing ->
                     Print.empty
 
-                Just (Elm.Syntax.Node.Node _ moduleDocumentationAsString) ->
+                Just moduleDocumentationParsed ->
                     printLinebreakLinebreak
-                        |> Print.followedBy (Print.exactly moduleDocumentationAsString)
+                        |> Print.followedBy (printModuleDocumentation moduleDocumentationParsed)
             )
         |> Print.followedBy
             (case syntaxModule.imports of
@@ -193,6 +207,48 @@ module_ syntaxModule =
                                 |> Print.followedBy
                                     (moduleLevelComments (comment0 :: comment1Up))
             )
+
+
+printModuleDocumentation :
+    { whileAtDocsLines : List { rawBefore : String, atDocsLine : List String }
+    , rawAfterAtDocsLines : String
+    }
+    -> Print
+printModuleDocumentation moduleDocumentationBlocks =
+    let
+        content : String
+        content =
+            ((moduleDocumentationBlocks.whileAtDocsLines
+                |> listMapAndFlattenToString
+                    (\atDocsLineAndBefore ->
+                        atDocsLineAndBefore.rawBefore
+                            ++ (case atDocsLineAndBefore.atDocsLine of
+                                    [] ->
+                                        ""
+
+                                    atDocsExpose0 :: atDocsExpose1Up ->
+                                        "@docs "
+                                            ++ ((atDocsExpose0 :: atDocsExpose1Up)
+                                                    |> String.join ", "
+                                               )
+                                            ++ "\n"
+                               )
+                    )
+             )
+                ++ moduleDocumentationBlocks.rawAfterAtDocsLines
+            )
+                |> String.trimRight
+    in
+    Print.exactly
+        ("{-| "
+            ++ content
+            ++ (if content |> String.contains "\n" then
+                    "\n\n-}"
+
+                else
+                    "\n-}"
+               )
+        )
 
 
 {-| Resulting lists are sorted by range
@@ -281,10 +337,17 @@ moduleDocumentationParse moduleDocumentationContent =
             }
         parsed =
             moduleDocumentationContent
+                |> String.dropLeft
+                    -- String.length "{-|"
+                    3
+                |> String.trimLeft
+                |> String.dropRight
+                    -- String.length "-}"
+                    2
                 |> String.lines
                 |> List.foldl
                     (\line soFar ->
-                        if String.startsWith "@docs " line then
+                        if line |> String.startsWith "@docs " then
                             { rawSinceAtDocs = ""
                             , finishedBlocks =
                                 { rawBefore = soFar.rawSinceAtDocs
@@ -296,8 +359,17 @@ moduleDocumentationParse moduleDocumentationContent =
                                     :: soFar.finishedBlocks
                             }
 
+                        else if line == "@docs" then
+                            { rawSinceAtDocs = ""
+                            , finishedBlocks =
+                                { rawBefore = soFar.rawSinceAtDocs
+                                , atDocsLine = []
+                                }
+                                    :: soFar.finishedBlocks
+                            }
+
                         else
-                            { rawSinceAtDocs = soFar.rawSinceAtDocs ++ "\n"
+                            { rawSinceAtDocs = soFar.rawSinceAtDocs ++ line ++ "\n"
                             , finishedBlocks = soFar.finishedBlocks
                             }
                     )

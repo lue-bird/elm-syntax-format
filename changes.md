@@ -1,5 +1,6 @@
 #### 1.1.9
   - in module `ElmSyntaxPrint`
+      - format the module documentation comment (strip (..), strip empty @docs etc)
       - simplify negated integer zero to zero
       - fix bug where duplicate negation was printed as single-line comment
       - be less strict around possible symbols before negation
