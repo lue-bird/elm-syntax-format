@@ -178,7 +178,7 @@ module_ syntaxModule =
         |> Print.followedBy
             (syntaxModule.declarations
                 |> declarations
-                    { otherComments = commentsAndPortDocumentationComments.remainingComments
+                    { comments = commentsAndPortDocumentationComments.remainingComments
                     , portDocumentationComments = commentsAndPortDocumentationComments.portDocumentationComments
                     , previousEnd = lastSyntaxLocationBeforeDeclarations
                     }
@@ -4268,7 +4268,7 @@ and comments in between
 -}
 declarations :
     { portDocumentationComments : List (Elm.Syntax.Node.Node String)
-    , otherComments : List (Elm.Syntax.Node.Node String)
+    , comments : List (Elm.Syntax.Node.Node String)
     , previousEnd : Elm.Syntax.Range.Location
     }
     -> List (Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration)
@@ -4281,7 +4281,7 @@ declarations context syntaxDeclarations =
 
         (Elm.Syntax.Node.Node declaration0Range declaration0) :: declarations1Up ->
             declaration
-                { comments = context.otherComments
+                { comments = context.comments
                 , portDocumentationComment =
                     case declaration0 of
                         Elm.Syntax.Declaration.PortDeclaration _ ->
@@ -4332,7 +4332,7 @@ declarations context syntaxDeclarations =
                                 { print =
                                     soFar.print
                                         |> Print.followedBy
-                                            (case commentsInRange { start = soFar.previousRange.end, end = declarationRange.start } context.otherComments of
+                                            (case commentsInRange { start = soFar.previousRange.end, end = declarationRange.start } context.comments of
                                                 comment0 :: comment1Up ->
                                                     printLinebreakLinebreakLinebreak
                                                         |> Print.followedBy
@@ -4341,7 +4341,7 @@ declarations context syntaxDeclarations =
                                                             )
                                                         |> Print.followedBy
                                                             (declaration
-                                                                { comments = commentNodesInRange declarationRange context.otherComments
+                                                                { comments = commentNodesInRange declarationRange context.comments
                                                                 , portDocumentationComment = maybeDeclarationPortDocumentationComment
                                                                 }
                                                                 syntaxDeclaration
@@ -4349,7 +4349,7 @@ declarations context syntaxDeclarations =
 
                                                 [] ->
                                                     linebreaksFollowedByDeclaration
-                                                        { comments = commentNodesInRange declarationRange context.otherComments
+                                                        { comments = commentNodesInRange declarationRange context.comments
                                                         , portDocumentationComment = maybeDeclarationPortDocumentationComment
                                                         }
                                                         syntaxDeclaration
