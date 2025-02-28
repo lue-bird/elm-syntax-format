@@ -3083,7 +3083,7 @@ nestableMultiCommentMapWithRange rangeContentToRes ( openChar, openTail ) ( clos
         (\range afterOpen contentAfterAfterOpen ->
             rangeContentToRes
                 range
-                (open ++ afterOpen ++ contentAfterAfterOpen ++ close)
+                (open ++ afterOpen ++ contentAfterAfterOpen ++ close ++ "")
         )
         (symbolFollowedBy open
             (while isNotRelevant)
