@@ -269,7 +269,7 @@ module_ =
                 ropeEmpty
             )
         )
-        (manyWithComments import_)
+        (manyWithComments importFollowedByWhitespaceAndComments)
         (manyWithComments
             (topIndentedFollowedBy
                 (ParserFast.map3
@@ -286,7 +286,7 @@ module_ =
                     )
                     declaration
                     whitespaceAndComments
-                    (manyWithComments import_)
+                    (manyWithComments importFollowedByWhitespaceAndComments)
                 )
             )
         )
@@ -724,8 +724,13 @@ portModuleDefinition =
 -}
 import_ : Parser { comments : Comments, syntax : Elm.Syntax.Node.Node Elm.Syntax.Import.Import }
 import_ =
+    importFollowedByWhitespaceAndComments
+
+
+importFollowedByWhitespaceAndComments : Parser { comments : Comments, syntax : Elm.Syntax.Node.Node Elm.Syntax.Import.Import }
+importFollowedByWhitespaceAndComments =
     ParserFast.map5WithStartLocation
-        (\start commentsAfterImport mod commentsAfterModuleName maybeModuleAlias maybeExposingResult ->
+        (\start commentsAfterImport moduleNameNode commentsAfterModuleName maybeModuleAlias maybeExposingResult ->
             let
                 commentsBeforeAlias : Comments
                 commentsBeforeAlias =
@@ -737,15 +742,15 @@ import_ =
                     case maybeExposingResult.syntax of
                         Nothing ->
                             let
-                                (Elm.Syntax.Node.Node modRange _) =
-                                    mod
+                                (Elm.Syntax.Node.Node moduleNameRange _) =
+                                    moduleNameNode
                             in
                             { comments =
                                 commentsBeforeAlias
                                     |> ropePrependTo maybeExposingResult.comments
                             , syntax =
-                                Elm.Syntax.Node.Node { start = start, end = modRange.end }
-                                    { moduleName = mod
+                                Elm.Syntax.Node.Node { start = start, end = moduleNameRange.end }
+                                    { moduleName = moduleNameNode
                                     , moduleAlias = Nothing
                                     , exposingList = Nothing
                                     }
@@ -761,7 +766,7 @@ import_ =
                                     |> ropePrependTo maybeExposingResult.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = exposingRange.end }
-                                    { moduleName = mod
+                                    { moduleName = moduleNameNode
                                     , moduleAlias = Nothing
                                     , exposingList = Just exposingListValue
                                     }
@@ -780,7 +785,7 @@ import_ =
                                     |> ropePrependTo maybeExposingResult.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = aliasRange.end }
-                                    { moduleName = mod
+                                    { moduleName = moduleNameNode
                                     , moduleAlias = Just moduleAliasResult.syntax
                                     , exposingList = Nothing
                                     }
@@ -797,7 +802,7 @@ import_ =
                                     |> ropePrependTo maybeExposingResult.comments
                             , syntax =
                                 Elm.Syntax.Node.Node { start = start, end = exposingRange.end }
-                                    { moduleName = mod
+                                    { moduleName = moduleNameNode
                                     , moduleAlias = Just moduleAliasResult.syntax
                                     , exposingList = Just exposingListValue
                                     }
