@@ -2891,16 +2891,16 @@ expressionChar =
 expressionLambdaFollowedByWhitespaceAndComments : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression))
 expressionLambdaFollowedByWhitespaceAndComments =
     ParserFast.map6WithStartLocation
-        (\start commentsAfterBackslash firstArg commentsAfterFirstArg secondUpArgs commentsAfterArrow expressionResult ->
+        (\start commentsAfterBackslash parameter0 commentsAfterParameter0 parameter1Up commentsAfterArrow expressionResult ->
             let
                 (Elm.Syntax.Node.Node expressionRange _) =
                     expressionResult.syntax
             in
             { comments =
                 commentsAfterBackslash
-                    |> ropePrependTo firstArg.comments
-                    |> ropePrependTo commentsAfterFirstArg
-                    |> ropePrependTo secondUpArgs.comments
+                    |> ropePrependTo parameter0.comments
+                    |> ropePrependTo commentsAfterParameter0
+                    |> ropePrependTo parameter1Up.comments
                     |> ropePrependTo commentsAfterArrow
                     |> ropePrependTo expressionResult.comments
             , syntax =
@@ -2909,7 +2909,7 @@ expressionLambdaFollowedByWhitespaceAndComments =
                     , end = expressionRange.end
                     }
                     (Elm.Syntax.Expression.LambdaExpression
-                        { args = firstArg.syntax :: secondUpArgs.syntax
+                        { args = parameter0.syntax :: parameter1Up.syntax
                         , expression = expressionResult.syntax
                         }
                     )
