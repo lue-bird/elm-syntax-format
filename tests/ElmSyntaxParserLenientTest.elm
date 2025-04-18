@@ -3444,6 +3444,14 @@ Nothing"""
                             |> Expect.equal
                                 (Just (Elm.Syntax.Expression.Floatable 0.02))
                     )
+                , Test.test "literal e is not a number"
+                    (\() ->
+                        "e"
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\result -> result.syntax |> Elm.Syntax.Node.value)
+                            |> Expect.equal
+                                (Just (Elm.Syntax.Expression.FunctionOrValue [] "e"))
+                    )
                 , Test.test "integer with negative exponent (uppercase E)"
                     (\() ->
                         "2E-2"
