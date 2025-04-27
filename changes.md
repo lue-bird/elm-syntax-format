@@ -1,3 +1,7 @@
+#### 1.1.9 (unreleased)
+  - in module `ElmSyntaxPrint`
+      - correct amount of digits used in unicode character escape codes (\u{...})
+
 #### 1.1.8
   - in module `ElmSyntaxPrint`
       - format the module documentation comment (strip (..), strip empty @docs, move @docs off first line etc)

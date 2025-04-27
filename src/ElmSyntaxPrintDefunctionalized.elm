@@ -17,6 +17,7 @@ module ElmSyntaxPrintDefunctionalized exposing
 
 -}
 
+import Bitwise
 import Char.Extra
 import Elm.Syntax.Declaration
 import Elm.Syntax.Exposing
@@ -1919,7 +1920,30 @@ unsafeHexDigitIntToString int =
 
 characterHex : Char -> String
 characterHex character =
-    String.toUpper (intToHexString (Char.toCode character))
+    let
+        charCode : Int
+        charCode =
+            Char.toCode character
+    in
+    String.toUpper
+        (unsafeHexDigitIntToString
+            (charCode
+                |> Bitwise.and 0xF000
+                |> Bitwise.shiftRightBy 12
+            )
+            ++ unsafeHexDigitIntToString
+                (charCode
+                    |> Bitwise.and 0x0F00
+                    |> Bitwise.shiftRightBy 8
+                )
+            ++ unsafeHexDigitIntToString
+                (charCode
+                    |> Bitwise.and 0xF0
+                    |> Bitwise.shiftRightBy 4
+                )
+            ++ unsafeHexDigitIntToString (charCode |> Bitwise.and 0x0F)
+            ++ ""
+        )
 
 
 characterIsNotPrint : Char -> Bool

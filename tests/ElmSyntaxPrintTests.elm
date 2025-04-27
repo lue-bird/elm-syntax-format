@@ -3889,6 +3889,18 @@ a =
     \"\"\"🟩\"\"\"
 """
                 )
+            , Test.test "triple double quote string with unicode escape ansi hide cursor"
+                (\() ->
+                    """module A exposing (..)
+a = \"\"\"\\u{1B}[?25l\"\"\" """
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    \"\"\"\\u{001B}[?25l\"\"\"
+"""
+                )
             , Test.test "triple double quote string multi-line without escapes"
                 (\() ->
                     """module A exposing (..)
