@@ -1,4 +1,4 @@
-#### 1.1.9 (unreleased)
+#### 1.1.9
   - in module `ElmSyntaxPrint`
       - correct amount of digits used in unicode character escape codes (\u{...})
 

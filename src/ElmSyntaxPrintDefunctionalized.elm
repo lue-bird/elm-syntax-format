@@ -1941,7 +1941,8 @@ characterHex character =
                     |> Bitwise.and 0xF0
                     |> Bitwise.shiftRightBy 4
                 )
-            ++ unsafeHexDigitIntToString (charCode |> Bitwise.and 0x0F)
+            ++ unsafeHexDigitIntToString
+                (charCode |> Bitwise.and 0x0F)
             ++ ""
         )
 
