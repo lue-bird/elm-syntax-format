@@ -4481,6 +4481,60 @@ listFilledLast head tail =
             listFilledLast tailHead tailTail
 
 
+printDocumentationComment : String -> Print
+printDocumentationComment documentationCommentIncludingOpeningAndClosingTokens =
+    let
+        contentLines : List String
+        contentLines =
+            documentationCommentIncludingOpeningAndClosingTokens
+                |> String.dropLeft 3
+                |> String.dropRight 2
+                |> String.trim
+                |> String.lines
+                |> List.map String.trimRight
+    in
+    if contentLines |> List.all String.isEmpty then
+        printDocumentationCommentEmpty
+
+    else
+        printExactlyCurlyBraceOpeningMinusVerticalBar
+            |> Print.followedBy
+                (contentLines
+                    |> Print.listMapAndIntersperseAndFlatten Print.exactly
+                        Print.linebreak
+                )
+            |> Print.followedBy
+                (if contentLines |> List.any String.isEmpty then
+                    linebreakFollowedByLinebreakFollowedByMinusCurlyBraceClosing
+
+                 else
+                    linebreakFollowedByMinusCurlyBraceClosing
+                )
+
+
+printExactlyCurlyBraceOpeningMinusVerticalBar : Print
+printExactlyCurlyBraceOpeningMinusVerticalBar =
+    Print.exactly "{-| "
+
+
+printDocumentationCommentEmpty : Print
+printDocumentationCommentEmpty =
+    Print.exactly "{-| -}"
+
+
+linebreakFollowedByLinebreakFollowedByMinusCurlyBraceClosing : Print
+linebreakFollowedByLinebreakFollowedByMinusCurlyBraceClosing =
+    Print.linebreak
+        |> Print.followedBy Print.linebreak
+        |> Print.followedBy (Print.exactly "-}")
+
+
+linebreakFollowedByMinusCurlyBraceClosing : Print
+linebreakFollowedByMinusCurlyBraceClosing =
+    Print.linebreak
+        |> Print.followedBy (Print.exactly "-}")
+
+
 declarationDestructuring :
     List (Elm.Syntax.Node.Node String)
     -> Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
@@ -4586,7 +4640,7 @@ declarationPort syntaxComments signature =
             printExactlyPortSpace
 
         Just (Elm.Syntax.Node.Node documentationRange documentation) ->
-            Print.exactly documentation
+            printDocumentationComment documentation
                 |> Print.followedBy Print.linebreak
                 |> Print.followedBy
                     (commentsBetweenDocumentationAndDeclaration
@@ -4694,7 +4748,7 @@ declarationTypeAlias syntaxComments syntaxTypeAliasDeclaration =
             printExactlyTypeSpaceAlias
 
         Just (Elm.Syntax.Node.Node documentationRange documentation) ->
-            Print.exactly documentation
+            printDocumentationComment documentation
                 |> Print.followedBy Print.linebreak
                 |> Print.followedBy
                     (commentsBetweenDocumentationAndDeclaration
@@ -4861,7 +4915,7 @@ declarationChoiceType syntaxComments syntaxChoiceTypeDeclaration =
             printExactlyType
 
         Just (Elm.Syntax.Node.Node documentationRange documentation) ->
-            Print.exactly documentation
+            printDocumentationComment documentation
                 |> Print.followedBy Print.linebreak
                 |> Print.followedBy
                     (commentsBetweenDocumentationAndDeclaration
@@ -5110,7 +5164,7 @@ declarationExpression syntaxComments syntaxExpressionDeclaration =
             withoutDocumentationPrint
 
         Just (Elm.Syntax.Node.Node documentationRange documentation) ->
-            Print.exactly documentation
+            printDocumentationComment documentation
                 |> Print.followedBy Print.linebreak
                 |> Print.followedBy
                     (commentsBetweenDocumentationAndDeclaration

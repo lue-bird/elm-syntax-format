@@ -1,3 +1,7 @@
+#### 1.1.10 (unreleased)
+  - in module `ElmSyntaxPrint`
+      - behave like elm-format regarding whitespace in documentation comments
+
 #### 1.1.9
   - in module `ElmSyntaxPrint`
       - correct amount of digits used in unicode character escape codes (\u{...})

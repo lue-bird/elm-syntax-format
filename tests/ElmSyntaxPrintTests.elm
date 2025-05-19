@@ -567,6 +567,23 @@ a =
     "a"
 """
                 )
+            , Test.test "closing -} not on a new line"
+                (\() ->
+                    """module A exposing (..)
+{-| A module about A. -}
+a =
+    "a\""""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+{-| A module about A.
+-}
+
+
+a =
+    "a"
+"""
+                )
             ]
         , Test.describe "module-level comments"
             [ Test.test "before imports without module documentation"
@@ -1121,6 +1138,133 @@ port sendMessage : String -> Cmd msg
 
 {-| :blushes:
 -}
+port messageReceiver : (String -> msg) -> Sub msg
+"""
+                )
+            , Test.test "documentation comments have the closing -} on a new line"
+                (\() ->
+                    """port module A exposing (..)
+port sendMessage : String -> Cmd msg
+{-| :blushes: -}
+port messageReceiver : (String -> msg) -> Sub msg"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+
+port sendMessage : String -> Cmd msg
+
+
+{-| :blushes:
+-}
+port messageReceiver : (String -> msg) -> Sub msg
+"""
+                )
+            , Test.test "documentation comments have the closing -} on a new line on w*ndows"
+                (\() ->
+                    """port module A exposing (..)
+port sendMessage : String -> Cmd msg
+{-| :blushes: -}
+port messageReceiver : (String -> msg) -> Sub msg"""
+                        |> String.replace "\n" "\r\n"
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+
+port sendMessage : String -> Cmd msg
+
+
+{-| :blushes:
+-}
+port messageReceiver : (String -> msg) -> Sub msg
+"""
+                )
+            , Test.test "documentation comments don't have a linebreak before the closing -} when their content contains no blank lines"
+                (\() ->
+                    """port module A exposing (..)
+port sendMessage : String -> Cmd msg
+{-| :blushes:
+
+-}
+port messageReceiver : (String -> msg) -> Sub msg"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+
+port sendMessage : String -> Cmd msg
+
+
+{-| :blushes:
+-}
+port messageReceiver : (String -> msg) -> Sub msg
+"""
+                )
+            , Test.test "documentation comments have exactly one blank line + linebreak before the closing -} when their content contains blank lines"
+                (\() ->
+                    """port module A exposing (..)
+port sendMessage : String -> Cmd msg
+{-| :blushes:
+
+hi :3
+-}
+port messageReceiver : (String -> msg) -> Sub msg"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+
+port sendMessage : String -> Cmd msg
+
+
+{-| :blushes:
+
+hi :3
+
+-}
+port messageReceiver : (String -> msg) -> Sub msg
+"""
+                )
+            , Test.test "documentation comments have exactly one blank line + linebreak before the closing -} when their content contains lines with only whitespace, and comments are stripped of ending whitespace"
+                (\() ->
+                    """port module A exposing (..)
+port sendMessage : String -> Cmd msg
+{-| :blushes:
+\t
+hi :3\t
+-}
+port messageReceiver : (String -> msg) -> Sub msg"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+
+port sendMessage : String -> Cmd msg
+
+
+{-| :blushes:
+
+hi :3
+
+-}
+port messageReceiver : (String -> msg) -> Sub msg
+"""
+                )
+            , Test.test "documentation comments consisting of whitespace only are printed as {-| -}"
+                (\() ->
+                    """port module A exposing (..)
+port sendMessage : String -> Cmd msg
+{-| 
+
+
+\t   
+ \t 
+-}
+port messageReceiver : (String -> msg) -> Sub msg"""
+                        |> expectPrintedAs
+                            """port module A exposing (..)
+
+
+port sendMessage : String -> Cmd msg
+
+
+{-| -}
 port messageReceiver : (String -> msg) -> Sub msg
 """
                 )
