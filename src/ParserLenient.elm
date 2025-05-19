@@ -1,4 +1,4 @@
-module ParserFast exposing
+module ParserLenient exposing
     ( Parser(..), run
     , symbol, symbolWithEndLocation, symbolWithRange, symbolFollowedBy, symbolBacktrackableFollowedBy, followedBySymbol
     , keyword, keywordFollowedBy
@@ -27,12 +27,12 @@ e.g. when differentiating between `let`-expression, records and references, sinc
 
 You might however run into unintuitive behavior with e.g. whitespace (which commits even after seeing 0 blank characters):
 
-    ParserFast.symbolFollowedBy "("
-        (ParserFast.oneOf2
-            (ParserFast.skipWhileWhitespaceFollowedBy
+    ParserLenient.symbolFollowedBy "("
+        (ParserLenient.oneOf2
+            (ParserLenient.skipWhileWhitespaceFollowedBy
                 parenthesizedAfterOpeningParens
             )
-            (ParserFast.symbol ")" Unit)
+            (ParserLenient.symbol ")" Unit)
         )
 
 With `elm/parser`, the above will work perfectly fine since
@@ -40,7 +40,7 @@ the whitespace parser can succeed but still
 track back to the unit case in case `parenthesizedAfterOpeningParens`
 fails (without committing).
 
-With `ParserFast`, you need to either
+With `ParserLenient`, you need to either
 
   - check for `)` first. This should be preferred in >90% of cases
 
@@ -101,10 +101,10 @@ sample of what that code might look like:
     json : Parser Json
     json =
         oneOf4
-            (ParserFast.map Number float)
-            (ParserFast.keyword "true" (Boolean True))
-            (ParserFast.keyword "False" (Boolean False))
-            (ParserFast.keyword "null" Null)
+            (ParserLenient.map Number float)
+            (ParserLenient.keyword "true" (Boolean True))
+            (ParserLenient.keyword "False" (Boolean False))
+            (ParserLenient.keyword "null" Null)
 
 This parser will keep trying down the list of parsers until one of them starts committing.
 Once a path is chosen, it does not come back and try the others.
@@ -132,7 +132,7 @@ we can [`run`](#run) an int parser to turn `String` to `Int`:
 
     int : Parser Int
     int =
-        ParserFast.integerDecimalMapWithRange (\_ n -> n)
+        ParserLenient.integerDecimalMapWithRange (\_ n -> n)
 
 The cool thing is that you can combine `Parser` values to handle much more
 complex scenarios.
@@ -212,22 +212,22 @@ That means we will want to define our parser in terms of itself:
 
     boolean : Parser Boolean
     boolean =
-        ParserFast.oneOf3
-            (ParserFast.keyword "true" MyTrue)
-            (ParserFast.keyword "false" MyFalse)
-            (ParserFast.symbolFollowedBy "("
-                (ParserFast.map2 MyOr
-                    (ParserFast.skipWhileWhitespaceFollowedBy
-                        (ParserFast.lazy (\_ -> boolean))
-                        |> ParserFast.followedBySkipWhileWhitespace
-                        |> ParserFast.followedBySymbol "||"
-                        |> ParserFast.followedBySkipWhileWhitespace
+        ParserLenient.oneOf3
+            (ParserLenient.keyword "true" MyTrue)
+            (ParserLenient.keyword "false" MyFalse)
+            (ParserLenient.symbolFollowedBy "("
+                (ParserLenient.map2 MyOr
+                    (ParserLenient.skipWhileWhitespaceFollowedBy
+                        (ParserLenient.lazy (\_ -> boolean))
+                        |> ParserLenient.followedBySkipWhileWhitespace
+                        |> ParserLenient.followedBySymbol "||"
+                        |> ParserLenient.followedBySkipWhileWhitespace
                     )
-                    (ParserFast.lazy (\_ -> boolean)
-                        |> ParserFast.followedBySkipWhileWhitespace
+                    (ParserLenient.lazy (\_ -> boolean)
+                        |> ParserLenient.followedBySkipWhileWhitespace
                     )
                 )
-                |> ParserFast.followedBySymbol ")"
+                |> ParserLenient.followedBySymbol ")"
             )
 
 **Notice that `boolean` uses `boolean` in its definition!** In Elm, you can
@@ -1484,9 +1484,9 @@ Maybe you have a value that is an integer or `null`:
 
     nullOrInt : Parser (Maybe Int)
     nullOrInt =
-        ParserFast.oneOf2
-            (ParserFast.map Just int)
-            (ParserFast.keyword "null" Nothing)
+        ParserLenient.oneOf2
+            (ParserLenient.map Just int)
+            (ParserLenient.keyword "null" Nothing)
 
     -- run nullOrInt "0"    == Ok (Just 0)
     -- run nullOrInt "13"   == Ok (Just 13)
@@ -1667,7 +1667,7 @@ loopUntilHelp ((Parser parseEnd) as endParser) ((Parser parseElement) as element
 
     int : Parser Int
     int =
-        ParserFast.integerDecimalMapWithRange (\_ n -> n)
+        ParserLenient.integerDecimalMapWithRange (\_ n -> n)
 
 -}
 integerDecimalMapWithRange : (Elm.Syntax.Range.Range -> Int -> res) -> Parser res
@@ -1720,7 +1720,7 @@ integerDecimalMapWithRange rangeAndIntToRes =
 
     int : Parser Int
     int =
-        ParserFast.integerDecimalOrHexadecimalMapWithRange (\_ n -> n) (\_ n -> n)
+        ParserLenient.integerDecimalOrHexadecimalMapWithRange (\_ n -> n) (\_ n -> n)
 
 -}
 integerDecimalOrHexadecimalMapWithRange : (Elm.Syntax.Range.Range -> Int -> res) -> (Elm.Syntax.Range.Range -> Int -> res) -> Parser res
@@ -1780,7 +1780,7 @@ integerDecimalOrHexadecimalMapWithRange rangeAndIntDecimalToRes rangeAndIntHexad
 
     number : Parser Int
     number =
-        ParserFast.integerDecimalOrHexadecimalMapWithRange (\_ n -> n) (\_ n -> n) (\_ n -> n)
+        ParserLenient.integerDecimalOrHexadecimalMapWithRange (\_ n -> n) (\_ n -> n) (\_ n -> n)
 
 -}
 floatOrIntegerDecimalOrHexadecimalMapWithRange : (Elm.Syntax.Range.Range -> Float -> res) -> (Elm.Syntax.Range.Range -> Int -> res) -> (Elm.Syntax.Range.Range -> Int -> res) -> Parser res
@@ -2784,12 +2784,12 @@ mapWithRange combineStartAndResult (Parser parse) =
 we could try something like this:
 
     import Char
-    import ParserFast exposing (..)
+    import ParserLenient exposing (..)
     import Set
 
     typeVar : Parser String
     typeVar =
-        ParserFast.ifFollowedByWhileValidateWithoutLinebreak
+        ParserLenient.ifFollowedByWhileValidateWithoutLinebreak
             Char.isLower
             (\c -> Char.isAlphaNum c || c == '_')
             (\final -> final == "let" || final == "in" || final == "case" || final == "of")
@@ -3219,11 +3219,11 @@ repeated structures, like a bunch of statements:
     maybeStatementSemicolonWhitespace : Maybe Statement
     maybeStatementSemicolonWhitespace =
         orSucceed
-            (ParserFast.map Just
+            (ParserLenient.map Just
                 (statement
-                    |> ParserFast.followedBySkipWhileWhitespace
-                    |> ParserFast.followedBySymbol ";"
-                    |> ParserFast.followedBySkipWhileWhitespace
+                    |> ParserLenient.followedBySkipWhileWhitespace
+                    |> ParserLenient.followedBySymbol ";"
+                    |> ParserLenient.followedBySkipWhileWhitespace
                 )
             )
             Nothing

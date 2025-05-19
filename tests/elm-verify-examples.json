@@ -3,7 +3,7 @@
     "Print",
     "ElmSyntaxPrint",
     "ElmSyntaxPrintDefunctionalized",
-    "ParserFast",
+    "ParserLenient",
     "Char.Extra",
     "ElmSyntaxParserLenient",
     "./README.md"
