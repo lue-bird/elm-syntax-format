@@ -1,4 +1,4 @@
-#### 1.1.10 (unreleased)
+#### 1.1.10
   - in module `ElmSyntaxPrint`
       - behave like elm-format regarding whitespace in documentation comments
 
