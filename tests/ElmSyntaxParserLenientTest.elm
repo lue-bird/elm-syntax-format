@@ -4546,8 +4546,8 @@ Nothing"""
                                 )
                             )
                 )
-            , Test.test "function declaration with negation sign after =" <|
-                \() ->
+            , Test.test "function declaration with negation sign after ="
+                (\() ->
                     "foo=-1"
                         |> expectSyntaxWithoutComments ElmSyntaxParserLenient.declaration
                             (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 7 } }
@@ -4569,6 +4569,7 @@ Nothing"""
                                     }
                                 )
                             )
+                )
             , Test.test "negated expression in application"
                 (\() ->
                     "toFloat -5"
