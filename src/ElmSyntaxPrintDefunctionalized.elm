@@ -344,13 +344,14 @@ moduleDocumentationParse moduleDocumentationContent =
             }
         parsed =
             moduleDocumentationContent
-                |> String.dropLeft
+                |> String.slice
                     -- String.length "{-|"
                     3
+                    ((moduleDocumentationContent |> String.length)
+                        - -- String.length "-}"
+                          2
+                    )
                 |> String.trimLeft
-                |> String.dropRight
-                    -- String.length "-}"
-                    2
                 |> String.lines
                 |> List.foldl
                     (\line soFar ->
@@ -366,19 +367,21 @@ moduleDocumentationParse moduleDocumentationContent =
                                     :: soFar.finishedBlocks
                             }
 
-                        else if line == "@docs" then
-                            { rawSinceAtDocs = ""
-                            , finishedBlocks =
-                                { rawBefore = soFar.rawSinceAtDocs
-                                , atDocsLine = []
-                                }
-                                    :: soFar.finishedBlocks
-                            }
-
                         else
-                            { rawSinceAtDocs = soFar.rawSinceAtDocs ++ line ++ "\n"
-                            , finishedBlocks = soFar.finishedBlocks
-                            }
+                            case line of
+                                "@docs" ->
+                                    { rawSinceAtDocs = ""
+                                    , finishedBlocks =
+                                        { rawBefore = soFar.rawSinceAtDocs
+                                        , atDocsLine = []
+                                        }
+                                            :: soFar.finishedBlocks
+                                    }
+
+                                _ ->
+                                    { rawSinceAtDocs = soFar.rawSinceAtDocs ++ line ++ "\n"
+                                    , finishedBlocks = soFar.finishedBlocks
+                                    }
                     )
                     rawSinceAtDocsEmptyFinishedBlocksEmpty
     in
@@ -1447,10 +1450,13 @@ comment syntaxComment =
                     commentContentLines : List String
                     commentContentLines =
                         nonDirectlyClosingMultiLineComment
-                            |> -- {-
-                               String.dropLeft 2
-                            |> -- -}
-                               String.dropRight 2
+                            |> String.slice
+                                -- {-
+                                2
+                                ((nonDirectlyClosingMultiLineComment |> String.length)
+                                    - -- -}
+                                      2
+                                )
                             |> String.lines
 
                     commentContentNormal : List String
@@ -1460,20 +1466,11 @@ comment syntaxComment =
                                 []
 
                             commentContentLine0 :: commentContentLine1Up ->
-                                (commentContentLine0 |> String.trimLeft)
+                                (commentContentLine0 |> String.trim)
                                     :: (commentContentLine1Up
-                                            |> listDropLastIfIs
-                                                (\line ->
-                                                    case line |> String.trim of
-                                                        "" ->
-                                                            True
-
-                                                        _ ->
-                                                            False
-                                                )
-                                            |> unindent
+                                            |> listDropLastIfEmpty
+                                            |> linesUnindentAndTrimRight
                                        )
-                                    |> List.map String.trimRight
                 in
                 printExactlyCurlyOpeningMinus
                     |> Print.followedBy
@@ -1514,29 +1511,49 @@ comment syntaxComment =
                     |> Print.followedBy printExactlyMinusCurlyClosing
 
 
-unindent : List String -> List String
-unindent lines =
+linesUnindentAndTrimRight : List String -> List String
+linesUnindentAndTrimRight lines =
     let
-        nonBlankLines : List String
-        nonBlankLines =
+        nonBlankLinesIndentationMinimum : Maybe Int
+        nonBlankLinesIndentationMinimum =
             lines
-                |> List.filterMap
-                    (\line ->
+                |> List.foldl
+                    (\line soFarMinimumIndentationOrNothing ->
                         case line |> String.trim of
                             "" ->
-                                Nothing
+                                soFarMinimumIndentationOrNothing
 
                             _ ->
-                                Just line
+                                let
+                                    currentLineIndentation : Int
+                                    currentLineIndentation =
+                                        line |> lineIndentation
+                                in
+                                Just
+                                    (case soFarMinimumIndentationOrNothing of
+                                        Nothing ->
+                                            currentLineIndentation
+
+                                        Just soFarMinimumIndentation ->
+                                            Basics.min
+                                                soFarMinimumIndentation
+                                                currentLineIndentation
+                                    )
                     )
+                    Nothing
     in
-    case nonBlankLines |> List.map lineIndentation |> List.minimum of
+    case nonBlankLinesIndentationMinimum of
         Nothing ->
-            lines
+            lines |> List.map (\_ -> "")
 
         Just minimumIndentation ->
             lines
-                |> List.map (\line -> line |> String.dropLeft minimumIndentation)
+                |> List.map
+                    (\line ->
+                        line
+                            |> String.dropLeft minimumIndentation
+                            |> String.trimRight
+                    )
 
 
 lineIndentation : String -> Int
@@ -1564,21 +1581,22 @@ spaceCount0OnlySpacesTrue =
     { spaceCount = 0, onlySpaces = True }
 
 
-listDropLastIfIs : (a -> Bool) -> List a -> List a
-listDropLastIfIs lastElementShouldBeRemoved list =
+listDropLastIfEmpty : List String -> List String
+listDropLastIfEmpty list =
     case list of
         [] ->
             []
 
         [ onlyElement ] ->
-            if onlyElement |> lastElementShouldBeRemoved then
-                []
+            case onlyElement |> String.trim of
+                "" ->
+                    []
 
-            else
-                [ onlyElement ]
+                _ ->
+                    [ onlyElement ]
 
         element0 :: element1 :: element2Up ->
-            element0 :: listDropLastIfIs lastElementShouldBeRemoved (element1 :: element2Up)
+            element0 :: listDropLastIfEmpty (element1 :: element2Up)
 
 
 {-| Print an [`Elm.Syntax.ModuleName.ModuleName`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-ModuleName#ModuleName)
@@ -1790,15 +1808,20 @@ tripleDoubleQuotedStringEscapeDoubleQuotes string =
                                         ++ ""
                                 }
                     )
-                    { consecutiveDoubleQuoteCount = 0
-                    , result = ""
-                    }
+                    consecutiveDoubleQuoteCountResultStringEmpty
     in
     beforeLastCharEscaped.result
         ++ (-- escape preceding continuous double quotes if they connect to the last char double quote
             String.repeat beforeLastCharEscaped.consecutiveDoubleQuoteCount "\\\""
            )
         ++ ""
+
+
+consecutiveDoubleQuoteCountResultStringEmpty : { consecutiveDoubleQuoteCount : Int, result : String }
+consecutiveDoubleQuoteCountResultStringEmpty =
+    { consecutiveDoubleQuoteCount = 0
+    , result = ""
+    }
 
 
 singleDoubleQuotedStringCharToEscaped : Char -> String

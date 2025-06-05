@@ -2041,7 +2041,12 @@ convert1OrMoreHexadecimal offset src =
             convert0OrMoreHexadecimal 15 (offset + 1) src
 
         _ ->
-            { int = 0, offset = -1 }
+            int0OffsetNegative1
+
+
+int0OffsetNegative1 : { int : Int, offset : Int }
+int0OffsetNegative1 =
+    { int = 0, offset = -1 }
 
 
 convert0OrMoreHexadecimal : Int -> Int -> String -> { int : Int, offset : Int }
@@ -2169,7 +2174,7 @@ convertIntegerDecimalOrHexadecimal offset src =
             errorAsBaseOffsetAndInt
 
 
-errorAsBaseOffsetAndInt : { base : Base, offsetAndInt : { int : number, offset : number } }
+errorAsBaseOffsetAndInt : { base : Base, offsetAndInt : { int : Int, offset : Int } }
 errorAsBaseOffsetAndInt =
     { base = Decimal, offsetAndInt = { int = 0, offset = -1 } }
 
@@ -2857,7 +2862,7 @@ whileAtMost3WithoutLinebreakAnd2PartUtf16ToResultAndThen charAsStringIsOkay cons
                             { length = 1, string = String.slice s0Offset (s0Offset + 1) src }
 
                     else
-                        { length = 0, string = "" }
+                        length0StringEmpty
             in
             case consumedStringToIntermediateOrErr consumed.string of
                 Just intermediate ->
@@ -2877,6 +2882,11 @@ whileAtMost3WithoutLinebreakAnd2PartUtf16ToResultAndThen charAsStringIsOkay cons
                 Nothing ->
                     pStepBadBacktracking
         )
+
+
+length0StringEmpty : { length : Int, string : String }
+length0StringEmpty =
+    { length = 0, string = "" }
 
 
 whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollowedBySymbol : (Elm.Syntax.Range.Range -> String -> res) -> (String -> Bool) -> (String -> Bool) -> String -> Parser res
@@ -2910,7 +2920,7 @@ whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollow
                             ( 1, String.slice s0Offset (s0Offset + 1) src )
 
                     else
-                        ( 0, "" )
+                        tuple0StringEmpty
             in
             if
                 (String.slice (s0Offset + consumedBeforeFinalSymbolLength) (s0Offset + consumedBeforeFinalSymbolLength + mandatoryFinalSymbolLength) src
@@ -2935,6 +2945,11 @@ whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollow
             else
                 pStepBadBacktracking
         )
+
+
+tuple0StringEmpty : ( Int, String )
+tuple0StringEmpty =
+    ( 0, "" )
 
 
 ifFollowedByWhileValidateMapWithRangeWithoutLinebreak :
@@ -3087,7 +3102,7 @@ nestableMultiCommentMapWithRange rangeContentToRes ( openChar, openTail ) ( clos
         (oneOf2
             (symbol close "")
             (loop
-                ( "", 1 )
+                tupleStringEmpty1
                 (oneOf3
                     (symbol close ( close, -1 ))
                     (symbol open ( open, 1 ))
@@ -3099,7 +3114,7 @@ nestableMultiCommentMapWithRange rangeContentToRes ( openChar, openTail ) ( clos
                     let
                         newNesting : Int
                         newNesting =
-                            soFarNesting + nestingChange
+                            soFarNesting + nestingChange + 0
                     in
                     if newNesting == 0 then
                         Done soFarContent
@@ -3109,6 +3124,11 @@ nestableMultiCommentMapWithRange rangeContentToRes ( openChar, openTail ) ( clos
                 )
             )
         )
+
+
+tupleStringEmpty1 : ( String, Int )
+tupleStringEmpty1 =
+    ( "", 1 )
 
 
 while : (Char -> Bool) -> Parser String

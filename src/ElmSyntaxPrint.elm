@@ -60,7 +60,12 @@ which you can in the end convert to a String with [`toString`](#toString)
 -}
 toString : Print -> String
 toString print =
-    print { indent = 0 }
+    print indent0
+
+
+indent0 : { indent : Int }
+indent0 =
+    { indent = 0 }
 
 
 {-| Print an [`Elm.Syntax.File.File`](https://dark.elm.dmy.fr/packages/stil4m/elm-syntax/latest/Elm-Syntax-File#File)

@@ -2744,7 +2744,7 @@ recordContentsFollowedByCurlyEnd =
                         case maybeValueResult of
                             Nothing ->
                                 { comments = commentsBefore
-                                , syntax = FieldsFirstValuePunned ()
+                                , syntax = fieldsFirstValuePunned
                                 }
 
                             Just expressionResult ->
@@ -2783,6 +2783,11 @@ recordContentsFollowedByCurlyEnd =
             recordFields
             (whitespaceAndComments |> ParserLenient.followedBySymbol "}")
         )
+
+
+fieldsFirstValuePunned : RecordFieldsOrUpdateAfterName
+fieldsFirstValuePunned =
+    FieldsFirstValuePunned ()
 
 
 type RecordFieldsOrUpdateAfterName
@@ -3400,11 +3405,15 @@ expressionNegation =
                     -- from let...in
                     "n" ->
                         if
-                            (String.slice (offset - 3) (offset - 2) source == "i")
-                                && Basics.not
-                                    (String.all Char.Extra.isLatinAlphaNumOrUnderscoreFast
-                                        (String.slice (offset - 4) (offset - 3) source)
-                                    )
+                            case String.slice (offset - 3) (offset - 2) source of
+                                "i" ->
+                                    Basics.not
+                                        (String.all Char.Extra.isLatinAlphaNumOrUnderscoreFast
+                                            (String.slice (offset - 4) (offset - 3) source)
+                                        )
+
+                                _ ->
+                                    False
                         then
                             negationAfterMinus
 
@@ -4726,9 +4735,14 @@ hexStringToInt string =
             , result = soFar.result + 16 ^ soFar.exponent * charToHex c
             }
         )
-        { exponent = 0, result = 0 }
+        exponent0Result0
         string
         |> .result
+
+
+exponent0Result0 : { exponent : Int, result : Int }
+exponent0Result0 =
+    { exponent = 0, result = 0 }
 
 
 charToHex : Char -> Int
@@ -5188,16 +5202,26 @@ whitespaceAndComments =
                 case source |> String.slice offset (offset + 2) of
                     "--" ->
                         -- this will always succeed from here, so no need to fall back to empty
-                        Just fromSingleLineCommentNode
+                        justFromSingleLineCommentNode
 
                     "{-" ->
-                        Just fromMultilineCommentNodeOrEmptyOnProblem
+                        justFromMultilineCommentNodeOrEmptyOnProblem
 
                     _ ->
                         Nothing
             )
             ropeEmpty
         )
+
+
+justFromSingleLineCommentNode : Maybe (Parser Comments)
+justFromSingleLineCommentNode =
+    Just fromSingleLineCommentNode
+
+
+justFromMultilineCommentNodeOrEmptyOnProblem : Maybe (Parser Comments)
+justFromMultilineCommentNodeOrEmptyOnProblem =
+    Just fromMultilineCommentNodeOrEmptyOnProblem
 
 
 fromMultilineCommentNodeOrEmptyOnProblem : Parser Comments
@@ -5351,7 +5375,7 @@ untilWithComments end element =
     ParserLenient.loopUntil
         end
         element
-        ( ropeEmpty, [] )
+        tupleCommentsEmptyListEmpty
         (\pResult ( commentsSoFar, itemsSoFar ) ->
             ( commentsSoFar |> ropePrependTo pResult.comments
             , pResult.syntax :: itemsSoFar
@@ -5367,7 +5391,7 @@ untilWithComments end element =
 manyWithComments : ParserLenient.Parser (WithComments a) -> ParserLenient.Parser (WithComments (List a))
 manyWithComments p =
     ParserLenient.loopWhileSucceeds p
-        ( ropeEmpty, [] )
+        tupleCommentsEmptyListEmpty
         (\pResult ( commentsSoFar, itemsSoFar ) ->
             ( commentsSoFar |> ropePrependTo pResult.comments
             , pResult.syntax :: itemsSoFar
@@ -5380,6 +5404,11 @@ manyWithComments p =
         )
 
 
+tupleCommentsEmptyListEmpty : ( Comments, List a )
+tupleCommentsEmptyListEmpty =
+    ( ropeEmpty, [] )
+
+
 {-| Same as `manyWithComments` except that it doesn't reverse the list.
 This can be useful if you need to access the range of the last item.
 
@@ -5389,13 +5418,18 @@ Mind you the comments will be reversed either way
 manyWithCommentsReverse : ParserLenient.Parser (WithComments a) -> ParserLenient.Parser (WithComments (List a))
 manyWithCommentsReverse p =
     ParserLenient.loopWhileSucceeds p
-        { comments = ropeEmpty, syntax = [] }
+        commentsRopeEmptySyntaxListEmpty
         (\pResult soFar ->
             { comments = soFar.comments |> ropePrependTo pResult.comments
             , syntax = pResult.syntax :: soFar.syntax
             }
         )
         (\result -> result)
+
+
+commentsRopeEmptySyntaxListEmpty : { comments : Comments, syntax : List a }
+commentsRopeEmptySyntaxListEmpty =
+    { comments = ropeEmpty, syntax = [] }
 
 
 type alias Rope a =

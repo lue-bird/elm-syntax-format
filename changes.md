@@ -1,3 +1,6 @@
+#### 1.1.11
+  - optimize a bit
+
 #### 1.1.10
   - in module `ElmSyntaxPrint`
       - behave like elm-format regarding whitespace in documentation comments
