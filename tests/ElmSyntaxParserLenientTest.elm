@@ -7652,6 +7652,43 @@ pipeline1 = 1 ^ 2
                             )
                 )
             ]
+        , -- https://github.com/stil4m/elm-syntax/issues/273
+          Test.test "single double quote, not closed before end of file"
+            (\() ->
+                """
+module A exposing (..)
+a = "
+"""
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                    |> Expect.equal Nothing
+            )
+        , Test.test "triple double quote, not closed before end of file"
+            (\() ->
+                """
+module A exposing (..)
+a = \"\"\"
+"""
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                    |> Expect.equal Nothing
+            )
+        , Test.test "single quote, not closed before end of file"
+            (\() ->
+                """
+module A exposing (..)
+a = '
+"""
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                    |> Expect.equal Nothing
+            )
+        , Test.test "[glsl|, not closed before end of file"
+            (\() ->
+                """
+module A exposing (..)
+a = [glsl|
+"""
+                    |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.module_
+                    |> Expect.equal Nothing
+            )
         ]
 
 

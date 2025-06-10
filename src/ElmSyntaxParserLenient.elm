@@ -2585,7 +2585,7 @@ glslExpressionAfterOpeningSquareBracket =
                 (ParserLenient.symbol "|]" ())
                 (ParserLenient.oneOf2
                     (ParserLenient.symbol "|" "|")
-                    (ParserLenient.while
+                    (ParserLenient.atLeastOneWhile
                         (\c ->
                             case c of
                                 '|' ->
@@ -4897,7 +4897,7 @@ tripleQuotedStringLiteralOfterTripleDoubleQuote =
         (ParserLenient.oneOf3
             (ParserLenient.symbol "\"" "\"")
             (ParserLenient.symbolFollowedBy "\\" (escapedCharValueMap String.fromChar))
-            (ParserLenient.while
+            (ParserLenient.atLeastOneWhile
                 (\c ->
                     case c of
                         '"' ->

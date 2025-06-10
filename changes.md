@@ -1,3 +1,6 @@
+#### 1.1.12
+  - prevent infinite loop when file ends unexpectedly https://github.com/stil4m/elm-syntax/issues/273
+
 #### 1.1.11
   - optimize a bit
 
