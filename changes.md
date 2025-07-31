@@ -1,3 +1,7 @@
+#### 1.1.13
+  - in module `ElmSyntaxPrint`
+      - correct multi-line negation not being indented by 1
+
 #### 1.1.12
   - prevent infinite loop when file ends unexpectedly https://github.com/stil4m/elm-syntax/issues/273
 

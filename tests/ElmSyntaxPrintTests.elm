@@ -2043,6 +2043,21 @@ a =
     0x00
 """
                 )
+            , Test.test "negate multi-line"
+                (\() ->
+                    """module A exposing (..)
+a = -(negate
+    0)"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    -(negate
+        0
+     )
+"""
+                )
             , Test.test "doubly negated not literal-zero"
                 (\() ->
                     """module A exposing (..)

@@ -5551,20 +5551,19 @@ printExpressionNegation syntaxComments negated =
         printExactlyZeroXZeroZero
 
     else
-        case negated |> expressionToNotParenthesized of
-            Elm.Syntax.Node.Node doublyNegatedRange (Elm.Syntax.Expression.Negation doublyNegated) ->
-                printExactlyMinus
-                    |> Print.followedBy
-                        (expressionParenthesized syntaxComments
-                            (Elm.Syntax.Node.Node doublyNegatedRange (Elm.Syntax.Expression.Negation doublyNegated))
-                        )
+        printExactlyMinus
+            |> Print.followedBy
+                (Print.withIndentIncreasedBy 1
+                    (case negated |> expressionToNotParenthesized of
+                        Elm.Syntax.Node.Node doublyNegatedRange (Elm.Syntax.Expression.Negation doublyNegated) ->
+                            expressionParenthesized syntaxComments
+                                (Elm.Syntax.Node.Node doublyNegatedRange (Elm.Syntax.Expression.Negation doublyNegated))
 
-            negatedNotNegationOrIntegerZero ->
-                printExactlyMinus
-                    |> Print.followedBy
-                        (expressionParenthesizedIfSpaceSeparated syntaxComments
-                            negatedNotNegationOrIntegerZero
-                        )
+                        negatedNotNegationOrIntegerZero ->
+                            expressionParenthesizedIfSpaceSeparated syntaxComments
+                                negatedNotNegationOrIntegerZero
+                    )
+                )
 
 
 expressionIsBase10Zero : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Bool
