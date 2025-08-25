@@ -2939,6 +2939,66 @@ a =
         ++ []
 """
                 )
+            , Test.test "++ with left being multi-line but all only covering one line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    (if True then [] else []) ++ []"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    (if True then
+        []
+
+     else
+        []
+    )
+        ++ []
+"""
+                )
+            , Test.test "++ with middle being multi-line but all only covering one line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    [] ++ (if True then [] else []) ++ []"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    []
+        ++ (if True then
+                []
+
+            else
+                []
+           )
+        ++ []
+"""
+                )
+            , Test.test "++ with distant middle being multi-line but all only covering one line"
+                (\() ->
+                    """module A exposing (..)
+a =
+    [] ++ (if True then [] else []) ++ [] ++ []"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    []
+        ++ (if True then
+                []
+
+            else
+                []
+           )
+        ++ []
+        ++ []
+"""
+                )
             , Test.test "|> pipeline with parenthesized multi-line function"
                 (\() ->
                     """module A exposing (..)

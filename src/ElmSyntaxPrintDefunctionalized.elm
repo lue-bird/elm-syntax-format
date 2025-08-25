@@ -5849,6 +5849,10 @@ expressionOperation syntaxComments syntaxOperation =
             expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
                 operationExpanded.leftest
 
+        leftestPrintLineSpread : Print.LineSpread
+        leftestPrintLineSpread =
+            leftestPrint |> Print.lineSpread
+
         lineSpread : Print.LineSpread
         lineSpread =
             lineSpreadInRange syntaxOperation.fullRange
@@ -5866,6 +5870,7 @@ expressionOperation syntaxComments syntaxOperation =
 
         beforeRightestOperatorExpressionChainWithPreviousLineSpread :
             { previousLineSpread : Print.LineSpread
+            , lineSpreadIncludingExpressionPrintLineSpreads : Print.LineSpread
             , rightToLeft :
                 List
                     { operator : String
@@ -5884,8 +5889,16 @@ expressionOperation syntaxComments syntaxOperation =
                             expressionPrint =
                                 expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
                                     operatorExpression.expression
+
+                            expressionPrintLineSpread : Print.LineSpread
+                            expressionPrintLineSpread =
+                                expressionPrint |> Print.lineSpread
                         in
-                        { previousLineSpread = Print.lineSpread expressionPrint
+                        { previousLineSpread = expressionPrintLineSpread
+                        , lineSpreadIncludingExpressionPrintLineSpreads =
+                            soFar.lineSpreadIncludingExpressionPrintLineSpreads
+                                |> Print.lineSpreadMergeWith
+                                    (\() -> expressionPrintLineSpread)
                         , rightToLeft =
                             { operator = operatorExpression.operator
                             , expression = operatorExpression.expression
@@ -5896,7 +5909,10 @@ expressionOperation syntaxComments syntaxOperation =
                                 :: soFar.rightToLeft
                         }
                     )
-                    { previousLineSpread = leftestPrint |> Print.lineSpread
+                    { previousLineSpread = leftestPrintLineSpread
+                    , lineSpreadIncludingExpressionPrintLineSpreads =
+                        lineSpread
+                            |> Print.lineSpreadMergeWithStrict leftestPrintLineSpread
                     , rightToLeft = []
                     }
 
@@ -5943,7 +5959,11 @@ expressionOperation syntaxComments syntaxOperation =
                                 operationExpanded.rightestExpression
                     in
                     Print.withIndentAtNextMultipleOf4
-                        (Print.spaceOrLinebreakIndented lineSpread
+                        (Print.spaceOrLinebreakIndented
+                            (beforeRightestOperatorExpressionChainWithPreviousLineSpread.lineSpreadIncludingExpressionPrintLineSpreads
+                                |> Print.lineSpreadMergeWith
+                                    (\() -> expressionPrint |> Print.lineSpread)
+                            )
                             |> Print.followedBy (Print.exactly (nonApLOperator ++ " "))
                             |> Print.followedBy
                                 (Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
@@ -5999,7 +6019,8 @@ expressionOperation syntaxComments syntaxOperation =
 
                             nonApLOperator ->
                                 Print.withIndentAtNextMultipleOf4
-                                    (Print.spaceOrLinebreakIndented lineSpread
+                                    (Print.spaceOrLinebreakIndented
+                                        beforeRightestOperatorExpressionChainWithPreviousLineSpread.lineSpreadIncludingExpressionPrintLineSpreads
                                         |> Print.followedBy (Print.exactly (nonApLOperator ++ " "))
                                         |> Print.followedBy
                                             (Print.withIndentIncreasedBy (String.length nonApLOperator + 1)

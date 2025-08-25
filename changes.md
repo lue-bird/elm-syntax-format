@@ -1,3 +1,7 @@
+#### 1.1.13
+  - in module `ElmSyntaxPrint`
+      - correct binary operator position after an expression that is single but was formatted to multi-line
+
 #### 1.1.12
   - in module `ElmSyntaxPrint`
       - correct multi-line negation not being indented by 1
