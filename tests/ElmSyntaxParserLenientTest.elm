@@ -3872,6 +3872,18 @@ Nothing"""
                                 )
                             )
                 )
+            , Test.test "if-then-else with of instead of then"
+                (\() ->
+                    "if True of   foo else bar"
+                        |> expectSyntaxWithoutComments ElmSyntaxParserLenient.expression
+                            (Elm.Syntax.Node.Node { start = { row = 1, column = 1 }, end = { row = 1, column = 26 } }
+                                (Elm.Syntax.Expression.IfBlock
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 4 }, end = { row = 1, column = 8 } } (Elm.Syntax.Expression.FunctionOrValue [] "True"))
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 14 }, end = { row = 1, column = 17 } } (Elm.Syntax.Expression.FunctionOrValue [] "foo"))
+                                    (Elm.Syntax.Node.Node { start = { row = 1, column = 23 }, end = { row = 1, column = 26 } } (Elm.Syntax.Expression.FunctionOrValue [] "bar"))
+                                )
+                            )
+                )
             , Test.test "nestedIfExpression"
                 (\() ->
                     "if True then if False then foo else baz else bar"
@@ -5465,7 +5477,17 @@ Nothing"""
                     )
                 ]
             , Test.describe "case-of"
-                [ Test.test "allow the matched expression to be top indented"
+                [ Test.test "with then instead of of"
+                    (\() ->
+                        """case
+True
+  then
+    A -> 1"""
+                            |> ElmSyntaxParserLenient.run ElmSyntaxParserLenient.expression
+                            |> Maybe.map (\_ -> ())
+                            |> Expect.equal (Just ())
+                    )
+                , Test.test "allow the matched expression to be top indented"
                     (\() ->
                         """case
 True

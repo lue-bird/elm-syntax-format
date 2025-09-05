@@ -1,3 +1,8 @@
+#### 1.1.14
+  - in module `ElmSyntaxParserLenient`
+      - correct `case ... then` → `case ... of`
+      - correct `if ... of` → `if ... then`
+
 #### 1.1.13
   - in module `ElmSyntaxPrint`
       - correct binary operator position after an expression that is single but was formatted to multi-line

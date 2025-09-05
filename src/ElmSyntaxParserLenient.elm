@@ -36,6 +36,10 @@ Some additional lenient parsing:
 
   - `\a => b` or `\a. b` → `\a -> b`
 
+  - `case ... then` → `case ... of`
+
+  - `if ... of` or `if ... ->` → `if ... then`
+
   - `case ... of a. b` or `case ... of a b` → `case ... of a -> b`
 
   - merges consecutive `,` in record, list or explicit exposing
@@ -2982,7 +2986,10 @@ expressionCaseOfFollowedByOptimisticLayout =
         )
         (ParserLenient.keywordFollowedBy "case" whitespaceAndComments)
         expressionFollowedByWhitespaceAndComments
-        (ParserLenient.keywordFollowedBy "of" whitespaceAndComments)
+        (ParserLenient.oneOf2
+            (ParserLenient.keywordFollowedBy "of" whitespaceAndComments)
+            (ParserLenient.keywordFollowedBy "then" whitespaceAndComments)
+        )
         (ParserLenient.withIndentSetToColumn
             caseStatementsFollowedByWhitespaceAndComments
         )
@@ -3361,9 +3368,10 @@ expressionIfThenElseFollowedByOptimisticLayout =
         )
         (ParserLenient.keywordFollowedBy "if" whitespaceAndComments)
         expressionFollowedByWhitespaceAndComments
-        (ParserLenient.oneOf2
+        (ParserLenient.oneOf3
             (ParserLenient.keywordFollowedBy "then" whitespaceAndComments)
             (ParserLenient.keywordFollowedBy "->" whitespaceAndComments)
+            (ParserLenient.keywordFollowedBy "of" whitespaceAndComments)
         )
         expressionFollowedByWhitespaceAndComments
         (ParserLenient.keywordFollowedBy "else" whitespaceAndComments)
