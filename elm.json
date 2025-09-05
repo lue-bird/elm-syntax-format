@@ -3,7 +3,7 @@
     "name": "lue-bird/elm-syntax-format",
     "summary": "pretty print elm-syntax like elm-format",
     "license": "MIT",
-    "version": "1.1.13",
+    "version": "1.1.14",
     "exposed-modules": [
         "ElmSyntaxPrint",
         "ElmSyntaxParserLenient"
