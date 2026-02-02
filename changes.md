@@ -1,4 +1,4 @@
-#### 1.1.16
+#### 1.1.17
   - in module `ElmSyntaxPrint`
       - correct line spread when `<|` pipeline
         contains expressions that are multi-line but the overall range and comments are single-line
