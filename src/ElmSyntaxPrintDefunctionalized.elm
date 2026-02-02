@@ -5863,21 +5863,6 @@ expressionOperation syntaxComments syntaxOperation =
         leftestPrintLineSpread =
             leftestPrint |> Print.lineSpread
 
-        lineSpread : Print.LineSpread
-        lineSpread =
-            lineSpreadInRange syntaxOperation.fullRange
-                |> Print.lineSpreadMergeWith
-                    (\() ->
-                        beforeRightestPrintsAndComments.reverse
-                            |> Print.lineSpreadListMapAndCombine
-                                (\c ->
-                                    c.maybeCommentsBeforeExpression
-                                        |> maybeLineSpread .lineSpread
-                                )
-                    )
-                |> Print.lineSpreadMergeWithStrict
-                    commentsCollapsibleBeforeRightestExpression.lineSpread
-
         beforeRightestOperatorExpressionChainWithPreviousLineSpread :
             { previousLineSpread : Print.LineSpread
             , lineSpreadIncludingExpressionPrintLineSpreads : Print.LineSpread
@@ -5921,31 +5906,53 @@ expressionOperation syntaxComments syntaxOperation =
                     )
                     { previousLineSpread = leftestPrintLineSpread
                     , lineSpreadIncludingExpressionPrintLineSpreads =
-                        lineSpread
+                        lineSpreadInRange syntaxOperation.fullRange
                             |> Print.lineSpreadMergeWithStrict leftestPrintLineSpread
+                            |> Print.lineSpreadMergeWithStrict
+                                commentsCollapsibleBeforeRightestExpression.lineSpread
+                            |> Print.lineSpreadMergeWith
+                                (\() ->
+                                    beforeRightestPrintsAndComments.reverse
+                                        |> Print.lineSpreadListMapAndCombine
+                                            (\c ->
+                                                c.maybeCommentsBeforeExpression
+                                                    |> maybeLineSpread .lineSpread
+                                            )
+                                )
                     , rightToLeft = []
                     }
+
+        rightestExpressionPrint : Print
+        rightestExpressionPrint =
+            case operationExpanded.rightestOperator of
+                "<|" ->
+                    expressionParenthesizedAsApLArgument syntaxComments
+                        operationExpanded.rightestExpression
+
+                _ ->
+                    expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
+                        operationExpanded.rightestExpression
+
+        lineSpan : Print.LineSpread
+        lineSpan =
+            beforeRightestOperatorExpressionChainWithPreviousLineSpread.lineSpreadIncludingExpressionPrintLineSpreads
+                |> Print.lineSpreadMergeWith
+                    (\() -> rightestExpressionPrint |> Print.lineSpread)
 
         rightestOperatorExpressionPrint : Print
         rightestOperatorExpressionPrint =
             case operationExpanded.rightestOperator of
                 "<|" ->
-                    let
-                        expressionPrint : Print
-                        expressionPrint =
-                            expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments
-                                operationExpanded.rightestExpression
-                    in
                     Print.spaceOrLinebreakIndented
                         beforeRightestOperatorExpressionChainWithPreviousLineSpread.previousLineSpread
                         |> Print.followedBy printExactlyLessThanVerticalBar
                         |> Print.followedBy
                             (Print.withIndentAtNextMultipleOf4
-                                (Print.spaceOrLinebreakIndented lineSpread
+                                (Print.spaceOrLinebreakIndented lineSpan
                                     |> Print.followedBy
                                         (case commentsBeforeRightestExpression of
                                             [] ->
-                                                expressionPrint
+                                                rightestExpressionPrint
 
                                             _ :: _ ->
                                                 commentsCollapsibleBeforeRightestExpression.print
@@ -5953,33 +5960,23 @@ expressionOperation syntaxComments syntaxOperation =
                                                         (Print.spaceOrLinebreakIndented
                                                             (commentsCollapsibleBeforeRightestExpression.lineSpread
                                                                 |> Print.lineSpreadMergeWith
-                                                                    (\() -> expressionPrint |> Print.lineSpread)
+                                                                    (\() -> rightestExpressionPrint |> Print.lineSpread)
                                                             )
                                                         )
-                                                    |> Print.followedBy expressionPrint
+                                                    |> Print.followedBy rightestExpressionPrint
                                         )
                                 )
                             )
 
                 nonApLOperator ->
-                    let
-                        expressionPrint : Print
-                        expressionPrint =
-                            expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments
-                                operationExpanded.rightestExpression
-                    in
                     Print.withIndentAtNextMultipleOf4
-                        (Print.spaceOrLinebreakIndented
-                            (beforeRightestOperatorExpressionChainWithPreviousLineSpread.lineSpreadIncludingExpressionPrintLineSpreads
-                                |> Print.lineSpreadMergeWith
-                                    (\() -> expressionPrint |> Print.lineSpread)
-                            )
+                        (Print.spaceOrLinebreakIndented lineSpan
                             |> Print.followedBy (Print.exactly (nonApLOperator ++ " "))
                             |> Print.followedBy
                                 (Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
                                     (case commentsBeforeRightestExpression of
                                         [] ->
-                                            expressionPrint
+                                            rightestExpressionPrint
 
                                         _ :: _ ->
                                             commentsCollapsibleBeforeRightestExpression.print
@@ -5987,10 +5984,10 @@ expressionOperation syntaxComments syntaxOperation =
                                                     (Print.spaceOrLinebreakIndented
                                                         (commentsCollapsibleBeforeRightestExpression.lineSpread
                                                             |> Print.lineSpreadMergeWith
-                                                                (\() -> expressionPrint |> Print.lineSpread)
+                                                                (\() -> rightestExpressionPrint |> Print.lineSpread)
                                                         )
                                                     )
-                                                |> Print.followedBy expressionPrint
+                                                |> Print.followedBy rightestExpressionPrint
                                     )
                                 )
                         )
@@ -6006,7 +6003,7 @@ expressionOperation syntaxComments syntaxOperation =
                                     |> Print.followedBy printExactlyLessThanVerticalBar
                                     |> Print.followedBy
                                         (Print.withIndentAtNextMultipleOf4
-                                            (Print.spaceOrLinebreakIndented lineSpread
+                                            (Print.spaceOrLinebreakIndented lineSpan
                                                 |> Print.followedBy
                                                     (case operatorExpression.maybeCommentsBeforeExpression of
                                                         Nothing ->
@@ -6029,8 +6026,7 @@ expressionOperation syntaxComments syntaxOperation =
 
                             nonApLOperator ->
                                 Print.withIndentAtNextMultipleOf4
-                                    (Print.spaceOrLinebreakIndented
-                                        beforeRightestOperatorExpressionChainWithPreviousLineSpread.lineSpreadIncludingExpressionPrintLineSpreads
+                                    (Print.spaceOrLinebreakIndented lineSpan
                                         |> Print.followedBy (Print.exactly (nonApLOperator ++ " "))
                                         |> Print.followedBy
                                             (Print.withIndentIncreasedBy (String.length nonApLOperator + 1)
@@ -6172,24 +6168,119 @@ expressionParenthesizedIfSpaceSeparatedExceptApplication syntaxComments expressi
         expressionNotParenthesized syntaxComments expressionNode
 
 
-expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda :
+expressionParenthesizedAsApLArgument :
     List (Elm.Syntax.Node.Node String)
     -> Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
     -> Print
-expressionParenthesizedIfSpaceSeparatedExceptApplicationAndLambda syntaxComments expressionNode =
-    if expressionNode |> Elm.Syntax.Node.value |> expressionIsSpaceSeparated then
-        case expressionNode |> expressionToNotParenthesized |> Elm.Syntax.Node.value of
-            Elm.Syntax.Expression.Application _ ->
-                expressionNotParenthesized syntaxComments expressionNode
-
-            Elm.Syntax.Expression.LambdaExpression _ ->
-                expressionNotParenthesized syntaxComments expressionNode
-
-            _ ->
-                expressionParenthesized syntaxComments expressionNode
+expressionParenthesizedAsApLArgument syntaxComments expressionNode =
+    if expressionNode |> Elm.Syntax.Node.value |> expressionAsApLArgumentNeedsParens then
+        expressionParenthesized syntaxComments expressionNode
 
     else
         expressionNotParenthesized syntaxComments expressionNode
+
+
+expressionAsApLArgumentNeedsParens : Elm.Syntax.Expression.Expression -> Bool
+expressionAsApLArgumentNeedsParens expression =
+    case expression of
+        Elm.Syntax.Expression.UnitExpr ->
+            False
+
+        Elm.Syntax.Expression.FunctionOrValue _ _ ->
+            False
+
+        Elm.Syntax.Expression.PrefixOperator _ ->
+            False
+
+        Elm.Syntax.Expression.Operator _ ->
+            -- invalid syntax
+            False
+
+        Elm.Syntax.Expression.Integer _ ->
+            False
+
+        Elm.Syntax.Expression.Hex _ ->
+            False
+
+        Elm.Syntax.Expression.Floatable _ ->
+            False
+
+        Elm.Syntax.Expression.Negation _ ->
+            False
+
+        Elm.Syntax.Expression.Literal _ ->
+            False
+
+        Elm.Syntax.Expression.CharLiteral _ ->
+            False
+
+        Elm.Syntax.Expression.RecordExpr _ ->
+            False
+
+        Elm.Syntax.Expression.ListExpr _ ->
+            False
+
+        Elm.Syntax.Expression.RecordAccess _ _ ->
+            False
+
+        Elm.Syntax.Expression.RecordAccessFunction _ ->
+            False
+
+        Elm.Syntax.Expression.RecordUpdateExpression _ _ ->
+            False
+
+        Elm.Syntax.Expression.GLSLExpression _ ->
+            False
+
+        Elm.Syntax.Expression.Application _ ->
+            False
+
+        Elm.Syntax.Expression.TupledExpression parts ->
+            case parts of
+                [] ->
+                    -- should be handled by UnitExpr
+                    False
+
+                [ Elm.Syntax.Node.Node _ inParens ] ->
+                    -- should be handled by ParenthesizedExpression
+                    expressionAsApLArgumentNeedsParens inParens
+
+                [ _, _ ] ->
+                    False
+
+                [ _, _, _ ] ->
+                    False
+
+                _ :: _ :: _ :: _ :: _ ->
+                    -- invalid syntax
+                    False
+
+        Elm.Syntax.Expression.ParenthesizedExpression (Elm.Syntax.Node.Node _ inParens) ->
+            expressionAsApLArgumentNeedsParens inParens
+
+        Elm.Syntax.Expression.OperatorApplication operator _ _ _ ->
+            -- all other operators have a higher precedence
+            case operator of
+                "|>" ->
+                    True
+
+                "<|" ->
+                    True
+
+                _ ->
+                    False
+
+        Elm.Syntax.Expression.IfBlock _ _ _ ->
+            False
+
+        Elm.Syntax.Expression.LetExpression _ ->
+            False
+
+        Elm.Syntax.Expression.CaseExpression _ ->
+            False
+
+        Elm.Syntax.Expression.LambdaExpression _ ->
+            False
 
 
 expressionList :

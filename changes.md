@@ -1,5 +1,11 @@
 #### 1.1.16
   - in module `ElmSyntaxPrint`
+      - correct line spread when `<|` pipeline
+        contains expressions that are multi-line but the overall range and comments are single-line
+      - correctly omit parens around let-in, case-of, if-then-else and most operations in the last argument of a `<|` pipeline
+
+#### 1.1.16
+  - in module `ElmSyntaxPrint`
       - correct line spread between `case` and `of`
         where matched expression is multi-line but the overall range and comments are single-line
 

@@ -3211,6 +3211,25 @@ a =
             identity
 """
                 )
+            , Test.test "<| pipeline, multi-line argument but single-line range"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity identity <| let () = () in ()"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    identity <|
+        identity identity <|
+            let
+                () =
+                    ()
+            in
+            ()
+"""
+                )
             , Test.test "<| pipeline, multi-line, consecutive comments before rightest expression"
                 (\() ->
                     """module A exposing (..)
@@ -3228,6 +3247,60 @@ a =
             -- 0
             -- 1
             identity
+"""
+                )
+            , Test.test "<| pipeline, multi-line, rightest expression is case of"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity identity <| case () of
+                () -> ()"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    identity <|
+        identity identity <|
+            case () of
+                () ->
+                    ()
+"""
+                )
+            , Test.test "<| pipeline, multi-line, rightest expression is if then else"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity identity <| if True then () else ()"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    identity <|
+        identity identity <|
+            if True then
+                ()
+
+            else
+                ()
+"""
+                )
+            , Test.test "<| pipeline, multi-line, rightest expression is multiplication"
+                (\() ->
+                    """module A exposing (..)
+a =
+    identity <| identity identity <|
+        3*3"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    identity <|
+        identity identity <|
+            3
+                * 3
 """
                 )
             , Test.test "<| pipeline, multi-line, consecutive comments collapsible before rightest expression"
