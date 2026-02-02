@@ -1,3 +1,8 @@
+#### 1.1.16
+  - in module `ElmSyntaxPrint`
+      - correct line spread between `case` and `of` as well as `if` and `then`
+        where matched expression is multi-line but the overall range and comments are single-line
+
 #### 1.1.15
   - in module `ElmSyntaxPrint`
       - correct line spread between parts of tuple and triple expressions and types

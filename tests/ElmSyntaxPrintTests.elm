@@ -2135,6 +2135,29 @@ a =
         1
 """
                 )
+            , Test.test "if-then-else with multi-line condition but single-line range"
+                (\() ->
+                    """module A exposing (..)
+a =
+    if let () = () in () then 0 else 1"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    if
+        let
+            () =
+                ()
+        in
+        ()
+    then
+        0
+
+    else
+        1
+"""
+                )
             , Test.test "if-then-else with multi-line condition"
                 (\() ->
                     """module A exposing (..)
@@ -2379,6 +2402,28 @@ a =
     case
         -- 0
         -- 1
+        ()
+    of
+        () ->
+            0
+"""
+                )
+            , Test.test "case-of with multi-line cased expression which has a single-line range"
+                (\() ->
+                    """module A exposing (..)
+a =
+    case let () = () in () of
+        () -> 0"""
+                        |> expectPrintedAs
+                            """module A exposing (..)
+
+
+a =
+    case
+        let
+            () =
+                ()
+        in
         ()
     of
         () ->
