@@ -3225,6 +3225,14 @@ tuple config syntaxComments syntaxTuple =
                 }
                 syntaxComments
 
+        part0Print : Print
+        part0Print =
+            config.printPartNotParenthesized syntaxComments syntaxTuple.part0
+
+        part1Print : Print
+        part1Print =
+            config.printPartNotParenthesized syntaxComments syntaxTuple.part1
+
         lineSpread : Print.LineSpread
         lineSpread =
             config.lineSpreadMinimum
@@ -3241,14 +3249,10 @@ tuple config syntaxComments syntaxTuple =
                             [] ->
                                 Print.SingleLine
                     )
-
-        part0Print : Print
-        part0Print =
-            config.printPartNotParenthesized syntaxComments syntaxTuple.part0
-
-        part1Print : Print
-        part1Print =
-            config.printPartNotParenthesized syntaxComments syntaxTuple.part1
+                |> Print.lineSpreadMergeWith
+                    (\() -> part0Print |> Print.lineSpread)
+                |> Print.lineSpreadMergeWith
+                    (\() -> part1Print |> Print.lineSpread)
     in
     printExactlyParensOpeningSpace
         |> Print.followedBy
@@ -3362,6 +3366,18 @@ triple config syntaxComments syntaxTriple =
                 }
                 syntaxComments
 
+        part0Print : Print
+        part0Print =
+            config.printPartNotParenthesized syntaxComments syntaxTriple.part0
+
+        part1Print : Print
+        part1Print =
+            config.printPartNotParenthesized syntaxComments syntaxTriple.part1
+
+        part2Print : Print
+        part2Print =
+            config.printPartNotParenthesized syntaxComments syntaxTriple.part2
+
         lineSpread : Print.LineSpread
         lineSpread =
             config.lineSpreadMinimum
@@ -3380,18 +3396,12 @@ triple config syntaxComments syntaxTriple =
                             [] ->
                                 Print.SingleLine
                     )
-
-        part0Print : Print
-        part0Print =
-            config.printPartNotParenthesized syntaxComments syntaxTriple.part0
-
-        part1Print : Print
-        part1Print =
-            config.printPartNotParenthesized syntaxComments syntaxTriple.part1
-
-        part2Print : Print
-        part2Print =
-            config.printPartNotParenthesized syntaxComments syntaxTriple.part2
+                |> Print.lineSpreadMergeWith
+                    (\() -> part0Print |> Print.lineSpread)
+                |> Print.lineSpreadMergeWith
+                    (\() -> part1Print |> Print.lineSpread)
+                |> Print.lineSpreadMergeWith
+                    (\() -> part2Print |> Print.lineSpread)
     in
     printExactlyParensOpeningSpace
         |> Print.followedBy

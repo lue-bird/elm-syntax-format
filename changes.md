@@ -1,3 +1,8 @@
+#### 1.1.15
+  - in module `ElmSyntaxPrint`
+      - correct line spread between parts of tuple and triple expressions and types
+        where inner parts are multi-line but the overall range and comments are single-line
+
 #### 1.1.14
   - in module `ElmSyntaxParserLenient`
       - correct `case ... then` → `case ... of`
