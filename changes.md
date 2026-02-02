@@ -1,6 +1,6 @@
 #### 1.1.16
   - in module `ElmSyntaxPrint`
-      - correct line spread between `case` and `of` as well as `if` and `then`
+      - correct line spread between `case` and `of`
         where matched expression is multi-line but the overall range and comments are single-line
 
 #### 1.1.15
