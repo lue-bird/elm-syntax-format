@@ -1739,7 +1739,7 @@ stringLiteral (Elm.Syntax.Node.Node range stringContent) =
 
         wasProbablyTripleDoubleQuoteOriginally : Bool
         wasProbablyTripleDoubleQuoteOriginally =
-            (range.start.row /= range.end.row)
+            (range.start.row - range.end.row /= 0)
                 || ((range.end.column - range.start.column)
                         - (singleDoubleQuotedStringContentEscaped |> stringUnicodeLength)
                         /= 2

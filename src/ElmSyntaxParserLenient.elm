@@ -5276,7 +5276,7 @@ positivelyIndentedFollowedBy nextParser =
         (\column indent ->
             if
                 (column > 1)
-                    && (indent |> List.all (\nestedIndent -> column /= nestedIndent))
+                    && (indent |> List.all (\nestedIndent -> column - nestedIndent /= 0))
             then
                 nextParser
 
