@@ -1,3 +1,7 @@
+#### 1.1.19
+  - apply optimizations made to elm-syntax by [Ju Liu](https://github.com/Arkham)
+  - fix a rare bug related to linebreaks introduced in 1.1.18
+
 #### 1.1.18
   - apply optimizations made to elm-syntax by [Dillon Kearns](https://github.com/dillonkearns)
 
