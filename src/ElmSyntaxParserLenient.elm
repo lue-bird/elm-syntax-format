@@ -4157,7 +4157,7 @@ infixNonAssociative leftPrecedence symbol =
         extensionRightParser
             { afterCommitting =
                 \rightInfo ->
-                    if rightInfo.leftPrecedence == leftPrecedence then
+                    if rightInfo.leftPrecedence - leftPrecedence == 0 then
                         ParserLenient.problem
 
                     else
