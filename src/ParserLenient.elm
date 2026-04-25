@@ -1675,7 +1675,12 @@ integerDecimalMapWithRange rangeAndIntToRes =
                 s1 =
                     convertIntegerDecimal s0.offset s0.src
             in
-            if s1.offset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if s1.offset < 0 then
                 pStepBadBacktracking
 
             else
@@ -1728,7 +1733,12 @@ integerDecimalOrHexadecimalMapWithRange rangeAndIntDecimalToRes rangeAndIntHexad
                 s1 =
                     convertIntegerDecimalOrHexadecimal s0.offset s0.src
             in
-            if s1.offsetAndInt.offset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if s1.offsetAndInt.offset < 0 then
                 pStepBadBacktracking
 
             else
@@ -1788,7 +1798,12 @@ floatOrIntegerDecimalOrHexadecimalMapWithRange rangeAndFloatToRes rangeAndIntDec
                 s1 =
                     convertIntegerDecimalOrHexadecimal s0.offset s0.src
             in
-            if s1.offsetAndInt.offset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if s1.offsetAndInt.offset < 0 then
                 pStepBadBacktracking
 
             else
@@ -1797,7 +1812,7 @@ floatOrIntegerDecimalOrHexadecimalMapWithRange rangeAndFloatToRes rangeAndIntDec
                     offsetAfterFloat =
                         skipFloatAfterIntegerDecimal s1.offsetAndInt.offset s0.src
                 in
-                if offsetAfterFloat == -1 then
+                if offsetAfterFloat < 0 then
                     let
                         newColumn : Int
                         newColumn =
@@ -1860,7 +1875,12 @@ skipFloatAfterIntegerDecimal offset src =
                 offsetAfterDigits =
                     skip1OrMoreDigits0To9 (offset + 1) src
             in
-            if offsetAfterDigits == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if offsetAfterDigits < 0 then
                 -1
 
             else
@@ -2567,11 +2587,16 @@ anyChar =
                 newOffset =
                     charOrEnd s.offset s.src
             in
-            if newOffset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if -newOffset == 1 then
                 -- end of source
                 pStepBadBacktracking
 
-            else if newOffset == -2 then
+            else if newOffset < 0 then
                 -- newline
                 Good '\n'
                     { src = s.src
@@ -2814,7 +2839,12 @@ ifFollowedByWhileValidateWithoutLinebreak firstIsOkay afterFirstIsOkay resultIsO
                 firstOffset =
                     isSubCharWithoutLinebreak firstIsOkay s.offset s.src
             in
-            if firstOffset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if firstOffset < 0 then
                 pStepBadBacktracking
 
             else
@@ -2966,7 +2996,12 @@ ifFollowedByWhileValidateMapWithRangeWithoutLinebreak toResult firstIsOkay after
                 firstOffset =
                     isSubCharWithoutLinebreak firstIsOkay s0.offset s0.src
             in
-            if firstOffset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if firstOffset < 0 then
                 pStepBadBacktracking
 
             else
@@ -2999,7 +3034,12 @@ ifFollowedByWhileWithoutLinebreak firstIsOkay afterFirstIsOkay =
                 firstOffset =
                     isSubCharWithoutLinebreak firstIsOkay s.offset s.src
             in
-            if firstOffset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if firstOffset < 0 then
                 pStepBadBacktracking
 
             else
@@ -3025,7 +3065,12 @@ ifFollowedByWhileMapWithRangeWithoutLinebreak rangeAndConsumedStringToRes firstI
                 firstOffset =
                     isSubCharWithoutLinebreak firstIsOkay s0.offset s0.src
             in
-            if firstOffset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if firstOffset < 0 then
                 pStepBadBacktracking
 
             else
@@ -3058,7 +3103,12 @@ ifFollowedByWhileMapWithoutLinebreak consumedStringToRes firstIsOkay afterFirstI
                 firstOffset =
                     isSubCharWithoutLinebreak firstIsOkay s0.offset s0.src
             in
-            if firstOffset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if firstOffset < 0 then
                 pStepBadBacktracking
 
             else
@@ -3196,7 +3246,12 @@ anyCharFollowedByWhileMap consumedStringToRes afterFirstIsOkay =
                 firstOffset =
                     charOrEnd s.offset s.src
             in
-            if firstOffset == -1 then
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if firstOffset < 0 then
                 -- end of source
                 pStepBadBacktracking
 
