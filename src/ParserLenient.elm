@@ -2592,7 +2592,7 @@ anyChar =
             -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
             -- which allocates on every call.
             -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
-            if -newOffset == 1 then
+            if newOffset + 1 == 1 then
                 -- end of source
                 pStepBadBacktracking
 
@@ -3251,7 +3251,7 @@ anyCharFollowedByWhileMap consumedStringToRes afterFirstIsOkay =
             -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
             -- which allocates on every call.
             -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
-            if firstOffset < 0 then
+            if firstOffset + 1 == 0 then
                 -- end of source
                 pStepBadBacktracking
 
@@ -3259,7 +3259,7 @@ anyCharFollowedByWhileMap consumedStringToRes afterFirstIsOkay =
                 let
                     s1 : State
                     s1 =
-                        if firstOffset == -2 then
+                        if firstOffset < 0 then
                             skipWhileHelp afterFirstIsOkay (s.offset + 1) (s.row + 1) 1 s.src s.indent
 
                         else
