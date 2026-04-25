@@ -1,3 +1,6 @@
+#### 1.1.18
+  - apply optimizations made to elm-syntax by [Dillon Kearns](https://github.com/dillonkearns)
+
 #### 1.1.17
   - in module `ElmSyntaxPrint`
       - correct line spread when `<|` pipeline
