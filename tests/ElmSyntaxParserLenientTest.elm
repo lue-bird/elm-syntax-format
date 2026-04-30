@@ -8,8 +8,8 @@ import Elm.Syntax.Module
 import Elm.Syntax.Node
 import Elm.Syntax.Pattern
 import Elm.Syntax.TypeAnnotation
+import ElmFullModules
 import ElmSyntaxParserLenient
-import ElmSyntaxParserLenientTestFullModules
 import Expect
 import Test
 
@@ -30,7 +30,7 @@ all =
                                     Expect.pass
                         )
                 )
-                ElmSyntaxParserLenientTestFullModules.allSamples
+                ElmFullModules.allSamples
             )
         , Test.test "moduleName"
             (\() ->

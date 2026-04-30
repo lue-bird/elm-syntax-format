@@ -928,7 +928,8 @@ documentationComment =
     -- technically making the whole parser fail on multi-line comments would be "correct"
     -- but in practice, all declaration comments allow layout before which already handles
     -- these.
-    ParserLenient.nestableMultiCommentMapWithRange Elm.Syntax.Node.Node
+    ParserLenient.nestableMultiCommentMapWithRange
+        (\range content -> Elm.Syntax.Node.Node range ("{-" ++ content ++ "-}"))
         ( '{', "-" )
         ( '-', "}" )
 
@@ -2604,7 +2605,7 @@ glslExpressionAfterOpeningSquareBracket =
                 (\extension soFar ->
                     soFar ++ extension ++ ""
                 )
-                identity
+                (\() string -> string)
             )
         )
 
@@ -4346,8 +4347,8 @@ varPattern =
         )
 
 
-numberPart : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
-numberPart =
+numberPattern : Parser (WithComments (Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern))
+numberPattern =
     ParserLenient.integerDecimalOrHexadecimalMapWithRange
         (\range n -> { comments = ropeEmpty, syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.IntPattern n) })
         (\range n -> { comments = ropeEmpty, syntax = Elm.Syntax.Node.Node range (Elm.Syntax.Pattern.HexPattern n) })
@@ -4438,7 +4439,7 @@ composablePattern =
         recordPattern
         stringPattern
         listPattern
-        numberPart
+        numberPattern
         charPattern
 
 
@@ -4452,7 +4453,7 @@ patternNotSpaceSeparated =
         recordPattern
         stringPattern
         listPattern
-        numberPart
+        numberPattern
         charPattern
 
 
@@ -4896,7 +4897,7 @@ singleQuotedStringLiteralAfterDoubleQuote =
         (\extension soFar ->
             soFar ++ extension ++ ""
         )
-        identity
+        (\() string -> string)
 
 
 tripleQuotedStringLiteralOfterTripleDoubleQuote : Parser String
@@ -4923,7 +4924,7 @@ tripleQuotedStringLiteralOfterTripleDoubleQuote =
         (\extension soFar ->
             soFar ++ extension ++ ""
         )
-        identity
+        (\() string -> string)
 
 
 {-| [`Parser`](#Parser) for a name used for
@@ -5189,7 +5190,8 @@ multiLineComment =
 
 multiLineCommentNoCheck : Parser (Elm.Syntax.Node.Node String)
 multiLineCommentNoCheck =
-    ParserLenient.nestableMultiCommentMapWithRange Elm.Syntax.Node.Node
+    ParserLenient.nestableMultiCommentMapWithRange
+        (\range content -> Elm.Syntax.Node.Node range ("{-" ++ content ++ "-}"))
         ( '{', "-" )
         ( '-', "}" )
 
@@ -5389,7 +5391,7 @@ untilWithComments end element =
             , pResult.syntax :: itemsSoFar
             )
         )
-        (\( commentsSoFar, itemsSoFar ) ->
+        (\() ( commentsSoFar, itemsSoFar ) ->
             { comments = commentsSoFar
             , syntax = List.reverse itemsSoFar
             }

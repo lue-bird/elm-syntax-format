@@ -1,16 +1,16 @@
 module ParserLenient exposing
     ( Parser(..), run
-    , symbol, symbolWithEndLocation, symbolWithRange, symbolFollowedBy, symbolBacktrackableFollowedBy, followedBySymbol
-    , keyword, keywordFollowedBy
-    , anyChar, atLeastOneWhile, whileAtLeast1WithoutLinebreak, whileMapWithRange, ifFollowedByWhileWithoutLinebreak, ifFollowedByWhileMapWithoutLinebreak, ifFollowedByWhileMapWithRangeWithoutLinebreak, ifFollowedByWhileValidateWithoutLinebreak, ifFollowedByWhileValidateMapWithRangeWithoutLinebreak, whileAtMost3WithoutLinebreakAnd2PartUtf16ToResultAndThen, whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollowedBySymbol
+    , symbol, symbolWithEndLocation, symbolWithRange, symbolFollowedBy, symbolStartFollowedBy, symbolBacktrackableFollowedBy, followedBySymbol
+    , keyword, keywordFollowedBy, keywordStartFollowedBy
+    , anyChar, atLeastOneWhile, whileAtLeast1WithoutLinebreak, whileMapWithRange, ifFollowedByWhileWithoutLinebreak, ifFollowedByWhileMapWithoutLinebreak, ifFollowedByWhileMapWithRangeWithoutLinebreak, ifFollowedByWhileValidateWithoutLinebreak, ifFollowedByWhileValidateMapWithRangeWithoutLinebreak, ifFollowedByWhileValidateMapWithStartWithoutLinebreak, whileAtMost3WithoutLinebreakAnd2PartUtf16ToResultAndThen, whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollowedBySymbol
     , integerDecimalMapWithRange, integerDecimalOrHexadecimalMapWithRange, floatOrIntegerDecimalOrHexadecimalMapWithRange
-    , skipWhileWhitespaceBacktrackableFollowedBy, followedBySkipWhileWhitespace, nestableMultiCommentMapWithRange
+    , skipWhileWhitespaceBacktrackableFollowedBy, followedBySkipWhileWhitespace, skipWhileWhitespaceOrCommaBacktrackableFollowedBy, nestableMultiCommentMapWithRange
     , map, validate, lazy
-    , map2, map2WithStartLocation, map2WithRange, map3, map3WithStartLocation, map3WithRange, map4, map4WithStartLocation, map4WithRange, map5, map5WithStartLocation, map5WithRange, map6, map6WithStartLocation, map7, map7WithRange, map8WithStartLocation, map9WithRange
+    , map2, map2WithStartLocation, map2WithRange, map3, map3WithStartLocation, map3WithRange, map4, map4WithStartLocation, map4WithRange, map5, map5WithStartLocation, map5WithRange, map6, map6WithStartLocation, map7, map7WithRange, map8WithStartLocation, map9, map9WithRange, map10
     , loopWhileSucceeds, loopWhileSucceedsOntoResultFromParser, loopWhileSucceedsOntoResultFromParserRightToLeftStackUnsafe, loopWhileSucceedsRightToLeftStackUnsafe, loopUntil
-    , orSucceed, mapOrSucceed, map2OrSucceed, map2WithRangeOrSucceed, map3OrSucceed, map4OrSucceed, oneOf2, oneOf2Map, oneOf2MapWithStartRowColumnAndEndRowColumn, oneOf2OrSucceed, oneOf3, oneOf4, oneOf5, oneOf7, oneOf9
+    , orSucceed, mapOrSucceed, map2OrSucceed, map2WithRangeOrSucceed, map3OrSucceed, map3WithStartOrSucceed, map4OrSucceed, oneOf2, oneOf2Map, oneOf2MapWithStartAndEnd, oneOf2MapWithStartRowColumnAndEndRowColumn, oneOf2OrSucceed, oneOf3, oneOf3Map, oneOf4, oneOf5, oneOf6, oneOf7, oneOf9
     , withIndentSetToColumn, columnIndentAndThen, validateEndColumnIndentation
-    , mapWithRange, offsetSourceAndThen, offsetSourceAndThenOrSucceed
+    , mapWithRange, offsetSourceAndThen, offsetSourceValidateFollowedBy, offsetSourceAndThenOrSucceed
     , problem
     )
 
@@ -60,19 +60,19 @@ With `ParserLenient`, you need to either
 
 # Exact match primitives
 
-@docs symbol, symbolWithEndLocation, symbolWithRange, symbolFollowedBy, symbolBacktrackableFollowedBy, followedBySymbol
-@docs keyword, keywordFollowedBy
+@docs symbol, symbolWithEndLocation, symbolWithRange, symbolFollowedBy, symbolStartFollowedBy, symbolBacktrackableFollowedBy, followedBySymbol
+@docs keyword, keywordFollowedBy, keywordStartFollowedBy
 
 
 # Fuzzy match primitives
 
-@docs anyChar, atLeastOneWhile, whileAtLeast1WithoutLinebreak, whileMapWithRange, ifFollowedByWhileWithoutLinebreak, ifFollowedByWhileMapWithoutLinebreak, ifFollowedByWhileMapWithRangeWithoutLinebreak, ifFollowedByWhileValidateWithoutLinebreak, ifFollowedByWhileValidateMapWithRangeWithoutLinebreak, whileAtMost3WithoutLinebreakAnd2PartUtf16ToResultAndThen, whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollowedBySymbol
+@docs anyChar, atLeastOneWhile, whileAtLeast1WithoutLinebreak, whileMapWithRange, ifFollowedByWhileWithoutLinebreak, ifFollowedByWhileMapWithoutLinebreak, ifFollowedByWhileMapWithRangeWithoutLinebreak, ifFollowedByWhileValidateWithoutLinebreak, ifFollowedByWhileValidateMapWithRangeWithoutLinebreak, ifFollowedByWhileValidateMapWithStartWithoutLinebreak, whileAtMost3WithoutLinebreakAnd2PartUtf16ToResultAndThen, whileAtMost3WithoutLinebreakAnd2PartUtf16ValidateMapWithRangeBacktrackableFollowedBySymbol
 @docs integerDecimalMapWithRange, integerDecimalOrHexadecimalMapWithRange, floatOrIntegerDecimalOrHexadecimalMapWithRange
 
 
 # Whitespace primitives
 
-@docs skipWhileWhitespaceBacktrackableFollowedBy, followedBySkipWhileWhitespace, nestableMultiCommentMapWithRange
+@docs skipWhileWhitespaceBacktrackableFollowedBy, followedBySkipWhileWhitespace, skipWhileWhitespaceOrCommaBacktrackableFollowedBy, nestableMultiCommentMapWithRange
 
 
 # Flow
@@ -82,7 +82,7 @@ With `ParserLenient`, you need to either
 
 ## sequence
 
-@docs map2, map2WithStartLocation, map2WithRange, map3, map3WithStartLocation, map3WithRange, map4, map4WithStartLocation, map4WithRange, map5, map5WithStartLocation, map5WithRange, map6, map6WithStartLocation, map7, map7WithRange, map8WithStartLocation, map9WithRange
+@docs map2, map2WithStartLocation, map2WithRange, map3, map3WithStartLocation, map3WithRange, map4, map4WithStartLocation, map4WithRange, map5, map5WithStartLocation, map5WithRange, map6, map6WithStartLocation, map7, map7WithRange, map8WithStartLocation, map9, map9WithRange, map10
 
 @docs loopWhileSucceeds, loopWhileSucceedsOntoResultFromParser, loopWhileSucceedsOntoResultFromParserRightToLeftStackUnsafe, loopWhileSucceedsRightToLeftStackUnsafe, loopUntil
 
@@ -109,13 +109,13 @@ sample of what that code might look like:
 This parser will keep trying down the list of parsers until one of them starts committing.
 Once a path is chosen, it does not come back and try the others.
 
-@docs orSucceed, mapOrSucceed, map2OrSucceed, map2WithRangeOrSucceed, map3OrSucceed, map4OrSucceed, oneOf2, oneOf2Map, oneOf2MapWithStartRowColumnAndEndRowColumn, oneOf2OrSucceed, oneOf3, oneOf4, oneOf5, oneOf7, oneOf9
+@docs orSucceed, mapOrSucceed, map2OrSucceed, map2WithRangeOrSucceed, map3OrSucceed, map3WithStartOrSucceed, map4OrSucceed, oneOf2, oneOf2Map, oneOf2MapWithStartAndEnd, oneOf2MapWithStartRowColumnAndEndRowColumn, oneOf2OrSucceed, oneOf3, oneOf3Map, oneOf4, oneOf5, oneOf6, oneOf7, oneOf9
 
 
 # Indentation, Locations and source
 
 @docs withIndentSetToColumn, columnIndentAndThen, validateEndColumnIndentation
-@docs mapWithRange, offsetSourceAndThen, offsetSourceAndThenOrSucceed
+@docs mapWithRange, offsetSourceAndThen, offsetSourceValidateFollowedBy, offsetSourceAndThenOrSucceed
 @docs problem
 
 -}
@@ -325,6 +325,23 @@ offsetSourceAndThen callback =
                     callback s.offset s.src
             in
             parse s
+        )
+
+
+{-| Look ahead to check for something. If succeeds, commit and follow up
+with a given parser. Otherwise fail and backtrack.
+-}
+offsetSourceValidateFollowedBy : (Int -> String -> Bool) -> Parser a -> Parser a
+offsetSourceValidateFollowedBy offsetSourceIsValid (Parser parseFollowup) =
+    Parser
+        (\s ->
+            if offsetSourceIsValid s.offset s.src then
+                -- for absolute correctness, this should add |> pStepCommit
+                -- omitted for a faster good path at the cost of a slower bad path
+                parseFollowup s
+
+            else
+                pStepBadBacktracking
         )
 
 
@@ -912,6 +929,117 @@ map9WithRange func (Parser parseA) (Parser parseB) (Parser parseC) (Parser parse
         )
 
 
+map9 : (a -> b -> c -> d -> e -> f -> g -> h -> i -> value) -> Parser a -> Parser b -> Parser c -> Parser d -> Parser e -> Parser f -> Parser g -> Parser h -> Parser i -> Parser value
+map9 func (Parser parseA) (Parser parseB) (Parser parseC) (Parser parseD) (Parser parseE) (Parser parseF) (Parser parseG) (Parser parseH) (Parser parseI) =
+    Parser
+        (\s0 ->
+            case parseA s0 of
+                Bad committed () ->
+                    Bad committed ()
+
+                Good a s1 ->
+                    case parseB s1 of
+                        Bad _ () ->
+                            pStepBadCommitting
+
+                        Good b s2 ->
+                            case parseC s2 of
+                                Bad _ () ->
+                                    pStepBadCommitting
+
+                                Good c s3 ->
+                                    case parseD s3 of
+                                        Bad _ () ->
+                                            pStepBadCommitting
+
+                                        Good d s4 ->
+                                            case parseE s4 of
+                                                Bad _ () ->
+                                                    pStepBadCommitting
+
+                                                Good e s5 ->
+                                                    case parseF s5 of
+                                                        Bad _ () ->
+                                                            pStepBadCommitting
+
+                                                        Good f s6 ->
+                                                            case parseG s6 of
+                                                                Bad _ () ->
+                                                                    pStepBadCommitting
+
+                                                                Good g s7 ->
+                                                                    case parseH s7 of
+                                                                        Bad _ () ->
+                                                                            pStepBadCommitting
+
+                                                                        Good h s8 ->
+                                                                            case parseI s8 of
+                                                                                Bad _ () ->
+                                                                                    pStepBadCommitting
+
+                                                                                Good i s9 ->
+                                                                                    Good (func a b c d e f g h i) s9
+        )
+
+
+map10 : (a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> value) -> Parser a -> Parser b -> Parser c -> Parser d -> Parser e -> Parser f -> Parser g -> Parser h -> Parser i -> Parser j -> Parser value
+map10 func (Parser parseA) (Parser parseB) (Parser parseC) (Parser parseD) (Parser parseE) (Parser parseF) (Parser parseG) (Parser parseH) (Parser parseI) (Parser parseJ) =
+    Parser
+        (\s0 ->
+            case parseA s0 of
+                Bad committed () ->
+                    Bad committed ()
+
+                Good a s1 ->
+                    case parseB s1 of
+                        Bad _ () ->
+                            pStepBadCommitting
+
+                        Good b s2 ->
+                            case parseC s2 of
+                                Bad _ () ->
+                                    pStepBadCommitting
+
+                                Good c s3 ->
+                                    case parseD s3 of
+                                        Bad _ () ->
+                                            pStepBadCommitting
+
+                                        Good d s4 ->
+                                            case parseE s4 of
+                                                Bad _ () ->
+                                                    pStepBadCommitting
+
+                                                Good e s5 ->
+                                                    case parseF s5 of
+                                                        Bad _ () ->
+                                                            pStepBadCommitting
+
+                                                        Good f s6 ->
+                                                            case parseG s6 of
+                                                                Bad _ () ->
+                                                                    pStepBadCommitting
+
+                                                                Good g s7 ->
+                                                                    case parseH s7 of
+                                                                        Bad _ () ->
+                                                                            pStepBadCommitting
+
+                                                                        Good h s8 ->
+                                                                            case parseI s8 of
+                                                                                Bad _ () ->
+                                                                                    pStepBadCommitting
+
+                                                                                Good i s9 ->
+                                                                                    case parseJ s9 of
+                                                                                        Bad _ () ->
+                                                                                            pStepBadCommitting
+
+                                                                                        Good j s10 ->
+                                                                                            Good (func a b c d e f g h i j) s10
+        )
+
+
 {-| Indicate that a parser has reached a dead end. "Everything was going fine
 until I ran into this problem." Check out the -AndThen helpers for where to use this.
 -}
@@ -1035,6 +1163,39 @@ map3OrSucceed func (Parser parseA) (Parser parseB) (Parser parseC) fallback =
         )
 
 
+map3WithStartOrSucceed :
+    (Elm.Syntax.Range.Location -> a -> b -> c -> value)
+    -> Parser a
+    -> Parser b
+    -> Parser c
+    -> value
+    -> Parser value
+map3WithStartOrSucceed func (Parser parseA) (Parser parseB) (Parser parseC) fallback =
+    Parser
+        (\s0 ->
+            case parseA s0 of
+                Bad c1 () ->
+                    if c1 then
+                        pStepBadCommitting
+
+                    else
+                        Good fallback s0
+
+                Good a s1 ->
+                    case parseB s1 of
+                        Bad _ () ->
+                            pStepBadCommitting
+
+                        Good b s2 ->
+                            case parseC s2 of
+                                Bad _ () ->
+                                    pStepBadCommitting
+
+                                Good c s3 ->
+                                    Good (func { row = s0.row, column = s0.col } a b c) s3
+        )
+
+
 map4OrSucceed : (a -> b -> c -> d -> value) -> Parser a -> Parser b -> Parser c -> Parser d -> value -> Parser value
 map4OrSucceed func (Parser parseA) (Parser parseB) (Parser parseC) (Parser parseD) fallback =
     Parser
@@ -1088,6 +1249,41 @@ oneOf2Map firstToChoice (Parser attemptFirst) secondToChoice (Parser attemptSeco
                         case attemptSecond s of
                             Good second s1 ->
                                 Good (secondToChoice second) s1
+
+                            Bad secondCommitted () ->
+                                if secondCommitted then
+                                    pStepBadCommitting
+
+                                else
+                                    pStepBadBacktracking
+        )
+
+
+oneOf2MapWithStartAndEnd :
+    (Elm.Syntax.Range.Location -> Elm.Syntax.Range.Location -> first -> choice)
+    -> Parser first
+    -> (Elm.Syntax.Range.Location -> Elm.Syntax.Range.Location -> second -> choice)
+    -> Parser second
+    -> Parser choice
+oneOf2MapWithStartAndEnd firstToChoice (Parser attemptFirst) secondToChoice (Parser attemptSecond) =
+    Parser
+        (\s ->
+            case attemptFirst s of
+                Good first s1 ->
+                    Good
+                        (firstToChoice { row = s.row, column = s.col } { row = s1.row, column = s1.col } first)
+                        s1
+
+                Bad firstCommitted () ->
+                    if firstCommitted then
+                        pStepBadCommitting
+
+                    else
+                        case attemptSecond s of
+                            Good second s1 ->
+                                Good
+                                    (secondToChoice { row = s.row, column = s.col } { row = s1.row, column = s1.col } second)
+                                    s1
 
                             Bad secondCommitted () ->
                                 if secondCommitted then
@@ -1220,6 +1416,41 @@ oneOf3 (Parser attemptFirst) (Parser attemptSecond) (Parser attemptThird) =
         )
 
 
+oneOf3Map : (a -> result) -> Parser a -> (b -> result) -> Parser b -> (c -> result) -> Parser c -> Parser result
+oneOf3Map aToResult (Parser attemptFirst) bToResult (Parser attemptSecond) cToResult (Parser attemptThird) =
+    Parser
+        (\s ->
+            case attemptFirst s of
+                Good a s1 ->
+                    Good (a |> aToResult) s1
+
+                Bad firstCommitted () ->
+                    if firstCommitted then
+                        pStepBadCommitting
+
+                    else
+                        case attemptSecond s of
+                            Good b s1 ->
+                                Good (b |> bToResult) s1
+
+                            Bad secondCommitted () ->
+                                if secondCommitted then
+                                    pStepBadCommitting
+
+                                else
+                                    case attemptThird s of
+                                        Good c s1 ->
+                                            Good (c |> cToResult) s1
+
+                                        Bad thirdCommitted () ->
+                                            if thirdCommitted then
+                                                pStepBadCommitting
+
+                                            else
+                                                pStepBadBacktracking
+        )
+
+
 oneOf4 : Parser a -> Parser a -> Parser a -> Parser a -> Parser a
 oneOf4 (Parser attemptFirst) (Parser attemptSecond) (Parser attemptThird) (Parser attemptFourth) =
     Parser
@@ -1310,6 +1541,68 @@ oneOf5 (Parser attemptFirst) (Parser attemptSecond) (Parser attemptThird) (Parse
 
                                                                 (Bad _ ()) as fifthBad ->
                                                                     fifthBad
+        )
+
+
+oneOf6 : Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a
+oneOf6 (Parser attempt0) (Parser attempt1) (Parser attempt2) (Parser attempt3) (Parser attempt4) (Parser attempt5) =
+    Parser
+        (\s ->
+            case attempt0 s of
+                (Good _ _) as good ->
+                    good
+
+                (Bad committed0 ()) as bad0 ->
+                    if committed0 then
+                        bad0
+
+                    else
+                        case attempt1 s of
+                            (Good _ _) as good ->
+                                good
+
+                            (Bad committed1 ()) as bad1 ->
+                                if committed1 then
+                                    bad1
+
+                                else
+                                    case attempt2 s of
+                                        (Good _ _) as good ->
+                                            good
+
+                                        (Bad committed2 ()) as bad2 ->
+                                            if committed2 then
+                                                bad2
+
+                                            else
+                                                case attempt3 s of
+                                                    (Good _ _) as good ->
+                                                        good
+
+                                                    (Bad committed3 ()) as bad3 ->
+                                                        if committed3 then
+                                                            bad3
+
+                                                        else
+                                                            case attempt4 s of
+                                                                (Good _ _) as good ->
+                                                                    good
+
+                                                                (Bad committed4 ()) as bad4 ->
+                                                                    if committed4 then
+                                                                        bad4
+
+                                                                    else
+                                                                        case attempt5 s of
+                                                                            (Good _ _) as good ->
+                                                                                good
+
+                                                                            (Bad committed5 ()) as bad5 ->
+                                                                                if committed5 then
+                                                                                    bad5
+
+                                                                                else
+                                                                                    pStepBadBacktracking
         )
 
 
@@ -1616,17 +1909,17 @@ loopWhileSucceedsOntoResultFromParser element (Parser parseInitialFolded) reduce
         )
 
 
-loopUntil : Parser () -> Parser element -> folded -> (element -> folded -> folded) -> (folded -> res) -> Parser res
-loopUntil endParser element initialFolded reduce foldedToRes =
+loopUntil : Parser end -> Parser element -> folded -> (element -> folded -> folded) -> (end -> folded -> res) -> Parser res
+loopUntil endParser element initialFolded reduce endAndFoldedToRes =
     Parser
-        (\s -> loopUntilHelp endParser element initialFolded reduce foldedToRes s)
+        (\s -> loopUntilHelp endParser element initialFolded reduce endAndFoldedToRes s)
 
 
-loopUntilHelp : Parser () -> Parser element -> folded -> (element -> folded -> folded) -> (folded -> res) -> State -> PStep res
-loopUntilHelp ((Parser parseEnd) as endParser) ((Parser parseElement) as element) soFar reduce foldedToRes s0 =
+loopUntilHelp : Parser end -> Parser element -> folded -> (element -> folded -> folded) -> (end -> folded -> res) -> State -> PStep res
+loopUntilHelp ((Parser parseEnd) as endParser) ((Parser parseElement) as element) soFar reduce endAndFoldedToRes s0 =
     case parseEnd s0 of
-        Good () s1 ->
-            Good (foldedToRes soFar) s1
+        Good end s1 ->
+            Good (endAndFoldedToRes end soFar) s1
 
         Bad endCommitted () ->
             if endCommitted then
@@ -1640,7 +1933,7 @@ loopUntilHelp ((Parser parseEnd) as endParser) ((Parser parseElement) as element
                             element
                             (soFar |> reduce elementResult)
                             reduce
-                            foldedToRes
+                            endAndFoldedToRes
                             s1
 
                     Bad _ () ->
@@ -2454,6 +2747,44 @@ symbolFollowedBy str (Parser parseNext) =
 {-| Make sure the given String isn't empty and does not contain \\n
 or 2-part UTF-16 characters.
 -}
+symbolStartFollowedBy : (Elm.Syntax.Range.Location -> next -> result) -> String -> Parser next -> Parser result
+symbolStartFollowedBy mapNextWithStart str (Parser parseNext) =
+    let
+        strLength : Int
+        strLength =
+            String.length str
+    in
+    Parser
+        (\s0 ->
+            let
+                newOffset : Int
+                newOffset =
+                    s0.offset + strLength
+            in
+            if String.slice s0.offset newOffset s0.src == str then
+                case
+                    parseNext
+                        { src = s0.src
+                        , offset = newOffset
+                        , indent = s0.indent
+                        , row = s0.row
+                        , col = s0.col + strLength
+                        }
+                of
+                    Good next s1 ->
+                        Good (mapNextWithStart { row = s0.row, column = s0.col } next) s1
+
+                    Bad _ () ->
+                        pStepBadCommitting
+
+            else
+                pStepBadBacktracking
+        )
+
+
+{-| Make sure the given String isn't empty and does not contain \\n
+or 2-part UTF-16 characters.
+-}
 symbolBacktrackableFollowedBy : String -> Parser next -> Parser next
 symbolBacktrackableFollowedBy str (Parser parseNext) =
     let
@@ -2572,6 +2903,47 @@ keywordFollowedBy kwd (Parser parseNext) =
                     , col = s.col + kwdLength
                     }
                     |> pStepCommit
+
+            else
+                pStepBadBacktracking
+        )
+
+
+{-| Make sure the given String isn't empty and does not contain \\n
+or 2-part UTF-16 characters.
+-}
+keywordStartFollowedBy : (Elm.Syntax.Range.Location -> next -> result) -> String -> Parser next -> Parser result
+keywordStartFollowedBy nextToResultWithStart kwd (Parser parseNext) =
+    let
+        kwdLength : Int
+        kwdLength =
+            String.length kwd
+    in
+    Parser
+        (\s0 ->
+            let
+                newOffset : Int
+                newOffset =
+                    s0.offset + kwdLength
+            in
+            if
+                (String.slice s0.offset newOffset s0.src == kwd)
+                    && not (isSubCharAlphaNumOrUnderscore newOffset s0.src)
+            then
+                case
+                    parseNext
+                        { src = s0.src
+                        , offset = newOffset
+                        , indent = s0.indent
+                        , row = s0.row
+                        , col = s0.col + kwdLength
+                        }
+                of
+                    Good next s1 ->
+                        Good (nextToResultWithStart { row = s0.row, column = s0.col } next) s1
+
+                    Bad _ () ->
+                        pStepBadCommitting
 
             else
                 pStepBadBacktracking
@@ -2758,6 +3130,36 @@ skipWhileWhitespaceHelp offset row col src indent =
 
         "\u{000D}" ->
             skipWhileWhitespaceHelp (offset + 1) row (col + 1) src indent
+
+        -- empty or non-whitespace
+        _ ->
+            { src = src, offset = offset, indent = indent, row = row, col = col }
+
+
+{-| Match zero or more \\n, \\r and space characters, then proceed with the given parser
+-}
+skipWhileWhitespaceOrCommaBacktrackableFollowedBy : Parser next -> Parser next
+skipWhileWhitespaceOrCommaBacktrackableFollowedBy (Parser parseNext) =
+    Parser
+        (\s0 ->
+            parseNext (skipWhileWhitespaceOrCommaHelp s0.offset s0.row s0.col s0.src s0.indent)
+        )
+
+
+skipWhileWhitespaceOrCommaHelp : Int -> Int -> Int -> String -> List Int -> State
+skipWhileWhitespaceOrCommaHelp offset row col src indent =
+    case String.slice offset (offset + 1) src of
+        " " ->
+            skipWhileWhitespaceOrCommaHelp (offset + 1) row (col + 1) src indent
+
+        "," ->
+            skipWhileWhitespaceOrCommaHelp (offset + 1) row (col + 1) src indent
+
+        "\n" ->
+            skipWhileWhitespaceOrCommaHelp (offset + 1) (row + 1) 1 src indent
+
+        "\u{000D}" ->
+            skipWhileWhitespaceOrCommaHelp (offset + 1) row (col + 1) src indent
 
         -- empty or non-whitespace
         _ ->
@@ -3022,6 +3424,46 @@ ifFollowedByWhileValidateMapWithRangeWithoutLinebreak toResult firstIsOkay after
         )
 
 
+ifFollowedByWhileValidateMapWithStartWithoutLinebreak :
+    (Elm.Syntax.Range.Location -> String -> res)
+    -> (Char -> Bool)
+    -> (Char -> Bool)
+    -> (String -> Bool)
+    -> Parser res
+ifFollowedByWhileValidateMapWithStartWithoutLinebreak toResult firstIsOkay afterFirstIsOkay resultIsOkay =
+    Parser
+        (\s0 ->
+            let
+                firstOffset : Int
+                firstOffset =
+                    isSubCharWithoutLinebreak firstIsOkay s0.offset s0.src
+            in
+            -- the elm compiler does not optimize `== -1` to `===`. Negative
+            -- numbers are compiled as a prefix negate expression, not a literal,
+            -- so `isLiteral` returns False and `==` falls back to `_Utils_eq`
+            -- which allocates on every call.
+            -- See https://github.com/elm/compiler/blob/0.19.1/compiler/src/Generate/JavaScript/Expression.hs#L549-L592
+            if firstOffset < 0 then
+                pStepBadBacktracking
+
+            else
+                let
+                    s1 : State
+                    s1 =
+                        skipWhileWithoutLinebreakHelp afterFirstIsOkay firstOffset s0.row (s0.col + 1) s0.src s0.indent
+
+                    name : String
+                    name =
+                        String.slice s0.offset s1.offset s0.src
+                in
+                if resultIsOkay name then
+                    Good (toResult { row = s0.row, column = s0.col } name) s1
+
+                else
+                    pStepBadBacktracking
+        )
+
+
 ifFollowedByWhileWithoutLinebreak :
     (Char -> Bool)
     -> (Char -> Bool)
@@ -3144,7 +3586,7 @@ nestableMultiCommentMapWithRange rangeContentToRes ( openChar, openTail ) ( clos
         (\range afterOpen contentAfterAfterOpen ->
             rangeContentToRes
                 range
-                (open ++ afterOpen ++ contentAfterAfterOpen ++ close ++ "")
+                (afterOpen ++ contentAfterAfterOpen ++ "")
         )
         (symbolFollowedBy open
             (while isNotRelevant)
