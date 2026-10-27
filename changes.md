@@ -1,3 +1,7 @@
+#### 1.1.20
+  - in module `ElmSyntaxParserLenient`
+      - correctly parse negation after [ (list start). Thank you [dsimunic](https://github.com/dsimunic) for [reporting](https://github.com/lue-bird/elm-syntax-format/issues/4)
+
 #### 1.1.19
   - apply optimizations made to elm-syntax by [Ju Liu](https://github.com/Arkham)
   - fix a rare bug related to linebreaks introduced in 1.1.18
