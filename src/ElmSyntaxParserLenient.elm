@@ -3395,6 +3395,10 @@ expressionNegation =
                     ")" ->
                         negationAfterMinus
 
+                    -- from list start
+                    "[" ->
+                        negationAfterMinus
+
                     -- from the end of a multiline comment
                     "}" ->
                         negationAfterMinus
